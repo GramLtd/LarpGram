@@ -348,6 +348,7 @@ h2{animation:rise .45s ease both}
 #esw{margin-top:6px}
 .cmh{text-align:center;padding:22px 18px 20px;margin-top:12px;background:radial-gradient(120% 80% at 50% 0,#ff4f7a40,transparent 60%),radial-gradient(90% 70% at 100% 100%,#4f9dff26,transparent 60%),linear-gradient(180deg,#26284f,#1b1c3a);border-color:#ff5a6e40}
 .cmi{width:110px;height:110px;margin:0 auto 6px;filter:drop-shadow(0 12px 20px #ff3d6b66);animation:float 3.4s ease-in-out infinite}.cmi svg{width:100%;height:100%}
+.rfh{background:radial-gradient(120% 80% at 50% 0,#6c63ff40,transparent 60%),radial-gradient(90% 70% at 100% 100%,#4f9dff26,transparent 60%),linear-gradient(180deg,#26284f,#1b1c3a);border-color:#8b6cff40}.rfh .cmi{filter:drop-shadow(0 12px 20px #6c63ff66)}.rfh p b{color:#fff}
 .cmh h3{font:800 26px/1.1 "Unbounded",system-ui;margin:4px 0 8px}.cmu{display:flex;align-items:baseline;justify-content:center;gap:8px;color:#d9daf0;font-weight:800}
 .cmu b{font:800 34px "Unbounded",system-ui;color:var(--gold);display:inline-flex;align-items:center;gap:6px}.cmu b .st{width:28px;height:28px}
 .cmh p{color:#c9cbe4;margin-top:10px}
@@ -386,17 +387,19 @@ h2{animation:rise .45s ease both}
 </main>
 
 <main id="v-earn" hidden>
-  <div class="gsw glass" id="esw"><i class="lens" aria-hidden="true"></i><button class="on" data-e="nick">Поставь в ник</button><button data-e="cm">Комментарии</button></div>
+  <div class="gsw glass" id="esw"><i class="lens" aria-hidden="true"></i><button class="on" data-e="nick">Ник</button><button data-e="cm">Комменты</button><button data-e="ref">Друзья</button></div>
   <div id="nickBox"></div><div id="cmBox" hidden></div>
-  <h2>Приглашайте друзей</h2>
+  <div id="refBox" hidden>
+  <div class="card cmh rfh"><div class="cmi"><svg viewBox="0 0 96 96"><defs><linearGradient id="rfA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b9dff"/><stop offset="1" stop-color="#5a3fd8"/></linearGradient><linearGradient id="rfB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fd0ff"/><stop offset="1" stop-color="#2a7be0"/></linearGradient></defs>
+    <circle cx="62" cy="30" r="13" fill="url(#rfB)"/><path d="M40 78c0-14 10-24 22-24s22 10 22 24z" fill="url(#rfB)"/><circle cx="36" cy="34" r="15" fill="url(#rfA)" stroke="#121329" stroke-width="3"/><path d="M8 84c0-16 12-28 28-28s28 12 28 28z" fill="url(#rfA)" stroke="#121329" stroke-width="3"/><circle cx="76" cy="74" r="13" fill="url(#tgS)" stroke="#fff6c2" stroke-width="2"/><path d="M76 68v12M70 74h12" stroke="#7a4a00" stroke-width="3" stroke-linecap="round"/></svg></div>
+    <h3>Приглашай друзей</h3><div class="cmu"><b id="rbh"></b> за друга</div><p>и <b id="rph"></b> с каждого кейса друга — навсегда</p></div>
   <div class="card">
-    <p style="color:var(--mut);font-weight:600">Получайте бонус за каждого друга и процент с его кейсов — навсегда.</p>
     <div class="line"><span>Друг зашёл по ссылке</span><b id="rb"></b></div>
     <div class="line"><span>С каждого кейса друга</span><b id="rp"></b></div>
     <div class="line"><span>Приглашено друзей</span><b id="rn">0</b></div>
     <div class="line"><span>Заработано</span><b><span id="re">0</span><i class="sti"></i></b></div>
     <button class="btn" id="inv" style="margin-top:14px">Пригласить друзей</button>
-    <button class="btn ghost" id="copy" style="margin-top:10px">Скопировать ссылку</button></div>
+    <button class="btn ghost" id="copy" style="margin-top:10px">Скопировать ссылку</button></div></div>
 </main>
 
 <main id="v-bonus" hidden>
@@ -626,7 +629,7 @@ async function taskAct(t,b){if(!t)return;
 /* ---------- заработок: комментарии ---------- */
 let esec='nick';
 const CMI='<svg viewBox="0 0 96 96"><defs><linearGradient id="cmB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b86"/><stop offset="1" stop-color="#e0294f"/></linearGradient></defs><path d="M18 16h60a12 12 0 0 1 12 12v32a12 12 0 0 1-12 12H44L26 86V72h-8A12 12 0 0 1 6 60V28a12 12 0 0 1 12-12z" fill="url(#cmB)" stroke="#7af0ff" stroke-width="3" stroke-linejoin="round"/><path d="M20 22h56" stroke="#ffffff55" stroke-width="4" stroke-linecap="round"/><circle cx="30" cy="44" r="6" fill="#fff"/><circle cx="48" cy="44" r="6" fill="#fff"/><circle cx="66" cy="44" r="6" fill="#fff"/><circle cx="76" cy="72" r="13" fill="url(#tgS)" stroke="#fff6c2" stroke-width="2"/></svg>';
-function renderEarn(){$('nickBox').hidden=esec!='nick';$('cmBox').hidden=esec!='cm';moveLens($('esw'));if(esec=='nick')renderNick();else renderCm()}
+function renderEarn(){$('nickBox').hidden=esec!='nick';$('cmBox').hidden=esec!='cm';$('refBox').hidden=esec!='ref';moveLens($('esw'));if(esec=='nick')renderNick();else if(esec=='cm')renderCm()}
 $$('#esw button').forEach(b=>b.onclick=()=>{esec=b.dataset.e;$$('#esw button').forEach(x=>x.classList.toggle('on',x==b));hap();renderEarn()});
 function renderCm(){const c=S?.cm;if(!c)return;
   const pay=n=>c.rate*n*(1+cm_tier(c,n)/100);
@@ -1056,7 +1059,7 @@ async function load(){S=await api('state');left=S.free_in;freeBadge();if(S.ton_s
   if(!$('chips').children.length)renderChips();
   renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();if(!$('g-plinko').hidden)renderPlinko();renderProfile();
   if(tab=='bonus'&&!(BV&&BV.spinning))renderBonus();else renderTasks();renderNick();renderCm();
-  $('rb').innerHTML='+'+price(S.ref_bonus);$('rp').textContent=S.ref_percent+'%';$('rn').textContent=S.refs;$('re').parentElement.innerHTML=`<span id="re">${price(S.ref_earned)}</span>`;
+  $('rb').innerHTML='+'+price(S.ref_bonus);$('rbh').innerHTML='+'+price(S.ref_bonus);$('rph').textContent=S.ref_percent+'%';$('rp').textContent=S.ref_percent+'%';$('rn').textContent=S.refs;$('re').parentElement.innerHTML=`<span id="re">${price(S.ref_earned)}</span>`;
   if(CV){CV.c=S.cases.find(c=>c.id==CV.c.id)||CV.c;CV.refresh()}
   return loadLive()}
 setInterval(()=>{if(left>0){left--;if(left==0){freeBadge();renderCases();renderBonus()}else $$('[data-fp]').forEach(e=>e.textContent=fmt(left));CV&&CV.refresh();BV&&BV.refresh()}},1000);
