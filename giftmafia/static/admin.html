@@ -1,46 +1,140 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>GiftMafia — админка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Unbounded:wght@700;800&display=swap">
 <style>
-body{font:15px/1.4 system-ui,sans-serif;background:#14090b;color:#efe6d6;max-width:900px;margin:auto;padding:16px}
-h2{margin:24px 0 8px;color:#c9a24b}
-table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #3b0d14;text-align:left}
-button,input,select{font:inherit;padding:6px 10px;border-radius:4px;border:1px solid #c9a24b;background:#2a1014;color:#efe6d6}
-button{cursor:pointer;background:#c9a24b;color:#14090b;border:0}button.x{background:#7a2a2a;color:#fff}
-.stats{display:flex;gap:12px;flex-wrap:wrap}.stats div{background:#3b0d14;padding:12px 16px;border-radius:4px}
-.scroll{overflow-x:auto}a{color:#c9a24b}
+:root{--bg:#121329;--card:#1f2142;--card2:#2a2c55;--line:#ffffff14;--mut:#9fa2cc;--acc1:#4f7bff;--acc2:#8b5cff;--grad:linear-gradient(90deg,var(--acc1),var(--acc2));--ok:#3ee08f;--bad:#ff5a6e;--gold:#ffc83d}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{background:radial-gradient(700px 360px at 50% -140px,#5b46d455,transparent 70%) no-repeat,var(--bg);color:#fff;font:600 15px/1.4 "Manrope",-apple-system,system-ui,sans-serif;max-width:860px;margin:auto;padding:0 16px 60px;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc1);outline-offset:2px}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:14px 16px 12px;margin:0 -16px;background:#121329d9;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.logo{font:800 22px/1 "Unbounded",system-ui;letter-spacing:-.03em}.logo b{background:linear-gradient(180deg,#ffe07a,#f3a514);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;background:#ffffff14;color:var(--mut)}
+.sp{flex:1}
+.btn{height:44px;padding:0 18px;border-radius:999px;background:var(--grad);font-weight:800;box-shadow:0 8px 22px -10px #6c63ffaa}
+.btn.ghost{background:var(--card2);box-shadow:none}.btn.ok{background:linear-gradient(90deg,#20b56b,#3ee08f)}.btn.bad{background:#ff5a6e2e;color:#ffb0ba;box-shadow:none}
+.btn.sm{height:36px;padding:0 14px;font-size:14px}
+.btn:disabled{opacity:.5}
+.glass{position:relative;display:flex;gap:2px;padding:5px;border-radius:999px;margin-top:6px;background:linear-gradient(180deg,#ffffff1f,#ffffff08 45%,#ffffff0d);background-color:#1a1b3a8c;
+  -webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid #ffffff2b;box-shadow:inset 0 1px 0 #ffffff59,0 12px 40px #0006}
+.glass button{position:relative;z-index:1;flex:1;height:42px;border-radius:999px;color:var(--mut);font-weight:800;transition:color .2s}
+.glass button.on{color:#fff}
+.lens{position:absolute;top:5px;bottom:5px;left:0;border-radius:999px;background:linear-gradient(180deg,#ffffff2e,#ffffff0f);border:1px solid #ffffff38;
+  box-shadow:inset 0 1px 0 #ffffff80,0 6px 18px -6px #6c63ffaa;transition:transform .45s cubic-bezier(.3,1.35,.4,1),width .45s cubic-bezier(.3,1.35,.4,1)}
+h2{font:800 22px "Unbounded",system-ui;margin:26px 0 12px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+h2 small{font:700 14px "Manrope";color:var(--mut)}
+.card{background:linear-gradient(180deg,#24264d,#1b1c3a);border:1px solid var(--line);border-radius:22px;padding:16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stat small{display:block;color:var(--mut);font-size:13px}.stat b{display:block;font:800 26px "Unbounded",system-ui;margin-top:6px;white-space:nowrap}
+.stat b.pos{color:var(--ok)}.stat b.neg{color:var(--bad)}
+.list{display:grid;gap:10px}
+.req{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.req img,.pz img{width:48px;height:48px;object-fit:contain;flex:none}
+.req .who{flex:1;min-width:160px}.req .who b{display:block}.req .who small{color:var(--mut)}
+.req a{color:#a9a4ff;text-decoration:none}
+.st{font-size:12px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap}
+.st.requested{background:#ffc83d26;color:var(--gold)}.st.sent{background:#3ee08f26;color:var(--ok)}.st.rejected{background:#ff5a6e26;color:var(--bad)}
+.acts{display:flex;gap:8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{height:38px;padding:0 16px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-weight:700;color:#d9daf0}
+.chip.on{background:var(--grad);border-color:transparent;color:#fff}
+.case{padding:0;overflow:hidden}
+.ch{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;width:100%;text-align:left}
+.ch .t{flex:1;min-width:0}.ch .t b{display:block;font-size:16px}.ch .t small{color:var(--mut)}
+.rtp{font-weight:800;font-size:13px;padding:5px 10px;border-radius:999px;background:#ffffff12}
+.rtp.hi{color:var(--bad)}.rtp.lo{color:var(--ok)}
+.arrow{transition:transform .25s;color:var(--mut)}.case.open .arrow{transform:rotate(90deg)}
+.cb{display:none;border-top:1px solid var(--line);padding:12px 16px 16px}.case.open .cb{display:block}
+.price{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.inp{height:40px;border-radius:12px;background:#ffffff0d;border:1px solid var(--line);padding:0 12px;min-width:0}
+.inp.n{width:96px}
+.pz{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pzc{display:flex;align-items:center;gap:8px}
+.pz:last-of-type{border:0}
+.pz .nm{flex:1;min-width:0}.pz .nm b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pz .nm small{color:var(--mut)}
+.pz .coin{width:48px;height:48px;display:grid;place-items:center;font-size:26px;flex:none}
+.pc{width:64px;text-align:right;font-weight:800;color:#d9daf0;font-size:13px}
+.x{width:36px;height:36px;border-radius:50%;background:#ff5a6e1f;color:#ffb0ba;font-size:18px;flex:none}
+.add{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed #ffffff26}
+.empty{color:var(--mut);padding:10px 2px}
+.login{min-height:80vh;display:flex;flex-direction:column;justify-content:center;gap:14px;max-width:360px;margin:auto;text-align:center}
+.login .logo{font-size:34px;margin-bottom:6px}
+.login .inp{height:52px;font-size:16px;text-align:center}
+#toast{position:fixed;left:16px;right:16px;top:14px;max-width:480px;margin:auto;background:#2c2e52;border:1px solid #ffffff26;padding:13px 16px;border-radius:16px;display:none;z-index:20;font-weight:700;box-shadow:0 10px 30px #000a}
+@media(max-width:520px){.pz .nm{flex:1 1 calc(100% - 60px)}.pzc{width:100%;padding-left:58px}.pzc .inp{flex:1}.pc{width:52px}.req .acts{width:100%}.req .acts .btn{flex:1}}
 </style></head><body>
-<h1>GiftMafia — админка</h1>
-<div class="stats" id="stats"></div>
-<h2>Заявки на вывод</h2><div class="scroll"><table id="req"></table></div>
-<h2>Призы и шансы</h2>
-<p style="color:#9a8a84">Шанс = вес / сумма весов призов в кейсе. NFT выбирается из каталога всех подарков Telegram (static/gifts.json), оценка в ⭐ считается из FLOORS в main.py.</p>
-<div class="scroll"><table id="prizes"></table></div>
-<p><select id="pc"></select> <select id="pk" onchange="kind()"><option value="nft">NFT</option><option value="stars">⭐ на баланс</option></select>
- <span id="pnft"><input id="pg" list="gl" placeholder="Коллекция (Plush Pepe)" oninput="models()"> <input id="pm" list="ml" placeholder="Модель"></span>
- <input id="ps" type="number" placeholder="⭐" style="width:80px;display:none"> вес <input id="pw" type="number" value="1" step="any" style="width:80px"> <button onclick="addPrize()">Добавить приз</button></p>
-<datalist id="gl"></datalist><datalist id="ml"></datalist>
-<h2>Цены кейсов (Stars)</h2><div id="cases"></div>
+<div id="app"></div><div id="toast" role="status"></div>
 <script>
-let T=localStorage.adm||prompt('Admin token');localStorage.adm=T;
-const api=async(p,m='GET',b)=>{const r=await fetch('/api/admin/'+p,{method:m,headers:{'X-Admin':T,'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
- if(r.status==401){localStorage.removeItem('adm');alert('Неверный токен');location.reload()}return r.json()};
-async function load(){
- const s=await api('stats');$('stats').innerHTML=Object.entries({Пользователи:s.users,Выигрышей:s.wins,'Ждут отправки':s.requested,Отправлено:s.sent,'Мины, доход ⭐':s.mines,'Плинко, доход ⭐':s.plinko}).map(([k,v])=>`<div>${k}<br><b style="font-size:22px">${v}</b></div>`).join('');
- const r=await api('requests');
- $('req').innerHTML='<tr><th>#</th><th>Пользователь</th><th>Подарок</th><th>Статус</th><th></th></tr>'+r.map(w=>`<tr><td>${w.id}</td><td>${w.username?`<a href="https://t.me/${w.username}" target="_blank">@${w.username}</a>`:`<a href="tg://user?id=${w.user_id}">${w.name||w.user_id}</a>`}</td><td>${w.img?`<img src="${w.img}" style="width:28px;height:28px;vertical-align:middle;object-fit:contain"> `:''}${w.prize} <small>(≈${w.value} ⭐)</small></td><td>${w.status}</td><td>${w.status=='requested'?`<button onclick="win(${w.id},'sent')">Отправлен</button> <button class="x" onclick="win(${w.id},'rejected')">Отклонить</button>`:''}</td></tr>`).join('');
- const p=await api('prizes');
- const tot={};p.prizes.forEach(x=>tot[x.case_id]=(tot[x.case_id]||0)+x.weight);
- const cn=Object.fromEntries(p.cases.map(c=>[c.id,c.title]));
- $('pc').innerHTML=p.cases.map(c=>`<option value="${c.id}">${c.title}</option>`).join('');
- $('prizes').innerHTML='<tr><th>Кейс</th><th>Приз</th><th>≈ ⭐</th><th>Вес</th><th>Шанс</th><th></th></tr>'+p.prizes.map(x=>`<tr><td>${cn[x.case_id]}</td><td>${x.img?`<img src="${x.img}" style="width:28px;height:28px;vertical-align:middle;object-fit:contain"> `:'⭐ '}${x.name}</td><td>${x.stars||''}</td><td><input type="number" value="${x.weight}" style="width:70px" onchange="api('prize/${x.id}','PATCH',{weight:this.value}).then(load)"></td><td>${(x.weight/tot[x.case_id]*100).toFixed(x.weight/tot[x.case_id]<0.01?3:1)}%</td><td><button class="x" onclick="api('prize/${x.id}','DELETE').then(load)">Удалить</button></td></tr>`).join('');
- $('cases').innerHTML=p.cases.filter(c=>c.id!=1).map(c=>`<p>${c.title}: <input type="number" value="${c.price}" style="width:90px" onchange="api('case/${c.id}','PATCH',{price:this.value}).then(load)"> ⭐</p>`).join('');
-}
-const $=id=>document.getElementById(id);
-const win=(id,a)=>api(`win/${id}/${a}`,'POST').then(load);
-const addPrize=()=>api('prize','POST',{case_id:$('pc').value,kind:$('pk').value,gift:$('pg').value,model:$('pm').value,stars:$('ps').value,weight:$('pw').value}).then(load);
-let CAT=[];fetch('/static/gifts.json').then(r=>r.json()).then(g=>{CAT=g;$('gl').innerHTML=g.map(x=>`<option value="${x.name}">`).join('')});
-const models=()=>{const g=CAT.find(x=>x.name==$('pg').value);$('ml').innerHTML=g?g.models.map(([m,p])=>`<option value="${m}">${p/10}%</option>`).join(''):''};
-const kind=()=>{const n=$('pk').value=='nft';$('pnft').style.display=n?'':'none';$('ps').style.display=n?'none':''};
-load();
+const $=id=>document.getElementById(id),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=n=>Math.round(n).toLocaleString('ru-RU');
+const toast=t=>{const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2600)};
+const CAT={free:'Бесплатный',change:'На сдачу',theme:'Тематический',fifty:'50/50',premium:'Премиум',coll:'Коллекция'};
+let T='';try{T=localStorage.adm||''}catch(e){}
+let view='stats',reqF='requested',open=new Set(),CATALOG=[],D={};
+async function api(p,m='GET',b){const r=await fetch('/api/admin/'+p,{method:m,headers:{'X-Admin':T,'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  if(r.status==401){logout();throw new Error('Неверный токен')}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||'Ошибка');return j}
+function logout(){T='';try{localStorage.removeItem('adm')}catch(e){}renderLogin()}
+function renderLogin(){$('app').innerHTML=`<div class="login"><div class="logo">Gift<b>Mafia</b></div><p style="color:var(--mut)">Вход в админку</p>
+  <input class="inp" id="tok" type="password" placeholder="Токен администратора" autocomplete="current-password"><button class="btn" id="go">Войти</button></div>`;
+  const go=async()=>{T=$('tok').value.trim();if(!T)return;try{await api('stats');try{localStorage.adm=T}catch(e){}start()}catch(e){toast(e.message)}};
+  $('go').onclick=go;$('tok').onkeydown=e=>{if(e.key=='Enter')go()};$('tok').focus()}
+function moveLens(){const bar=document.querySelector('.glass'),on=bar?.querySelector('button.on'),l=bar?.querySelector('.lens');if(on&&l){l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`}}
+addEventListener('resize',moveLens);
+function start(){$('app').innerHTML=`<header class="top"><span class="logo">Gift<b>Mafia</b></span><span class="tag">админка</span><span class="sp"></span><button class="btn ghost sm" id="out">Выйти</button></header>
+  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Обзор</button><button data-v="req">Заявки</button><button data-v="cases">Кейсы</button></nav><main id="main"></main>`;
+  $('out').onclick=logout;$$('#nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
+  fetch('/static/gifts.json').then(r=>r.json()).then(g=>CATALOG=g).catch(()=>{});
+  load()}
+async function load(){try{const [s,r,p]=await Promise.all([api('stats'),api('requests'),api('prizes')]);D={s,r,p};render()}catch(e){toast(e.message)}}
+function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==view));requestAnimationFrame(moveLens);
+  const M=$('main');if(!D.s)return;
+  if(view=='stats'){const s=D.s,money=v=>`<b class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${num(v)} ⭐</b>`;
+    M.innerHTML=`<h2>Обзор</h2><div class="stats">
+      <div class="card stat"><small>Пользователи</small><b>${num(s.users)}</b></div>
+      <div class="card stat"><small>Выигрышей</small><b>${num(s.wins)}</b></div>
+      <div class="card stat"><small>Ждут отправки</small><b style="color:var(--gold)">${num(s.requested)}</b></div>
+      <div class="card stat"><small>Отправлено</small><b>${num(s.sent)}</b></div>
+      <div class="card stat"><small>Доход: мины</small>${money(s.mines||0)}</div>
+      <div class="card stat"><small>Доход: плинко</small>${money(s.plinko||0)}</div></div>
+      <p style="color:var(--mut);margin-top:14px">Доход игр = ставки минус выплаты. Кейсы и апгрейды считаются по заявкам на вывод.</p>`}
+  if(view=='req'){const all=D.r,list=reqF=='all'?all:all.filter(w=>w.status==reqF);
+    M.innerHTML=`<h2>Заявки на вывод<small>${all.filter(w=>w.status=='requested').length} ждут</small></h2>
+      <div class="chips">${[['requested','Ждут'],['sent','Отправлены'],['rejected','Отклонены'],['all','Все']].map(([k,t])=>`<button class="chip ${reqF==k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
+      <div class="list">${list.map(w=>`<div class="card req">${w.img?`<img src="${esc(w.img)}" alt="">`:''}
+        <div class="who"><b>${esc(w.prize)}</b><small>#${w.id} · ≈ ${num(w.value)} ⭐ · ${w.username?`<a href="https://t.me/${esc(w.username)}" target="_blank" rel="noopener">@${esc(w.username)}</a>`:`<a href="tg://user?id=${w.user_id}">${esc(w.name||w.user_id)}</a>`}</small></div>
+        <span class="st ${w.status}">${{requested:'Ждёт',sent:'Отправлен',rejected:'Отклонён'}[w.status]||w.status}</span>
+        ${w.status=='requested'?`<div class="acts"><button class="btn ok sm" data-w="${w.id}" data-a="sent">Отправлен</button><button class="btn bad sm" data-w="${w.id}" data-a="rejected">Отклонить</button></div>`:''}</div>`).join('')||'<p class="empty">Заявок нет.</p>'}</div>`;
+    $$('[data-f]',M).forEach(b=>b.onclick=()=>{reqF=b.dataset.f;render()});
+    $$('[data-a]',M).forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api(`win/${b.dataset.w}/${b.dataset.a}`,'POST');toast(b.dataset.a=='sent'?'Отмечено как отправленное':'Заявка отклонена');await load()}catch(e){toast(e.message);b.disabled=false}})}
+  if(view=='cases'){const {cases,prizes}=D.p;
+    M.innerHTML=`<h2>Кейсы и шансы<small>${cases.length} кейсов</small></h2>
+      <p style="color:var(--mut);margin-bottom:12px">Шанс = вес / сумма весов. «Возврат» — средняя выплата от цены кейса: выше 100% кейс убыточен.</p>
+      <div class="list">${cases.map(c=>caseHtml(c,prizes.filter(p=>p.case_id==c.id))).join('')}</div>
+      <datalist id="gl">${CATALOG.map(g=>`<option value="${esc(g.name)}">`).join('')}</datalist>`;
+    $$('.ch',M).forEach(h=>h.onclick=()=>{const id=+h.dataset.c;open.has(id)?open.delete(id):open.add(id);h.parentElement.classList.toggle('open')});
+    $$('[data-price]',M).forEach(i=>i.onchange=()=>act(api(`case/${i.dataset.price}`,'PATCH',{price:i.value}),'Цена сохранена'));
+    $$('[data-wt]',M).forEach(i=>i.onchange=()=>act(api(`prize/${i.dataset.wt}`,'PATCH',{weight:i.value}),'Вес сохранён'));
+    $$('[data-del]',M).forEach(b=>b.onclick=()=>{if(confirm('Удалить приз?'))act(api(`prize/${b.dataset.del}`,'DELETE'),'Приз удалён')});
+    $$('[data-kind]',M).forEach(s=>s.onchange=()=>{const f=s.closest('.add');f.querySelector('.nf').style.display=s.value=='nft'?'contents':'none';f.querySelector('[name=stars]').style.display=s.value=='nft'?'none':''});
+    $$('[name=gift]',M).forEach(i=>i.oninput=()=>{const g=CATALOG.find(x=>x.name==i.value),dl=$('ml'+i.dataset.c);dl.innerHTML=g?g.models.map(([m,p])=>`<option value="${esc(m)}">${p/10}%</option>`).join(''):''});
+    $$('[data-addto]',M).forEach(b=>b.onclick=()=>{const f=b.closest('.add'),v=n=>f.querySelector(`[name=${n}]`).value;
+      act(api('prize','POST',{case_id:b.dataset.addto,kind:v('kind'),gift:v('gift'),model:v('model'),stars:v('stars')||0,weight:v('weight')||1}),'Приз добавлен')})}}
+async function act(p,msg){try{await p;toast(msg);await load()}catch(e){toast(e.message)}}
+function caseHtml(c,ps){const W=ps.reduce((a,p)=>a+p.weight,0)||1,ev=ps.reduce((a,p)=>a+p.stars*p.weight,0)/W,rtp=c.price?ev/c.price*100:0;
+  return `<div class="card case ${open.has(c.id)?'open':''}"><button class="ch" data-c="${c.id}"><div class="t"><b>${esc(c.title)}</b><small>${CAT[c.cat]||c.cat} · ${c.price?num(c.price)+' ⭐':'бесплатно'} · ${ps.length} призов</small></div>
+    ${c.price?`<span class="rtp ${rtp>100?'hi':rtp<70?'lo':''}">возврат ${rtp.toFixed(0)}%</span>`:''}<span class="arrow">›</span></button>
+    <div class="cb">${c.price?`<div class="price">Цена <input class="inp n" type="number" min="1" value="${c.price}" data-price="${c.id}"> ⭐</div>`:''}
+    ${ps.map(p=>`<div class="pz">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:'<span class="coin">⭐</span>'}<div class="nm"><b>${esc(p.name)}</b><small>≈ ${num(p.stars)} ⭐</small></div>
+      <div class="pzc"><input class="inp n" type="number" step="any" min="0" value="${+p.weight.toPrecision(4)}" data-wt="${p.id}" aria-label="Вес"><span class="pc">${(p.weight/W*100).toFixed(p.weight/W<.01?2:1)}%</span><button class="x" data-del="${p.id}" aria-label="Удалить">×</button></div></div>`).join('')}
+    <div class="add"><select class="inp" name="kind" data-kind><option value="nft">NFT</option><option value="stars">⭐ на баланс</option></select>
+      <span class="nf" style="display:contents"><input class="inp" name="gift" list="gl" placeholder="Коллекция" data-c="${c.id}"><input class="inp" name="model" list="ml${c.id}" placeholder="Модель"><datalist id="ml${c.id}"></datalist></span>
+      <input class="inp" name="stars" type="number" placeholder="Сколько ⭐" style="display:none"><input class="inp" name="weight" type="number" step="any" placeholder="Вес" value="1">
+      <button class="btn sm" data-addto="${c.id}">Добавить приз</button></div></div></div>`}
+T?start():renderLogin();
 </script></body></html>

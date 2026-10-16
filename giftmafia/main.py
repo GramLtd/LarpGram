@@ -24,7 +24,7 @@ REF_PERCENT = 10   # % от трат друга на кейсы
 MAX_MULTI = 5      # сколько платных кейсов можно открыть за раз
 STORY_MIN_DELAY = 20  # сек между нажатием "в сторис" и выводом
 CASE_RTP = 0.85    # средний возврат платного кейса (доля цены)
-ECONOMY_VERSION = "2"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
+ECONOMY_VERSION = "3"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
 SELL_RATE = 0.9    # продажа подарка из инвентаря: доля оценки на баланс
 MINES_EDGE = 0.96  # множитель мин = EDGE * честный коэффициент
 MINES_MAX_WIN = 181818  # максимум выплаты за раунд мин, ⭐
@@ -148,6 +148,18 @@ def near(value, rng, pool=None, spread=0.15):
     return nft_item(*rng.choice(close))
 
 
+THEMES = [  # тематические кейсы: (название, коллекции)
+    ("Зимний", ["Santa Hat", "Snow Globe", "Xmas Stocking", "Candy Cane", "Ginger Cookie", "Winter Wreath", "Snow Mittens", "Sleigh Bell", "Jingle Bells", "Holiday Drink", "Spiced Wine", "Big Year"]),
+    ("Хэллоуин", ["Mad Pumpkin", "Witch Hat", "Hex Pot", "Voodoo Doll", "Skull Flower", "Evil Eye", "Spy Agaric", "Scared Cat", "Trapped Heart", "Flying Broom", "Crystal Ball", "Electric Skull"]),
+    ("Любовь", ["Love Potion", "Love Candle", "Cookie Heart", "Eternal Rose", "Valentine Box", "Cupid Charm", "Bonded Ring", "Diamond Ring", "Lush Bouquet", "Heart Locket"]),
+    ("Сладкий", ["Ice Cream", "Vice Cream", "Lol Pop", "Hypno Lollipop", "Homemade Cake", "Whip Cupcake", "Mousse Cake", "Bunny Muffin", "Berry Box", "Happy Brownie", "Jelly Bunny", "Instant Ramen"]),
+    ("Westside", ["Snoop Dogg", "Snoop Cigar", "Low Rider", "Westside Sign", "Swag Bag"]),
+    ("Чемпион", ["UFC Strike", "Khabib's Papakha", "Victory Medal", "Mighty Arm", "Heroic Helmet", "Surge Board"]),
+    ("Роскошь", ["Signet Ring", "Gem Signet", "Swiss Watch", "Perfume Bottle", "Vintage Cigar", "Nail Bracelet", "Precious Peach", "Astral Shard", "Ion Gem", "Loot Bag"]),
+    ("Магия", ["Magic Potion", "Genie Lamp", "Crystal Ball", "Witch Hat", "Hex Pot", "Astral Shard", "Eternal Candle", "Star Notepad", "Mirage Lamp"]),
+]
+
+
 def build_cases():
     """Кейсы собираются из каталога: цена «красивая», у каждого кейса есть дешёвые призы, призы около цены и джекпоты.
     Веса подбираются так, чтобы средний возврат был CASE_RTP. Потом цены и веса можно править в админке."""
@@ -157,23 +169,33 @@ def build_cases():
     C = []  # (id, title, price, cat, items, rtp)
     free = [stars_item(n) for n in (1, 2, 3, 5, 10, 25)] + [near(v, rng) for v in (260, 280, 300, 330)]
     C.append((1, "Подарок дня", 0, "free", free, None))
-    for i, (t, p) in enumerate([("Мелочь", 49), ("Сдача", 99), ("Копилка", 149), ("Заначка", 249)]):
+    for i, (t, p) in enumerate([("Мелочь", 49), ("Сдача", 99), ("Копилка", 149), ("Заначка", 249), ("Кошелёк", 399), ("Сейф", 749)]):
         items = [stars_item(round(p * k)) for k in (0.2, 0.4, 0.6, 0.8)]
         items += [near(p * k, rng) for k in (1.3, 2, 3, 5, 8, 15, 30)]
         C.append((10 + i, t, p, "change", items, CASE_RTP))
-    for i, (t, p) in enumerate([("Орёл или решка", 199), ("Всё или ничего", 499), ("Двойной шанс", 999)]):
+    for i, (t, p) in enumerate([("Орёл или решка", 199), ("Всё или ничего", 499), ("Двойной шанс", 999), ("Ва-банк", 2499)]):
         C.append((20 + i, t, p, "fifty", [near(p * 1.3, rng, spread=0.05)], None))  # проигрышный приз добавим ниже
-    for i, (t, p) in enumerate([("Семья", 499), ("Капо", 999), ("Крёстный отец", 2499), ("Дон", 4999)]):
+    for i, (t, p) in enumerate([("Семья", 499), ("Капо", 999), ("Консильери", 1499), ("Крёстный отец", 2499), ("Дон", 4999),
+                                ("Босс", 9999), ("Легенда", 24999)]):
         items = [stars_item(round(p * k)) for k in (0.3, 0.5, 0.7)]
         items += [near(p * k, rng) for k in (1, 1.5, 2, 3, 5, 10, 25, 50)]
         C.append((30 + i, t, p, "premium", items, CASE_RTP))
-    for i, g in enumerate(["Plush Pepe", "Durov's Cap", "Precious Peach", "Heart Locket", "Snoop Dogg", "Scared Cat", "Toy Bear", "Diamond Ring"]):
+    for i, (t, pool) in enumerate(THEMES):
+        pool = [g for g in pool if g in CATALOG]
+        cheapest = min(nft_value(g, m) for g in pool for m in MODELS[g])
+        p = nice(cheapest * 1.25)
+        items = [stars_item(round(p * k)) for k in (0.15, 0.3, 0.5)]
+        items += [near(p * k, rng, pool) for k in (0.8, 1.1, 1.5, 2, 3, 5, 8, 15, 30)]
+        C.append((60 + i, t, p, "theme", list({it["name"]: it for it in items}.values()), CASE_RTP))
+    for i, g in enumerate(["Plush Pepe", "Durov's Cap", "Precious Peach", "Heart Locket", "Snoop Dogg", "Scared Cat", "Toy Bear", "Diamond Ring",
+                           "Signet Ring", "Swiss Watch", "Astral Shard", "Ion Gem", "Mini Oscar", "Perfume Bottle", "Magic Potion", "Genie Lamp",
+                           "Kissed Frog", "Vintage Cigar", "Loot Bag", "Nail Bracelet"]):
         if g not in CATALOG: continue
         f = floor_stars(g); p = nice(f * 0.45)
         ms = sorted(CATALOG[g]["models"], key=lambda x: x[1])  # от редких к частым
         items = [stars_item(round(p * k)) for k in (0.25, 0.5, 0.75)]
         items += [nft_item(g, m) for m, _ in ms[:4]] + [nft_item(g, m) for m, _ in rng.sample(ms[4:], min(6, len(ms) - 4))]
-        C.append((40 + i, g, p, "coll", items, CASE_RTP))
+        C.append((100 + i, g, p, "coll", items, CASE_RTP))
     for cid, title, price, cat, items, rtp in C:
         run("INSERT INTO cases(id,title,price,emoji,cat) VALUES(?,?,?,?,?)", cid, title, price, "🎁", cat)
         if cat == "fifty":  # честные 50/50: проигрыш - звёзды, выигрыш - NFT около x1.3

@@ -100,15 +100,28 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .bar h3{font:800 20px "Unbounded",system-ui;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .x{width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none}.x svg{width:20px;height:20px}
 /* таббар */
-.tabs{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:496px;margin:auto;display:flex;gap:2px;padding:7px;border-radius:999px;
-  background:#1a1b3ae8;border:1px solid #ffffff1c;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 40px #000a;z-index:18}
-.tabs button{position:relative;flex:1;height:58px;border-radius:999px;color:var(--mut);font-weight:800;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:color .2s,background .2s}
+.glass{position:relative;isolation:isolate;background:linear-gradient(180deg,#ffffff1f,#ffffff08 45%,#ffffff0d);
+  -webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid #ffffff2b;
+  box-shadow:inset 0 1px 0 #ffffff59,inset 0 -1px 0 #ffffff14,inset 0 0 24px #ffffff0a,0 12px 40px #0009}
+.glass:before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
+  background:radial-gradient(120% 80% at 20% -20%,#ffffff26,transparent 55%),radial-gradient(90% 70% at 100% 120%,#8b5cff26,transparent 60%)}
+.lens{position:absolute;top:7px;bottom:7px;left:0;border-radius:999px;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,#ffffff2e,#ffffff0f);border:1px solid #ffffff38;
+  box-shadow:inset 0 1px 0 #ffffff80,inset 0 -6px 14px #ffffff0d,0 6px 18px -6px #6c63ffaa;
+  transition:transform .45s cubic-bezier(.3,1.35,.4,1),width .45s cubic-bezier(.3,1.35,.4,1)}
+.tabs{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:496px;margin:auto;display:flex;gap:2px;padding:7px;border-radius:999px;z-index:18;
+  background-color:#1a1b3a8c;transition:transform .3s ease,opacity .3s ease}
+body.kb .tabs{transform:translateY(140%);opacity:0;pointer-events:none}
+.tabs button{position:relative;z-index:1;flex:1;height:58px;border-radius:999px;color:var(--mut);font-weight:800;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:color .2s,background .2s}
 .tabs button svg{width:23px;height:23px;transition:transform .2s}
-.tabs button.on{color:#fff;background:linear-gradient(180deg,#363a7a,#2b2e66);box-shadow:inset 0 0 0 1px #ffffff26,0 6px 16px -8px #6c63ff}
+.tabs button.on{color:#fff}
 .tabs button.on svg{color:#a9a4ff;transform:translateY(-1px)}
 .tabs .fb{position:absolute;top:-6px;left:58%;background:var(--gold);color:#3a2600;font:800 10px/1 "Manrope";padding:4px 7px;border-radius:7px;letter-spacing:.05em}
 /* мины */
-.gsw{display:flex;gap:6px;margin-top:6px}.gsw .chip{flex:1 1 0;min-width:0;padding:0 8px;font-size:15px}
+.gsw{display:flex;gap:2px;margin-top:6px;padding:5px;border-radius:999px;background-color:#1a1b3a8c}
+.gsw .lens{top:5px;bottom:5px}
+.gsw button{position:relative;z-index:1;flex:1 1 0;min-width:0;height:44px;border-radius:999px;color:var(--mut);font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;gap:7px;transition:color .2s}
+.gsw button svg{width:19px;height:19px}.gsw button.on{color:#fff}
 .gbar{display:flex;align-items:center;gap:6px;margin-top:12px}
 .gbar .ib{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;color:#d9daf0;flex:none}.gbar .ib.on{color:var(--gold)}.gbar .ib svg{width:26px;height:26px}
 .mults{position:relative;flex:1;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-width:0;padding:0 8px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent)}.mults::-webkit-scrollbar{display:none}
@@ -119,6 +132,7 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .cell{aspect-ratio:1;border-radius:14px;background:linear-gradient(180deg,#3a3c5c,#2c2d48);box-shadow:inset 0 1px 0 #ffffff1c,0 4px 0 #1a1b2e,0 6px 12px #0006;display:grid;place-items:center;font-size:30px;transition:transform .12s,background .2s}
 .cell:active{transform:translateY(2px)}.cell:disabled{cursor:default}
 .cell.sel{box-shadow:inset 0 0 0 2px var(--acc1),0 4px 0 #1a1b2e}
+.cell svg{width:62%;height:62%}.cnt svg{width:24px;height:24px}
 .cell.gem{background:linear-gradient(180deg,#1f6b55,#174a3e);animation:pop .25s}.cell.bomb{background:linear-gradient(180deg,#8c2c3f,#4a1d2b);animation:pop .25s}
 .cell.dim{opacity:.45}
 @keyframes pop{from{transform:scale(.8)}to{transform:none}}
@@ -143,10 +157,6 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 /* плинко */
 .plb{position:relative;margin:14px -4px 0;border-radius:24px;background:radial-gradient(circle at 50% 0,#3b3a8a55,transparent 70%),linear-gradient(180deg,#1d1f40,#16172f);border:1px solid var(--line);padding:10px 4px 10px}
 .plb canvas{display:block;width:100%}
-.pls{display:flex;margin-top:6px}
-.pls div{flex:1 1 0;min-width:0;margin:0 1px;height:30px;border-radius:7px;display:grid;place-items:center;font:800 var(--fs,11px)/1 "Manrope";letter-spacing:-.03em;overflow:hidden;color:#2a1600;background:var(--sc);box-shadow:0 3px 0 color-mix(in srgb,var(--sc) 60%,#000);transition:transform .15s}
-.pls div.hit{animation:slotHit .45s ease}
-@keyframes slotHit{30%{transform:translateY(5px);filter:brightness(1.35)}}
 .plh{display:flex;gap:6px;min-height:30px;margin-top:10px;overflow:hidden}
 .plh span{flex:none;padding:6px 10px;border-radius:10px;font-weight:800;font-size:13px;color:#2a1600;background:var(--sc);animation:rise .3s ease}
 /* каталог */
@@ -242,7 +252,7 @@ img{opacity:0;transition:opacity .35s ease}img.ld{opacity:1}
 </header>
 
 <main id="v-games" hidden>
-  <div class="gsw"><button class="chip on" data-g="mines">💣 Мины</button><button class="chip" data-g="upgrade">🚀 Апгрейд</button><button class="chip" data-g="plinko">🔴 Плинко</button></div>
+  <div class="gsw glass"><i class="lens" aria-hidden="true"></i><button class="on" data-g="mines"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="14" r="7"/><path d="M15.5 9.5 18 7M18 7l1.5-1.5M18 7h2M18 7V5"/></svg>Мины</button><button data-g="upgrade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Апгрейд</button><button data-g="plinko"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.4"/><circle cx="8" cy="10" r="1.4"/><circle cx="16" cy="10" r="1.4"/><circle cx="4" cy="15" r="1.4"/><circle cx="12" cy="15" r="1.4"/><circle cx="20" cy="15" r="1.4"/><path d="M3 20h18"/></svg>Плинко</button></div>
   <section id="g-mines"></section>
   <section id="g-upgrade" hidden></section>
   <section id="g-plinko" hidden></section>
@@ -269,7 +279,7 @@ img{opacity:0;transition:opacity .35s ease}img.ld{opacity:1}
 
 <main id="v-bonus" hidden><div id="bonusCase"></div></main>
 
-<nav class="tabs"><button data-t="games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M7 10v4M5 12h4"/><circle cx="15.5" cy="13" r=".6" fill="currentColor"/><circle cx="18" cy="10.8" r=".6" fill="currentColor"/></svg>Игры</button><button data-t="cases" class="on"><span class="fb">FREE</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Кейсы</button><button data-t="earn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Заработок</button><button data-t="bonus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>Бонусы</button></nav>
+<nav class="tabs glass"><i class="lens" aria-hidden="true"></i><button data-t="games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M7 10v4M5 12h4"/><circle cx="15.5" cy="13" r=".6" fill="currentColor"/><circle cx="18" cy="10.8" r=".6" fill="currentColor"/></svg>Игры</button><button data-t="cases" class="on"><span class="fb">FREE</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Кейсы</button><button data-t="earn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Заработок</button><button data-t="bonus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>Бонусы</button></nav>
 
 <div class="ov" id="ovCase"><div class="ovi" id="caseIn"></div></div>
 <div class="ov z2" id="ovProf"><div class="ovi" id="profIn"></div></div>
@@ -282,6 +292,11 @@ const markImg=e=>{const t=e.target;if(t&&t.tagName=='IMG')t.classList.add('ld')}
 document.addEventListener('load',markImg,true);document.addEventListener('error',markImg,true);
 new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType!=1)continue;
   (n.tagName=='IMG'?[n]:n.querySelectorAll('img')).forEach(i=>{if(i.complete)i.classList.add('ld')})}}).observe(document.documentElement,{childList:true,subtree:true});
+// клавиатура: прячем нижнее меню, тап мимо поля ввода закрывает клавиатуру
+document.addEventListener('focusin',e=>{if(e.target.matches('input'))document.body.classList.add('kb')});
+document.addEventListener('focusout',()=>setTimeout(()=>{if(!document.activeElement?.matches?.('input'))document.body.classList.remove('kb')},50));
+document.addEventListener('touchstart',e=>{const a=document.activeElement;if(a&&a.matches('input')&&!e.target.closest('input,label.amt,.bet'))a.blur()},{passive:true});
+document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.matches('input'))e.target.blur()});
 // iOS: запрет зума щипком и двойным тапом
 ['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 const tg=window.Telegram?.WebApp||{initData:'',ready(){},expand(){},BackButton:{show(){},hide(){},onClick(){}},HapticFeedback:null,isVersionAtLeast:()=>false,openTelegramLink:u=>open(u),openInvoice(){},shareToStory(){},shareMessage(){}};
@@ -289,6 +304,8 @@ tg.ready();tg.expand();try{tg.setHeaderColor('#171828');tg.setBackgroundColor('#
 const $=id=>document.getElementById(id),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const STAR='<svg class="st" viewBox="0 0 24 24"><polygon points="12.00,2.90 14.88,8.94 21.51,9.81 16.66,14.41 17.88,20.99 12.00,17.80 6.12,20.99 7.34,14.41 2.49,9.81 9.12,8.94" fill="url(#tgS)" stroke="url(#tgS)" stroke-width="2.2" stroke-linejoin="round"/><polygon points="12.00,7.20 13.47,10.38 16.95,10.79 14.38,13.17 15.06,16.61 12.00,14.90 8.94,16.61 9.62,13.17 7.05,10.79 10.53,10.38" fill="#fff6c2" opacity=".55" stroke="#fff6c2" stroke-width="1" stroke-linejoin="round"/></svg>';
 const COIN='<svg class="coin" viewBox="0 0 64 64"><circle cx="32" cy="33" r="30" fill="url(#tgG)"/><polygon points="32.00,10.00 38.94,24.45 54.83,26.58 43.22,37.65 46.11,53.42 32.00,45.80 17.89,53.42 20.78,37.65 9.17,26.58 25.06,24.45" fill="url(#tgS)" stroke="url(#tgS)" stroke-width="5" stroke-linejoin="round"/><polygon points="32.00,20.30 35.53,27.95 43.89,28.94 37.71,34.65 39.35,42.91 32.00,38.80 24.65,42.91 26.29,34.65 20.11,28.94 28.47,27.95" fill="#fff6c2" opacity=".5" stroke="#fff6c2" stroke-width="2" stroke-linejoin="round"/></svg>';
+const GEM='<svg viewBox="0 0 24 24"><path d="M7 3h10l4 6-9 12L3 9z" fill="#5ff2c3"/><path d="M3 9h18M7 3l5 6 5-6M12 9v12" stroke="#1d8f6f" stroke-width="1.2" fill="none" stroke-linejoin="round"/><path d="M7 3 3 9h4.5z" fill="#b8ffe9" opacity=".7"/></svg>';
+const BOMB='<svg viewBox="0 0 24 24"><circle cx="11" cy="14" r="7" fill="#2b2d45" stroke="#ff5a6e" stroke-width="1.6"/><circle cx="8.6" cy="11.6" r="1.6" fill="#ffffff55"/><path d="M15.5 9.5 17.5 7.5" stroke="#c9cbe4" stroke-width="2" stroke-linecap="round"/><path d="M19 4.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" fill="#ffc83d"/></svg>';
 const IC={x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
  sort:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4"/></svg>',
@@ -332,14 +349,17 @@ const sfx={tick:()=>tone(1400,{d:.03,v:.015}),pop:n=>tone(523.25*Math.pow(2,SCAL
   big:()=>[523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>tone(f,{d:.6,v:.035,at:i*.09}))};
 
 /* ---------- вкладки ---------- */
-function setTab(t){tab=t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));
+function moveLens(bar){const on=bar&&bar.querySelector('button.on'),l=bar&&bar.querySelector('.lens');if(!on||!l||!on.offsetWidth)return;
+  l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`}
+addEventListener('resize',()=>$$('.glass').forEach(moveLens));
+function setTab(t){tab=t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));moveLens($$('.tabs')[0]);if(t=='games')requestAnimationFrame(()=>moveLens($('v-games').querySelector('.gsw')));
   ['games','cases','earn','bonus'].forEach(k=>$('v-'+k).hidden=k!=t);scrollTo(0,0);if(t=='bonus')renderBonus()}
 $$('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
 
 /* ---------- кейсы ---------- */
-const CATS=[['all','Все'],['free','Бесплатные'],['change','На сдачу'],['fifty','50/50'],['premium','Премиум'],['coll','Коллекции']];
-const CAT_T={free:'Бесплатные',change:'На сдачу',fifty:'50/50',premium:'Премиум',coll:'Коллекции'};
-const CAT_GL={free:'#3ee08f55',change:'#8b6cff66',fifty:'#ffc83d55',premium:'#ff5a6e55',coll:'#4f9dff66'};
+const CATS=[['all','Все'],['free','Бесплатные'],['change','На сдачу'],['theme','Тематические'],['fifty','50/50'],['premium','Премиум'],['coll','Коллекции']];
+const CAT_T={free:'Бесплатные',change:'На сдачу',theme:'Тематические',fifty:'50/50',premium:'Премиум',coll:'Коллекции'};
+const CAT_GL={free:'#3ee08f55',change:'#8b6cff66',theme:'#e05ce266',fifty:'#ffc83d55',premium:'#ff5a6e55',coll:'#4f9dff66'};
 function renderChips(){$('chips').innerHTML=`<button class="chip ic" id="sbtn" aria-label="Поиск">${IC.search}</button>`+
   CATS.map(([k,t])=>`<button class="chip ${filt==k?'on':''}" data-f="${k}">${t}</button>`).join('')+
   `<button class="chip" id="allnft">Все NFT</button><button class="chip ic" id="sort" aria-label="Сортировка по цене">${IC.sort}</button>`;
@@ -473,7 +493,7 @@ function renderMines(){const el=$('g-mines'),g=M.g,live=g&&g.status=='live',k=g?
   <div class="box seg"><button data-m="bal" class="${M.mode=='bal'?'on':''}">Балансом</button><button data-m="gift" class="${M.mode=='gift'?'on':''}">Подарком</button></div>
   ${M.mode=='bal'?`<div class="box"><div class="bet">${STAR}<input id="mBet" inputmode="numeric" value="${live?g.bet:M.bet}" ${live?'disabled':''} aria-label="Ставка"></div><button class="sb" data-b="h">½</button><button class="sb" data-b="d">2×</button><button class="sb" data-b="max" style="color:#fff">МАКС</button></div>`
    :`<div class="box"><button class="gsel" id="mGift">${M.gift?`<img src="${esc(imgOf(M.gift,128))}" alt=""><span style="min-width:0"><b>${title(M.gift)}</b><small>${num(M.gift.value)} ${STAR}</small></span>`:'<span style="color:var(--mut);padding:12px 6px">Выберите подарок из инвентаря</span>'}</button></div>`}
-  <div class="row2"><div class="box"><button class="sb" data-bm="-1" aria-label="Меньше мин">−</button><span class="cnt">💣 ${b}</span><button class="sb" data-bm="1" aria-label="Больше мин">+</button></div>
+  <div class="row2"><div class="box"><button class="sb" data-bm="-1" aria-label="Меньше мин">−</button><span class="cnt">${BOMB}${b}</span><button class="sb" data-bm="1" aria-label="Больше мин">+</button></div>
    <div class="box seg"><button data-a="0" class="${M.auto?'':'on'}">Ручная</button><button data-a="1" class="${M.auto?'on':''}">Авто</button></div></div>
   <button class="btn" id="mGo" style="margin-top:12px"></button>
   ${M.auto&&!live?`<p class="maxw" style="justify-content:center">Выберите клетки на поле: ${M.sel.size}</p>`:''}`;
@@ -497,8 +517,8 @@ const profit=(bet,b,s)=>{const v=Math.floor(bet*mMult(b,s))-bet;return v<1?'&lt;
 const betVal=()=>Math.max(1,M.bet|0);
 function cellHtml(i){const g=M.g;let cls='cell',inner='';
   if(g){const op=g.opened.includes(i),f=g.field;
-    if(op&&f&&f.includes(i)){cls+=' bomb';inner='💣'}else if(op){cls+=' gem';inner='💎'}
-    else if(f){if(f.includes(i)){cls+=' bomb dim';inner='💣'}else{cls+=' gem dim';inner='💎'}}}
+    if(op&&f&&f.includes(i)){cls+=' bomb';inner=BOMB}else if(op){cls+=' gem';inner=GEM}
+    else if(f){if(f.includes(i)){cls+=' bomb dim';inner=BOMB}else{cls+=' gem dim';inner=GEM}}}
   if(M.auto&&M.sel.has(i)&&!(g&&g.status=='live'))cls+=' sel';
   return `<button class="${cls}" data-i="${i}" aria-label="Клетка ${i+1}">${inner}</button>`}
 function cellClick(i){const g=M.g;
@@ -563,11 +583,11 @@ async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
     U.busy=false;renderUpgrade();await load();
     if(r.ok)showWins([r.win]);else toast('Не повезло — попробуйте ещё')}
   catch(e){U.busy=false;toast(e.message);renderUpgrade()}}
-$$('.gsw .chip').forEach(b=>b.onclick=()=>{$$('.gsw .chip').forEach(x=>x.classList.toggle('on',x==b));
+$$('.gsw button').forEach(b=>b.onclick=()=>{$$('.gsw button').forEach(x=>x.classList.toggle('on',x==b));moveLens($('v-games').querySelector('.gsw'));
   ['mines','upgrade','plinko'].forEach(g=>$('g-'+g).hidden=b.dataset.g!=g);if(b.dataset.g=='plinko')renderPlinko()});
 
 /* ---------- плинко ---------- */
-const P={bet:10,risk:'mid',rows:12,balls:[],flash:{},hist:[],geo:null,raf:0,inflight:0};
+const P={bet:10,risk:'mid',rows:12,balls:[],flash:{},hitAt:{},hist:[],geo:null,raf:0,inflight:0};
 const RISK=[['low','Низкий'],['mid','Средний'],['high','Высокий']];
 const plTable=()=>(S?.plinko?.[P.rows]||S?.plinko?.[String(P.rows)]||{})[P.risk]||[];
 const slotColor=(k,n)=>{const d=Math.abs(k-n/2)/(n/2);return `hsl(${48-50*d} 95% ${60-6*d}%)`};
@@ -575,7 +595,7 @@ const fmtX=m=>(+m).toString().replace('.',',')+'×';
 const plBusy=()=>P.balls.length||P.inflight;
 const fmtS=m=>(m>=10?Math.round(m):+m).toString().replace('.',',');
 function renderPlinko(){const el=$('g-plinko');if(!el||!S||plBusy())return;const t=plTable();
-  el.innerHTML=`<div class="plb"><canvas id="plc"></canvas><div class="pls" id="pls">${t.map((m,k)=>`<div style="--sc:${slotColor(k,P.rows)}">${fmtS(m)}</div>`).join('')}</div></div>
+  el.innerHTML=`<div class="plb"><canvas id="plc" aria-label="Поле плинко"></canvas></div>
   <div class="plh" id="plh">${P.hist.map(h=>`<span style="--sc:${h.c}">${fmtX(h.m)}</span>`).join('')}</div>
   <div class="box"><div class="bet">${STAR}<input id="pBet" inputmode="numeric" value="${P.bet}" aria-label="Ставка"></div><button class="sb" data-pb="h">½</button><button class="sb" data-pb="d">2×</button><button class="sb" data-pb="max" style="color:#fff">МАКС</button></div>
   <div class="box seg">${RISK.map(([k,t])=>`<button data-pr="${k}" class="${P.risk==k?'on':''}">${t}</button>`).join('')}</div>
@@ -589,27 +609,31 @@ function renderPlinko(){const el=$('g-plinko');if(!el||!S||plBusy())return;const
   $$('[data-pn]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.rows=+b.dataset.pn;renderPlinko()});
   $('pGo').onclick=drop;plLayout()}
 function plLayout(){const cv=$('plc');if(!cv)return;const W=cv.clientWidth;if(!W)return;
-  const R=P.rows,dx=W/(R+2),dy=dx*.86,top=dx*.7,H=top+(R-1)*dy+dx*.55,dpr=Math.min(2,devicePixelRatio||1);
+  const R=P.rows,dx=W/(R+2),dy=dx*.86,top=dx*.7,sy=top+(R-1)*dy+dx*.6,sh=Math.max(24,Math.min(34,dx*1.15)),H=sy+sh+8,dpr=Math.min(2,devicePixelRatio||1);
   cv.style.height=H+'px';cv.width=W*dpr;cv.height=H*dpr;const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);
-  $('pls').style.padding=`0 ${dx/2-1}px`;$('pls').style.setProperty('--fs',Math.max(7.5,Math.min(13,dx*.4))+'px');
-  P.geo={W,H,R,dx,dy,top,pr:Math.max(2.2,dx*.12),br:Math.max(4,dx*.24),x};plDraw()}
+  P.geo={W,H,R,dx,dy,top,sy,sh,fs:Math.max(8,Math.min(13,dx*.4)),pr:Math.max(2.2,dx*.12),br:Math.max(4,dx*.24),x,t:plTable()};plDraw()}
+function rr(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()}
 const pegX=(i,j)=>P.geo.W/2+(j-(i+2)/2)*P.geo.dx;
 function plDraw(){const g=P.geo;if(!g)return;const{x,W,H,R,dy,top,pr,br}=g;x.clearRect(0,0,W,H);
   for(let i=0;i<R;i++)for(let j=0;j<i+3;j++){const f=P.flash[i+':'+j]||0;x.beginPath();x.arc(pegX(i,j),top+i*dy,pr+f*2,0,6.283);
     x.fillStyle=f?`rgba(255,${200+55*f|0},${120+135*f|0},${.6+.4*f})`:'#c9cbf0';x.shadowColor=f?'#ffd23f':'transparent';x.shadowBlur=f?12*f:0;x.fill()}
-  x.shadowBlur=0;
+  x.shadowBlur=0;const now=performance.now();x.textAlign='center';x.textBaseline='middle';x.font=`800 ${g.fs}px Manrope, system-ui, sans-serif`;
+  for(let k=0;k<=R;k++){const age=now-(P.hitAt[k]||0),off=age<450?Math.sin(age/450*Math.PI)*5:0,X=g.dx/2+k*g.dx+1,w=g.dx-2,c=slotColor(k,R);
+    x.fillStyle='rgba(0,0,0,.35)';rr(x,X,g.sy+3,w,g.sh,6);x.fill();
+    x.fillStyle=c;rr(x,X,g.sy+off,w,g.sh,6);x.fill();if(off){x.fillStyle='rgba(255,255,255,.25)';x.fill()}
+    x.fillStyle='#2a1600';x.fillText(fmtS(g.t[k]??0),X+w/2,g.sy+off+g.sh/2+.5)}
   for(const b of P.balls){const gr=x.createRadialGradient(b.x-br*.35,b.y-br*.35,br*.2,b.x,b.y,br);gr.addColorStop(0,'#fff3c4');gr.addColorStop(1,'#ff5a6e');
     x.beginPath();x.arc(b.x,b.y,br,0,6.283);x.fillStyle=gr;x.shadowColor='#ff5a6e';x.shadowBlur=10;x.fill();x.shadowBlur=0}}
 function plLoop(){const now=performance.now(),g=P.geo;if(!g){P.raf=0;return}const seg=fast?70:125;
   for(const k in P.flash){P.flash[k]-=.06;if(P.flash[k]<=0)delete P.flash[k]}
   P.balls=P.balls.filter(b=>{const t=(now-b.t0)/seg,i=Math.floor(t),f=t-i;const R=g.R;
-    const xs=r=>g.W/2+(b.path.slice(0,r).reduce((a,v)=>a+v,0)-r/2)*g.dx, ys=r=>r<R?g.top+r*g.dy-g.pr-g.br:g.H+g.br;
+    const xs=r=>g.W/2+(b.path.slice(0,r).reduce((a,v)=>a+v,0)-r/2)*g.dx, ys=r=>r<R?g.top+r*g.dy-g.pr-g.br:g.sy+g.sh/2;
     if(i<0){b.x=g.W/2;b.y=-g.br+(ys(0)+g.br)*Math.max(0,1+t)**2;return true}
     if(i>=R){land(b);return false}
     if(i!==b.hit){b.hit=i;const j=b.path.slice(0,i).reduce((a,v)=>a+v,0)+1;P.flash[i+':'+j]=1;if(sound&&i%2==0)tone(900+i*40,{d:.03,v:.012})}
     const x0=xs(i),x1=xs(i+1),y0=ys(i),y1=ys(i+1);b.x=x0+(x1-x0)*f;b.y=y0+(y1-y0)*f*f-g.dy*.42*Math.sin(Math.PI*f);return true});
-  plDraw();P.raf=(P.balls.length||Object.keys(P.flash).length)?requestAnimationFrame(plLoop):0}
-function land(b){const g=P.geo,sl=$('pls')?.children[b.res.slot];if(sl){sl.classList.remove('hit');void sl.offsetWidth;sl.classList.add('hit')}
+  plDraw();P.raf=(P.balls.length||Object.keys(P.flash).length||Object.values(P.hitAt).some(t=>now-t<460))?requestAnimationFrame(plLoop):0}
+function land(b){const g=P.geo;P.hitAt[b.res.slot]=performance.now();
   S.balance+=b.res.payout;$('balv').textContent=num(S.balance);
   const m=b.res.mult;if(m>=2){sfx.win();hap('ok')}else if(m>=1)sfx.pop(4);else tone(330,{d:.18,v:.03});
   P.hist.unshift({m,c:slotColor(b.res.slot,g.R)});P.hist=P.hist.slice(0,8);const h=$('plh');
@@ -738,5 +762,5 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
     ...first.map(u=>new Promise(r=>{const i=new Image();i.onload=i.onerror=()=>{done++;bootP(65+30*done/first.length);r()};i.src=u})),
     document.fonts?document.fonts.ready:0]),wait(5000)]);
   bootP(100);await wait(Math.max(250,600-(Date.now()-t0)));
-  document.body.classList.add('ready');setTimeout(()=>$('boot')?.remove(),600)})();
+  document.body.classList.add('ready');$$('.glass').forEach(moveLens);setTimeout(()=>$('boot')?.remove(),600)})();
 </script></body></html>
