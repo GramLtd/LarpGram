@@ -346,7 +346,7 @@ const IC={x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
  help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.8"/><circle cx="12" cy="17.3" r=".6" fill="currentColor"/></svg>'};
 $('bal').querySelector('.ic').innerHTML=STAR;$$('.sti').forEach(e=>e.outerHTML=STAR);
 
-let S=null,CAT=[],FL={},TS=69,left=0,filt='all',asc=true,query='',tab='cases';
+let S=null,CAT=[],FL={},VAL={},TS=69,left=0,filt='all',asc=true,query='',tab='cases';
 let fast=false,sound=true;try{fast=localStorage.gmFast=='1';sound=localStorage.gmSnd!='0'}catch(e){}
 const save=()=>{try{localStorage.gmFast=fast?'1':'0';localStorage.gmSnd=sound?'1':'0'}catch(e){}};
 const toast=t=>{const e=$('toast');t=String(t);e.innerHTML=t.includes('<svg')?t:esc(t).replace(/\u2B50/g,STAR);e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2800)};
@@ -365,8 +365,7 @@ const valOf=p=>p.stars??p.value;
 const tierV=(v,base)=>{const r=v/Math.max(base,1);return r>=10?3:r>=3?2:r>=1?1:0};
 const tierP=pm=>pm<=5?3:pm<=10?2:pm<=20?1:0;
 const pct=(p,c)=>{const t=c.prizes.reduce((a,x)=>a+x.weight,0),v=p.weight/t*100;return (v<0.01?'<0.01':v<1?v.toFixed(2):v<10?v.toFixed(1):Math.round(v))+'%'};
-const mult=pm=>Math.min(6,Math.max(1,Math.pow(20/Math.max(pm,1),.55)));
-const nftVal=(g,pm)=>Math.round((FL[g]??4.5)*TS*mult(pm));
+const nftVal=(g,m)=>VAL[g]?.[m]??0; // цены моделей приходят с сервера (/api/catalog)
 const isFree=c=>c.price==0;
 /* звук */
 let AC;const ac=()=>{try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume();return AC}catch(e){return null}};
@@ -606,7 +605,7 @@ function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
   const bi=$('uBet');if(bi)bi.onchange=()=>{U.src.value=Math.max(1,parseInt(bi.value.replace(/\D/g,''))||1);U.res=null;renderUpgrade()};
   $$('[data-k]',el).forEach(b=>b.onclick=()=>{if(!U.src.value)return toast('Сначала выберите, что улучшаем');U.target=nearest(U.src.value*+b.dataset.k);U.res=null;renderUpgrade()});
   $('uGo').onclick=doUpgrade}
-function allModels(){if(allModels.c)return allModels.c;return allModels.c=CAT.flatMap(g=>g.models.map(([m,pm])=>({kind:'nft',gift:g.name,model:m,pm,img:mimg(g.name,m),value:nftVal(g.name,pm)})))}
+function allModels(){if(allModels.c)return allModels.c;return allModels.c=CAT.flatMap(g=>g.models.map(([m,pm])=>({kind:'nft',gift:g.name,model:m,pm,img:mimg(g.name,m),value:nftVal(g.name,m)})))}
 function nearest(v){const a=allModels().filter(p=>p.value>U.src.value);if(!a.length)return null;
   const best=a.reduce((b,p)=>Math.abs(Math.log(p.value/v))<Math.abs(Math.log(b.value/v))?p:b);const close=a.filter(p=>p.value>=best.value*.97&&p.value<=best.value*1.03);return close[Math.random()*close.length|0]}
 async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
@@ -698,7 +697,7 @@ function renderCat(){const total=CAT.reduce((a,g)=>a+g.models.length,0);
   <div id="catList" style="margin-top:12px"></div>`;
   $('catX').onclick=closeCat;const qi=$('catQ');qi.oninput=()=>{catQ=qi.value.trim().toLowerCase();list()};list();
   function list(){const L=$('catList');
-    if(catQ||catColl){let ms=catColl?catColl.models.map(([m,pm])=>({kind:'nft',gift:catColl.name,model:m,pm,img:mimg(catColl.name,m),value:nftVal(catColl.name,pm)})):allModels();
+    if(catQ||catColl){let ms=catColl?catColl.models.map(([m,pm])=>({kind:'nft',gift:catColl.name,model:m,pm,img:mimg(catColl.name,m),value:nftVal(catColl.name,m)})):allModels();
       if(catQ)ms=ms.filter(p=>(p.gift+' '+p.model).toLowerCase().includes(catQ));
       if(catPick&&U.src.value)ms=ms.filter(p=>p.value>U.src.value);
       const shown=ms.slice(0,180);
@@ -706,7 +705,7 @@ function renderCat(){const total=CAT.reduce((a,g)=>a+g.models.length,0);
         `<div class="grid3">${shown.map((p,i)=>`<button class="pc t${tierP(p.pm)}" data-i="${i}"><span class="ch">${(p.pm/10).toLocaleString('ru-RU')}%</span><div class="pi"><img src="${esc(imgOf(p))}" alt="" loading="lazy" decoding="async"></div><b>${catColl?esc(p.model):esc(p.gift)+' · '+esc(p.model)}</b><em>${num(p.value)} ${STAR}</em></button>`).join('')}</div>`+(ms.length?'':'<p class="empty">Ничего не нашлось.</p>');
       $$('[data-i]',L).forEach(b=>b.onclick=()=>{const p=shown[+b.dataset.i];if(catPick){catPick(p);$('ovCat').classList.remove('on');afterClose()}})}
     else{const gs=[...CAT].sort((a,b)=>(FL[b.name]??4.5)-(FL[a.name]??4.5));
-      L.innerHTML=`<div class="grid3">${gs.map((g,i)=>{const m=g.models[g.models.length-1];return `<button class="coll" data-c="${esc(g.name)}"><div class="pi"><img src="${esc(mimg(g.name,m[0]))}" alt="" loading="lazy" decoding="async"></div><b>${esc(g.name)}</b><small>от ${num(nftVal(g.name,m[1]))} ${STAR}</small><small>${g.models.length} ${plural(g.models.length,'модель','модели','моделей')}</small></button>`}).join('')}</div>`;
+      L.innerHTML=`<div class="grid3">${gs.map((g,i)=>{const m=g.models[g.models.length-1];return `<button class="coll" data-c="${esc(g.name)}"><div class="pi"><img src="${esc(mimg(g.name,m[0]))}" alt="" loading="lazy" decoding="async"></div><b>${esc(g.name)}</b><small>от ${num(Math.min(...g.models.map(x=>nftVal(g.name,x[0]))))} ${STAR}</small><small>${g.models.length} ${plural(g.models.length,'модель','модели','моделей')}</small></button>`}).join('')}</div>`;
       $$('[data-c]',L).forEach(b=>b.onclick=()=>{catColl=CAT.find(g=>g.name==b.dataset.c);renderCat();$('ovCat').scrollTop=0})}}}
 
 /* ---------- профиль и инвентарь ---------- */
@@ -793,7 +792,7 @@ setInterval(()=>{if(left>0){left--;if(left==0){renderCases();renderBonus()}else 
 const bootP=v=>{const b=$('bootp');if(b)b.style.width=v+'%'};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{const t0=Date.now();bootP(15);
-  try{const [g,c]=await Promise.all([fetch('/static/gifts.json').then(r=>r.json()),fetch('/api/catalog').then(r=>r.json())]);CAT=g;TS=c.ton_stars;FL=c.floors_ton}catch(e){}
+  try{const [g,c]=await Promise.all([fetch('/static/gifts.json').then(r=>r.json()),fetch('/api/catalog').then(r=>r.json())]);CAT=g;TS=c.ton_stars;FL=c.floors_ton;for(const x of g)VAL[x.name]=Object.fromEntries(x.models.map(([m],i)=>[m,c.prices?.[x.name]?.[i]??0]))}catch(e){}
   bootP(40);
   try{await load()}catch(e){toast(e.message)}
   bootP(65);

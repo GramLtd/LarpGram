@@ -76,7 +76,7 @@ const num=n=>Math.round(n).toLocaleString('ru-RU');
 const toast=t=>{const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2600)};
 const CAT={free:'Бесплатный',change:'На сдачу',theme:'Тематический',fifty:'50/50',premium:'Премиум',coll:'Коллекция'};
 let T='';try{T=localStorage.adm||''}catch(e){}
-let view='stats',reqF='requested',open=new Set(),CATALOG=[],D={};
+let view='stats',reqF='requested',open=new Set(),CATALOG=[],D={},PQ='',POWN=0,PR=null;
 async function api(p,m='GET',b){const r=await fetch('/api/admin/'+p,{method:m,headers:{'X-Admin':T,'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
   if(r.status==401){logout();throw new Error('Неверный токен')}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||'Ошибка');return j}
 function logout(){T='';try{localStorage.removeItem('adm')}catch(e){}renderLogin()}
@@ -87,7 +87,7 @@ function renderLogin(){$('app').innerHTML=`<div class="login"><div class="logo">
 function moveLens(){const bar=document.querySelector('.glass'),on=bar?.querySelector('button.on'),l=bar?.querySelector('.lens');if(on&&l){l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`}}
 addEventListener('resize',moveLens);
 function start(){$('app').innerHTML=`<header class="top"><span class="logo">Gift<b>Mafia</b></span><span class="tag">админка</span><span class="sp"></span><button class="btn ghost sm" id="out">Выйти</button></header>
-  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Обзор</button><button data-v="req">Заявки</button><button data-v="cases">Кейсы</button></nav><main id="main"></main>`;
+  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Обзор</button><button data-v="req">Заявки</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button></nav><main id="main"></main>`;
   $('out').onclick=logout;$$('#nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
   fetch('/static/gifts.json').then(r=>r.json()).then(g=>CATALOG=g).catch(()=>{});
   load()}
@@ -112,6 +112,13 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
         ${w.status=='requested'?`<div class="acts"><button class="btn ok sm" data-w="${w.id}" data-a="sent">Отправлен</button><button class="btn bad sm" data-w="${w.id}" data-a="rejected">Отклонить</button></div>`:''}</div>`).join('')||'<p class="empty">Заявок нет.</p>'}</div>`;
     $$('[data-f]',M).forEach(b=>b.onclick=()=>{reqF=b.dataset.f;render()});
     $$('[data-a]',M).forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api(`win/${b.dataset.w}/${b.dataset.a}`,'POST');toast(b.dataset.a=='sent'?'Отмечено как отправленное':'Заявка отклонена');await load()}catch(e){toast(e.message);b.disabled=false}})}
+  if(view=='prices'){M.innerHTML=`<h2>Цены моделей<small id="pinfo"></small></h2>
+      <p style="color:var(--mut);margin-bottom:12px">У каждой модели своя цена. Без своей цены работает формула: флор коллекции × редкость модели × наценка за «дорогое» название (Gold, Midas, Black…). Своя цена сразу применяется в кейсах, продаже и апгрейде. После правок нажмите «Подогнать шансы» у нужных кейсов.</p>
+      <div class="price"><input class="inp" id="pq" style="flex:1;min-width:180px" placeholder="Поиск: коллекция или модель" value="${esc(PQ)}"><button class="chip ${POWN?'on':''}" id="pown">Только свои</button></div>
+      <div class="card" style="padding:4px 16px"><div id="plist"><p class="empty">Загрузка…</p></div></div>`;
+    let t;$('pq').oninput=e=>{clearTimeout(t);t=setTimeout(()=>{PQ=e.target.value;loadPrices()},300)};
+    $('pown').onclick=()=>{POWN=POWN?0:1;$('pown').classList.toggle('on',!!POWN);loadPrices()};
+    PR?renderPrices():0;loadPrices()}
   if(view=='cases'){const {cases,prizes}=D.p;
     M.innerHTML=`<h2>Кейсы и шансы<small>${cases.length} кейсов</small></h2>
       <p style="color:var(--mut);margin-bottom:12px">Шанс = вес / сумма весов. «Возврат» — средняя выплата от цены кейса: выше 100% кейс убыточен.</p>
@@ -121,15 +128,26 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
     $$('[data-price]',M).forEach(i=>i.onchange=()=>act(api(`case/${i.dataset.price}`,'PATCH',{price:i.value}),'Цена сохранена'));
     $$('[data-wt]',M).forEach(i=>i.onchange=()=>act(api(`prize/${i.dataset.wt}`,'PATCH',{weight:i.value}),'Вес сохранён'));
     $$('[data-del]',M).forEach(b=>b.onclick=()=>{if(confirm('Удалить приз?'))act(api(`prize/${b.dataset.del}`,'DELETE'),'Приз удалён')});
+    $$('[data-reb]',M).forEach(b=>b.onclick=()=>act(api(`case/${b.dataset.reb}/rebalance`,'POST'),'Шансы пересчитаны'));
     $$('[data-kind]',M).forEach(s=>s.onchange=()=>{const f=s.closest('.add');f.querySelector('.nf').style.display=s.value=='nft'?'contents':'none';f.querySelector('[name=stars]').style.display=s.value=='nft'?'none':''});
     $$('[name=gift]',M).forEach(i=>i.oninput=()=>{const g=CATALOG.find(x=>x.name==i.value),dl=$('ml'+i.dataset.c);dl.innerHTML=g?g.models.map(([m,p])=>`<option value="${esc(m)}">${p/10}%</option>`).join(''):''});
     $$('[data-addto]',M).forEach(b=>b.onclick=()=>{const f=b.closest('.add'),v=n=>f.querySelector(`[name=${n}]`).value;
       act(api('prize','POST',{case_id:b.dataset.addto,kind:v('kind'),gift:v('gift'),model:v('model'),stars:v('stars')||0,weight:v('weight')||1}),'Приз добавлен')})}}
+async function loadPrices(){try{PR=await api(`models?q=${encodeURIComponent(PQ)}&own=${POWN}`);if(view=='prices')renderPrices()}catch(e){toast(e.message)}}
+function renderPrices(){const L=$('plist');if(!L||!PR)return;
+  $('pinfo').textContent=`своих цен: ${PR.own}`+(PR.more?' · первые 80':'');
+  L.innerHTML=PR.items.map((x,i)=>`<div class="pz"><img src="${esc(x.img)}" alt="" loading="lazy"><div class="nm"><b>${esc(x.gift)} · ${esc(x.model)}</b>
+    <small>редкость ${(x.perm/10).toLocaleString('ru-RU')}% · формула ≈ ${num(x.formula)} ⭐${x.price?` · <span style="color:var(--gold)">своя ${num(x.price)} ⭐</span>`:''}</small></div>
+    <div class="pzc"><input class="inp n" type="number" min="1" placeholder="${x.formula}" value="${x.price||''}" data-mp="${i}" aria-label="Своя цена"><span class="pc">⭐</span>
+    <button class="x" data-mr="${i}" aria-label="Сбросить на формулу" ${x.price?'':'disabled style="opacity:.3"'}>↺</button></div></div>`).join('')||'<p class="empty">Ничего не нашлось.</p>';
+  const save=async(i,v)=>{const x=PR.items[i];try{const r=await api('model_price','POST',{gift:x.gift,model:x.model,stars:v});toast(v?`Цена: ${num(r.price)} ⭐`:'Цена сброшена на формулу');await loadPrices();D.p=await api('prizes')}catch(e){toast(e.message)}};
+  $$('[data-mp]',L).forEach(inp=>inp.onchange=()=>save(+inp.dataset.mp,parseInt(inp.value)||0));
+  $$('[data-mr]',L).forEach(b=>b.onclick=()=>save(+b.dataset.mr,0))}
 async function act(p,msg){try{await p;toast(msg);await load()}catch(e){toast(e.message)}}
 function caseHtml(c,ps){const W=ps.reduce((a,p)=>a+p.weight,0)||1,ev=ps.reduce((a,p)=>a+p.stars*p.weight,0)/W,rtp=c.price?ev/c.price*100:0;
   return `<div class="card case ${open.has(c.id)?'open':''}"><button class="ch" data-c="${c.id}"><div class="t"><b>${esc(c.title)}</b><small>${CAT[c.cat]||c.cat} · ${c.price?num(c.price)+' ⭐':'бесплатно'} · ${ps.length} призов</small></div>
     ${c.price?`<span class="rtp ${rtp>100?'hi':rtp<70?'lo':''}">возврат ${rtp.toFixed(0)}%</span>`:''}<span class="arrow">›</span></button>
-    <div class="cb">${c.price?`<div class="price">Цена <input class="inp n" type="number" min="1" value="${c.price}" data-price="${c.id}"> ⭐</div>`:''}
+    <div class="cb">${c.price?`<div class="price">Цена <input class="inp n" type="number" min="1" value="${c.price}" data-price="${c.id}"> ⭐<span class="sp"></span><button class="btn ghost sm" data-reb="${c.id}">Подогнать шансы под 85%</button></div>`:''}
     ${ps.map(p=>`<div class="pz">${p.img?`<img src="${esc(p.img)}" alt="" loading="lazy">`:'<span class="coin">⭐</span>'}<div class="nm"><b>${esc(p.name)}</b><small>≈ ${num(p.stars)} ⭐</small></div>
       <div class="pzc"><input class="inp n" type="number" step="any" min="0" value="${+p.weight.toPrecision(4)}" data-wt="${p.id}" aria-label="Вес"><span class="pc">${(p.weight/W*100).toFixed(p.weight/W<.01?2:1)}%</span><button class="x" data-del="${p.id}" aria-label="Удалить">×</button></div></div>`).join('')}
     <div class="add"><select class="inp" name="kind" data-kind><option value="nft">NFT</option><option value="stars">⭐ на баланс</option></select>

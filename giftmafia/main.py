@@ -1,4 +1,4 @@
-import asyncio, hashlib, hmac, io, json, math, os, random, secrets, sqlite3, time, urllib.parse, urllib.request
+import asyncio, functools, hashlib, hmac, io, json, math, os, random, re, secrets, sqlite3, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from urllib.parse import parse_qsl
 
@@ -24,7 +24,8 @@ REF_PERCENT = 10   # % от трат друга на кейсы
 MAX_MULTI = 5      # сколько платных кейсов можно открыть за раз
 STORY_MIN_DELAY = 20  # сек между нажатием "в сторис" и выводом
 CASE_RTP = 0.85    # средний возврат платного кейса (доля цены)
-ECONOMY_VERSION = "3"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
+FREE_NFT_CHANCE = 3  # % шанс NFT в бесплатном «Подарке дня»
+ECONOMY_VERSION = "4"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
 SELL_RATE = 0.9    # продажа подарка из инвентаря: доля оценки на баланс
 MINES_EDGE = 0.96  # множитель мин = EDGE * честный коэффициент
 MINES_MAX_WIN = 181818  # максимум выплаты за раунд мин, ⭐
@@ -63,18 +64,39 @@ FLOORS = {
     "Fresh Socks": 3.9, "Input Key": 3.9, "Happy Brownie": 3.8, "Spring Basket": 4.0, "Pretty Posy": 4.0, "Money Pot": 4.0,
 }
 
-def model_mult(permille):  # редкие модели дороже флора коллекции: 2% -> x1, 1% -> x1.4, 0.5% -> x2, 0.1% -> x4
-    return min(4.0, max(1.0, (20 / max(permille, 1)) ** 0.5))
-
 MODELS = {g: dict((m, p) for m, p in c["models"]) for g, c in CATALOG.items()}
+
+# ---------- цены моделей ----------
+# У каждой модели своя цена. Порядок: ручная цена из админки (вкладка «Цены») -> формула.
+# Формула примерная: самая частая модель коллекции стоит как флор, более редкие дороже по кривой,
+# модели с «дорогими» словами в названии (Gold, Midas, Black...) получают наценку, плюс небольшой
+# стабильный разброс, чтобы модели одинаковой редкости не стоили одинаково. Точные цены задавайте в админке.
+RARITY_POWER = 0.7     # крутизна наценки за редкость
+MAX_MODEL_MULT = 10.0  # самая дорогая модель максимум во столько раз дороже флора
+PREMIUM_WORDS = {"midas": 1.6, "gold": 1.35, "golden": 1.35, "diamond": 1.35, "platinum": 1.3, "rainbow": 1.3, "black": 1.25,
+                 "onyx": 1.25, "galaxy": 1.25, "cosmic": 1.25, "noir": 1.2, "ruby": 1.15, "emerald": 1.15, "sapphire": 1.15,
+                 "crystal": 1.15, "neon": 1.15, "silver": 1.1}
+OVR = {}  # (коллекция, модель) -> ⭐, ручные цены из админки
+
+
+def _jitter(gift, model):  # стабильный разброс 0.92..1.22 (одинаковый при каждом запуске)
+    return 0.92 + 0.3 * int(hashlib.md5(f"{gift}/{model}".encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
+
+
+@functools.lru_cache(maxsize=None)
+def formula_value(gift, model):
+    perms = MODELS[gift]; common = max(perms.values()) or 1
+    rarity = (common / max(perms[model], 1)) ** RARITY_POWER
+    word = max([PREMIUM_WORDS[w] for w in re.findall(r"[a-z]+", model.lower()) if w in PREMIUM_WORDS], default=1.0)
+    f = floor_stars(gift)
+    return max(f, round(f * min(MAX_MODEL_MULT, rarity * word * _jitter(gift, model))))
 
 def model_img(gift, model, size=256):  # лёгкое превью webp с нашего сервера, см. /img
     return f"/img/{size}?" + urllib.parse.urlencode({"g": gift, "m": model})
 
 def nft_value(gift, model):
-    perm = MODELS.get(gift, {}).get(model)
-    if perm is None: raise HTTPException(404, "Нет такой модели")
-    return round(FLOORS.get(gift, DEFAULT_FLOOR) * TON_STARS * model_mult(perm))
+    if model not in MODELS.get(gift, {}): raise HTTPException(404, "Нет такой модели")
+    return OVR.get((gift, model)) or formula_value(gift, model)
 
 def floor_stars(gift): return round(FLOORS.get(gift, DEFAULT_FLOOR) * TON_STARS)
 
@@ -90,6 +112,7 @@ CREATE TABLE IF NOT EXISTS wins(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id IN
   gift TEXT DEFAULT '', model TEXT DEFAULT '', img TEXT DEFAULT '', value INT DEFAULT 0, source TEXT DEFAULT 'case',
   status TEXT, story_at INT DEFAULT 0, shares INT DEFAULT 0, last_share INT DEFAULT 0, created INT);
 CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS model_prices(gift TEXT, model TEXT, stars INT, PRIMARY KEY(gift, model));
 CREATE TABLE IF NOT EXISTS plinko(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, rows INT, risk TEXT, slot INT, mult REAL, payout INT, created INT);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
@@ -104,6 +127,9 @@ def run(sql, *a):
     c = db.execute(sql, a); db.commit(); return c.lastrowid
 def changed(sql, *a):  # сколько строк обновлено (атомарные списания)
     c = db.execute(sql, a); db.commit(); return c.rowcount
+
+
+OVR.update({(r["gift"], r["model"]): r["stars"] for r in db.execute("SELECT * FROM model_prices")})
 
 
 # ---------- кейсы ----------
@@ -167,8 +193,11 @@ def build_cases():
     run("DELETE FROM prizes"); run("DELETE FROM cases")
     rng = random.Random(11)
     C = []  # (id, title, price, cat, items, rtp)
-    free = [stars_item(n) for n in (1, 2, 3, 5, 10, 25)] + [near(v, rng) for v in (260, 280, 300, 330)]
-    C.append((1, "Подарок дня", 0, "free", free, None))
+    cheapest, seen = [], set()  # 8 самых дешёвых моделей разных подарков
+    for v, g, m in sorted((nft_value(g, m), g, m) for g in CATALOG for m in MODELS[g]):
+        if g not in seen: seen.add(g); cheapest.append(nft_item(g, m))
+        if len(cheapest) == 8: break
+    C.append((1, "Подарок дня", 0, "free", [stars_item(n) for n in (1, 2, 3, 5, 10, 25)] + cheapest, None))
     for i, (t, p) in enumerate([("Мелочь", 49), ("Сдача", 99), ("Копилка", 149), ("Заначка", 249), ("Кошелёк", 399), ("Сейф", 749)]):
         items = [stars_item(round(p * k)) for k in (0.2, 0.4, 0.6, 0.8)]
         items += [near(p * k, rng) for k in (1.3, 2, 3, 5, 8, 15, 30)]
@@ -198,11 +227,14 @@ def build_cases():
         C.append((100 + i, g, p, "coll", items, CASE_RTP))
     for cid, title, price, cat, items, rtp in C:
         run("INSERT INTO cases(id,title,price,emoji,cat) VALUES(?,?,?,?,?)", cid, title, price, "🎁", cat)
-        if cat == "fifty":  # честные 50/50: проигрыш - звёзды, выигрыш - NFT около x1.3
+        if cat == "free":  # звёзды 97%, NFT 3% поровну
+            nft = [it for it in items if it["kind"] == "nft"]
+            ws = [30, 25, 18, 13, 8, 3] + [FREE_NFT_CHANCE / len(nft)] * len(nft)
+        elif cat == "fifty":  # честные 50/50: проигрыш - звёзды, выигрыш - NFT около x1.3
             win = items[0]; lose = max(1, round(2 * CASE_RTP * price - win["stars"]))
             items, ws = [stars_item(lose), win], [50, 50]
         else:
-            ws = solve_weights([it["stars"] for it in items], price * rtp if rtp else 4)
+            ws = solve_weights([it["stars"] for it in items], price * rtp)
         for it, w in zip(items, ws):
             run("INSERT INTO prizes(case_id,kind,name,gift,model,img,stars,weight) VALUES(?,?,?,?,?,?,?,?)",
                 cid, it["kind"], it["name"], it["gift"], it["model"], it["img"], it["stars"], w)
@@ -439,10 +471,16 @@ def state(uid: int = Depends(auth)):
             "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "upgrade_max": UPGRADE_MAX_CHANCE}
 
 
+CATALOG_CACHE = {}
+
+
 @app.get("/api/catalog")
 def catalog():
     """Все коллекции с флором; модели и редкость — в /static/gifts.json."""
-    return {"ton_stars": TON_STARS, "floors_ton": {g: FLOORS.get(g, DEFAULT_FLOOR) for g in CATALOG}}
+    if not CATALOG_CACHE:
+        CATALOG_CACHE.update(ton_stars=TON_STARS, floors_ton={g: FLOORS.get(g, DEFAULT_FLOOR) for g in CATALOG},
+                             prices={g: [nft_value(g, m) for m, _ in c["models"]] for g, c in CATALOG.items()})
+    return CATALOG_CACHE
 
 
 @app.post("/api/free")
@@ -702,6 +740,48 @@ def a_prize_del(pid: int):
 @app.patch("/api/admin/case/{cid}", dependencies=[Depends(admin)])
 def a_case(cid: int, b: dict):
     run("UPDATE cases SET price=? WHERE id=? AND id!=1", int(b["price"]), cid); return {"ok": True}
+
+
+@app.get("/api/admin/models", dependencies=[Depends(admin)])
+def a_models(q: str = "", own: int = 0):
+    q = q.strip().lower(); out = []
+    for g, c in CATALOG.items():
+        for m, pm in c["models"]:
+            if own and (g, m) not in OVR: continue
+            if q and q not in f"{g} {m}".lower(): continue
+            out.append({"gift": g, "model": m, "perm": pm, "formula": formula_value(g, m), "price": OVR.get((g, m)), "img": model_img(g, m, 128)})
+            if len(out) >= 80: return {"items": out, "more": True, "own": len(OVR)}
+    return {"items": out, "more": False, "own": len(OVR)}
+
+
+@app.post("/api/admin/model_price", dependencies=[Depends(admin)])
+def a_model_price(b: dict):
+    g, m = b.get("gift", ""), b.get("model", "")
+    if m not in MODELS.get(g, {}): raise HTTPException(404, "Нет такой модели")
+    stars = int(b.get("stars") or 0)
+    if stars > 0: run("INSERT OR REPLACE INTO model_prices(gift,model,stars) VALUES(?,?,?)", g, m, stars); OVR[(g, m)] = stars
+    else: run("DELETE FROM model_prices WHERE gift=? AND model=?", g, m); OVR.pop((g, m), None)
+    v = nft_value(g, m)
+    run("UPDATE prizes SET stars=? WHERE kind='nft' AND gift=? AND model=?", v, g, m)
+    CATALOG_CACHE.clear()
+    return {"price": v}
+
+
+@app.post("/api/admin/case/{cid}/rebalance", dependencies=[Depends(admin)])
+def a_rebalance(cid: int):
+    """Подогнать шансы кейса под CASE_RTP после правки цен."""
+    c = q1("SELECT * FROM cases WHERE id=?", cid)
+    if not c or not c["price"]: raise HTTPException(400, "Только для платных кейсов")
+    ps = q("SELECT * FROM prizes WHERE case_id=?", cid)
+    if c["cat"] == "fifty" and len(ps) == 2:
+        lose = [p for p in ps if p["kind"] == "stars"]; win = [p for p in ps if p["kind"] == "nft"]
+        if lose and win: run("UPDATE prizes SET stars=? WHERE id=?", max(1, round(2 * CASE_RTP * c["price"] - win[0]["stars"])), lose[0]["id"])
+        return {"ok": True}
+    vals = [p["stars"] for p in ps]
+    if not vals or min(vals) >= c["price"] * CASE_RTP or max(vals) <= c["price"] * CASE_RTP:
+        raise HTTPException(400, "Нельзя подогнать: нужны призы дешевле и дороже цены кейса")
+    for p, w in zip(ps, solve_weights(vals, c["price"] * CASE_RTP)): run("UPDATE prizes SET weight=? WHERE id=?", w, p["id"])
+    return {"ok": True}
 
 
 @app.get("/api/admin/stats", dependencies=[Depends(admin)])
