@@ -98,6 +98,15 @@ async def load_emoji():
     print(f"emoji {name}: {len(CE)} -", " ".join(CE)); return len(CE)
 
 
+def E(v): return _html.escape(str(v if v is not None else ""), quote=False)
+def N(v): return f"{int(v):,}".replace(",", " ")
+
+
+def deposit_text(stars, bonus, how=""):
+    return (f"✅ <b>Баланс пополнен</b>\n\n<blockquote>⭐ <b>+{N(stars)}</b> на баланс" + (f"\n🎟 <b>+{N(bonus)}</b> бонус по промокоду" if bonus else "") +
+            (f"\n💳 {E(how)}" if how else "") + "</blockquote>\n\n🎁 Удачи в кейсах!")
+
+
 def ce(text):
     """HTML-текст -> те же эмодзи, обёрнутые в <tg-emoji> из набора (теги и уже обёрнутые эмодзи не трогаем)."""
     if not _CE_RE or not text: return text
@@ -682,12 +691,13 @@ async def start(m):
         [InlineKeyboardButton(text="🎁 Открыть GiftMafia", web_app=WebAppInfo(url=WEBAPP_URL), style="primary")],
         [InlineKeyboardButton(text="🎉 Подарок дня бесплатно", web_app=WebAppInfo(url=WEBAPP_URL), style="success")]])
     await m.answer_photo(FSInputFile("static/banner.jpg"), caption=(
-        "🎩 <b>GiftMafia</b>\n\n"
-        "📦 NFT-кейсы с подарками Telegram\n"
-        "💣 Мины, ⬆️ апгрейды и 🎯 плинко\n"
-        "🎁 Подарок дня — бесплатно каждые 24 часа\n"
+        "🎩 <b>GiftMafia</b> — NFT-подарки Telegram\n\n"
+        "<blockquote>📦 <b>Кейсы</b> с настоящими NFT-подарками\n"
+        "💣 <b>Мины</b>, ⬆️ <b>апгрейды</b> и 🎯 <b>плинко</b>\n"
+        "🎁 <b>Подарок дня</b> — бесплатно раз в 24 часа</blockquote>\n\n"
         "💬 Платим ⭐ за комментарии\n"
-        "👥 Приглашай друзей и получай ⭐"), parse_mode="HTML", reply_markup=kb)
+        "👥 Зовите друзей и получайте ⭐ с их игр\n\n"
+        "👇 <i>Жми кнопку и забирай первый подарок</i>"), parse_mode="HTML", reply_markup=kb)
 
 
 @dp.pre_checkout_query()
@@ -698,7 +708,7 @@ async def pre(p): await p.answer(ok=True)
 async def paid(m):
     amount = int(m.successful_payment.invoice_payload.split(":")[1])
     r = deposit(m.from_user.id, amount, "stars", m.successful_payment.telegram_payment_charge_id, amount, "XTR")
-    if r: await m.answer(f"✅ Баланс пополнен на ⭐ {r[0]}{f' + {r[1]} бонус по промокоду' if r[1] else ''}.")
+    if r: await m.answer(deposit_text(r[0], r[1]), parse_mode="HTML")
 
 
 # ---------- app ----------
@@ -838,13 +848,11 @@ def story(wid: int, uid: int = Depends(auth)):
     return {"ok": True}
 
 
-INVITE_TEXT = ("🎁 <b>GiftMafia — NFT-подарки Telegram</b>\n\n"
-               "📦 Кейсы с настоящими NFT\n"
-               "💣 Мины и 🚀 апгрейды\n"
-               "🎯 Плинко\n"
-               "🎉 Подарок дня — бесплатно\n"
-               "⭐ Звёзды за задания\n\n"
-               "👇 Заходи по моей ссылке")
+INVITE_TEXT = ("🎩 <b>GiftMafia</b> — NFT-подарки Telegram\n\n"
+               "<blockquote>📦 Кейсы с настоящими NFT\n"
+               "💣 Мины, ⬆️ апгрейды и 🎯 плинко\n"
+               "🎁 Подарок дня — бесплатно</blockquote>\n\n"
+               "👇 <b>Заходи по моей ссылке</b> и забирай бонус ⭐")
 
 
 @app.post("/api/invite/prepare")
@@ -862,9 +870,9 @@ async def invite_prepare(uid: int = Depends(auth)):
 @app.post("/api/win/{wid}/prepare")
 async def prepare(wid: int, uid: int = Depends(auth)):
     w = own_win(wid, uid)
-    text = (f"🎁 Я выиграл {w['prize']} в GiftMafia! Подарок дня бесплатно, "
-            f"забирай: https://t.me/{BOT_USERNAME}")
-    res = InlineQueryResultArticle(id=f"w{wid}", title="GiftMafia", input_message_content=InputTextMessageContent(message_text=text))
+    text = (f"🎉 <b>Я выиграл {E(w['prize'])}</b> в GiftMafia!\n\n"
+            f"<blockquote>🎁 Подарок дня — бесплатно каждый день</blockquote>\n\n👇 Забирай свой: https://t.me/{BOT_USERNAME}")
+    res = InlineQueryResultArticle(id=f"w{wid}", title="GiftMafia", input_message_content=InputTextMessageContent(message_text=text, parse_mode="HTML"))
     pm = await bot.save_prepared_inline_message(user_id=uid, result=res, allow_user_chats=True)
     return {"id": pm.id}
 
@@ -887,8 +895,9 @@ async def withdraw(wid: int, uid: int = Depends(auth)):
     if changed("UPDATE wins SET status='requested' WHERE id=? AND status='ready'", wid) == 0: raise HTTPException(400, "Уже подана заявка")
     if ADMIN_CHAT_ID:
         u = q1("SELECT * FROM users WHERE id=?", uid)
-        await bot.send_message(ADMIN_CHAT_ID, f"📦 Заявка #{wid}: {w['prize']} → @{u['username'] or u['id']} (id {uid})")
-    try: await bot.send_message(uid, f"📦 Заявка на вывод {w['prize']} принята.\n⏳ Вывод подарка в течение 24 ч.")
+        await bot.send_message(ADMIN_CHAT_ID, f"📦 <b>Заявка на вывод #{wid}</b>\n\n<blockquote>🎁 {E(w['prize'])}\n⭐ ≈ {N(w['value'])}\n"
+                                              f"👥 {('@' + E(u['username'])) if u['username'] else E(u['name'] or '')} · <code>{uid}</code></blockquote>", parse_mode="HTML")
+    try: await bot.send_message(uid, f"📦 <b>Заявка на вывод принята</b>\n\n<blockquote>🎁 {E(w['prize'])}</blockquote>\n\n⏳ Подарок придёт в течение <b>24 часов</b>", parse_mode="HTML")
     except Exception: pass
     return {"ok": True, "eta": "24 ч"}
 
@@ -931,7 +940,7 @@ def deposit(uid, stars, method, ext, amount=0, currency=""):
 
 
 async def notify_deposit(uid, stars, bonus, how):
-    try: await bot.send_message(uid, f"✅ Баланс пополнен на ⭐ {stars}{f' + {bonus} бонус по промокоду' if bonus else ''} ({how}).")
+    try: await bot.send_message(uid, deposit_text(stars, bonus, how), parse_mode="HTML")
     except Exception: pass
 
 
@@ -1066,7 +1075,7 @@ async def free_notify():
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎁 Открыть подарок дня", web_app=WebAppInfo(url=WEBAPP_URL + "?go=free"), style="success")]])
     for u in us:
         run("UPDATE users SET free_notified=last_free WHERE id=?", u["id"])
-        try: await bot.send_message(u["id"], "🎁 <b>Подарок дня снова доступен!</b>\n\nОткрой бесплатный кейс — внутри ⭐ и шанс на NFT 🎉", parse_mode="HTML", reply_markup=kb)
+        try: await bot.send_message(u["id"], "🎁 <b>Подарок дня снова доступен!</b>\n\n<blockquote>Внутри ⭐ звёзды и шанс на NFT-подарок 🎉</blockquote>\n\n👇 Открывай бесплатный кейс", parse_mode="HTML", reply_markup=kb)
         except Exception: pass
         await asyncio.sleep(0.05)
 
@@ -1080,7 +1089,7 @@ async def biz_conn(c):
         if not setting("gift_account") and c.user.username: run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:gift_account',?)", "@" + c.user.username)
     else: run("DELETE FROM meta WHERE k='biz_conn'")
     if ADMIN_CHAT_ID:
-        try: await bot.send_message(ADMIN_CHAT_ID, f"🎁 Бизнес-аккаунт @{c.user.username or c.user.id} {'подключён' if c.is_enabled else 'отключён'}: приём подарков {'включён' if c.is_enabled else 'выключен'}.")
+        try: await bot.send_message(ADMIN_CHAT_ID, f"🎁 <b>Приём подарков {'включён' if c.is_enabled else 'выключен'}</b>\n\n<blockquote>Бизнес-аккаунт @{E(c.user.username or c.user.id)} {'подключён к боту' if c.is_enabled else 'отключён от бота'}</blockquote>", parse_mode="HTML")
         except Exception: pass
 
 
@@ -1161,21 +1170,21 @@ def cm_chat(): return int(setting("cm_chat") or 0) or ADMIN_CHAT_ID
 async def cm_report(m, photos):
     """photos: [(file_id, file_unique_id)] - один отчёт (одно фото или альбом)."""
     uid = m.from_user.id
-    if setting("cm_on") != "1": return await m.answer("⏳ Программа «Комментарии» сейчас на паузе.")
+    if setting("cm_on") != "1": return await m.answer("⏳ <b>Программа «Комментарии» на паузе</b>\n\nСкоро вернёмся — следите за новостями.", parse_mode="HTML")
     st = cm_state(uid); left = st["max"] - st["today"] - st["pending"]
-    if left <= 0: return await m.answer(f"⏳ Лимит {st['max']} скриншотов в день. Счёт обнуляется в 00:00 МСК.")
+    if left <= 0: return await m.answer(f"⏳ <b>Дневной лимит</b>\n\n<blockquote>Сегодня можно отправить до <b>{N(st['max'])}</b> скриншотов</blockquote>\n\nСчёт обнуляется в <b>00:00 МСК</b>", parse_mode="HTML")
     fresh, dup = [], 0
     for f, u in photos:
         if len(fresh) >= left: break
         if not changed("INSERT OR IGNORE INTO cm_files(uid,created) VALUES(?,?)", u, int(time.time())): dup += 1
         else: fresh.append((f, u))
     over = len(photos) - len(fresh) - dup
-    if not fresh: return await m.answer("⚠️ Эти скриншоты уже отправлялись.")
+    if not fresh: return await m.answer("⚠️ <b>Эти скриншоты уже отправлялись</b>\n\nПовторы не засчитываются — пришлите новые.", parse_mode="HTML")
     run("INSERT OR IGNORE INTO users(id,username,name,created) VALUES(?,?,?,?)", uid, m.from_user.username, m.from_user.first_name, int(time.time()))
     rid = run("INSERT INTO cm_reports(user_id,n,files,status,created) VALUES(?,?,?,'pending',?)", uid, len(fresh), json.dumps([f for f, _ in fresh]), int(time.time()))
     if _cm_queue and cm_chat(): _cm_queue.put_nowait(rid)
-    await m.answer(f"📥 Отчёт #{rid} принят: {len(fresh)} {('скриншот', 'скриншота', 'скриншотов')[0 if len(fresh) % 10 == 1 and len(fresh) % 100 != 11 else 1 if 2 <= len(fresh) % 10 <= 4 and not 12 <= len(fresh) % 100 <= 14 else 2]}"
-                   f"{f' · повторы не засчитаны: {dup}' if dup else ''}{f' · сверх дневного лимита: {over}' if over else ''}.\nПосле проверки ⭐ придут на баланс.")
+    await m.answer(f"📥 <b>Отчёт #{rid} принят</b>\n\n<blockquote>🖼 Скриншотов: <b>{len(fresh)}</b>" + (f"\n⚠️ Повторы не засчитаны: {dup}" if dup else "") +
+                   (f"\n⏳ Сверх дневного лимита: {over}" if over else "") + "</blockquote>\n\n⭐ После проверки звёзды придут на баланс", parse_mode="HTML")
 
 
 # ---------- ID премиум-эмодзи прямо в боте ----------
@@ -1212,7 +1221,7 @@ async def emoji_ids(m):
         prev = e.offset + e.length
     if bound:
         run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:emoji_alias',?)", json.dumps(al, ensure_ascii=False)); await load_emoji()
-    await m.answer(("✅ Привязано: %d\n\n" % bound if bound else "🆔 ID премиум-эмодзи:\n\n") + "\n".join(lines) +
+    await m.answer(("✅ <b>Привязано: %d</b>\n\n" % bound if bound else "🆔 <b>ID премиум-эмодзи</b>\n\n") + "<blockquote>" + "\n".join(lines) + "</blockquote>" +
                    ("" if bound else "\n\nЧтобы привязать, пришлите обычный эмодзи и сразу за ним премиум: «🚀 + премиум-эмодзи». Можно несколько пар в одном сообщении."),
                    parse_mode="HTML")
 
@@ -1250,8 +1259,9 @@ async def cm_worker():
                 if len(part) == 1: await bot.send_photo(cm_chat(), part[0])
                 else: await bot.send_media_group(cm_chat(), [InputMediaPhoto(media=f) for f in part])
             st = cm_state(r["user_id"])
-            msg = await bot.send_message(cm_chat(), f"💬 Отчёт #{rid} · {r['n']} скр. · {('@' + r['username']) if r['username'] else (r['name'] or '')} (id {r['user_id']})\n"
-                                         f"Сегодня зачтено: {st['today']}", reply_markup=cm_kb(rid, r["n"]))
+            who = ("@" + E(r["username"])) if r["username"] else E(r["name"] or "")
+            msg = await bot.send_message(cm_chat(), f"💬 <b>Отчёт #{rid}</b>\n\n<blockquote>👥 {who} · <code>{r['user_id']}</code>\n🖼 Скриншотов: <b>{r['n']}</b>\n"
+                                         f"✅ Сегодня зачтено: <b>{N(st['today'])}</b></blockquote>", parse_mode="HTML", reply_markup=cm_kb(rid, r["n"]))
             run("UPDATE cm_reports SET mod_msg=? WHERE id=?", msg.message_id, rid)
         except Exception as e: print("cm send:", e)
         await asyncio.sleep(6)
@@ -1272,8 +1282,9 @@ def cm_decide(rid, act, by=0):
 
 async def cm_notify(r, act, reward):
     try:
-        await bot.send_message(r["user_id"], f"✅ Отчёт #{r['id']} зачтён: +{reward} ⭐ на баланс" if act != "no" else
-                               f"❌ Отчёт #{r['id']} отклонён. Проверьте правила: коммент с {setting('cm_mention')}, видно ник и текст.")
+        await bot.send_message(r["user_id"], f"✅ <b>Отчёт #{r['id']} зачтён</b>\n\n<blockquote>⭐ <b>+{N(reward)}</b> на баланс</blockquote>" if act != "no" else
+                               f"❌ <b>Отчёт #{r['id']} отклонён</b>\n\n<blockquote>Проверьте правила:\n• в комментарии есть {E(setting('cm_mention'))}\n• на скриншоте видно ваш ник и текст</blockquote>",
+                               parse_mode="HTML")
     except Exception: pass
 
 
@@ -1284,8 +1295,8 @@ async def cm_cb(c):
     res = cm_decide(int(rid), act, c.from_user.id)
     if not res: return await c.answer("Уже проверен")
     r, reward = res
-    await c.message.edit_text(c.message.text + ("\n\n❌ Отклонён" if act == "no" else f"\n\n✅ Зачтён{' с картинкой' if act == 'img' else ''}: +{reward} ⭐")
-                              + f" · {c.from_user.first_name}", reply_markup=None)
+    await c.message.edit_text(c.message.html_text + ("\n\n❌ <b>Отклонён</b>" if act == "no" else f"\n\n✅ <b>Зачтён{' с картинкой' if act == 'img' else ''}</b>: +{N(reward)} ⭐")
+                              + f" · {E(c.from_user.first_name)}", parse_mode="HTML", reply_markup=None)
     await c.answer("Готово"); await cm_notify(r, act, reward)
 
 
@@ -1294,18 +1305,18 @@ async def cm_start_msg(m):
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🖼 Наша картинка (+%d%%)" % st["img_bonus"], callback_data="cmimg", style="primary")],
                                                [InlineKeyboardButton(text="📊 Мой заработок", web_app=WebAppInfo(url=WEBAPP_URL + "?go=earn"), style="success")]])
     await m.answer(
-        f"💬 <b>Платим за комментарии с {setting('cm_mention')}</b>\n\n"
-        f"✈️ <b>Где писать</b>\n• TikTok: под видео с {setting('cm_tags')}\n• Telegram: в открытых чатах от 2 000 участников\n\n"
-        f"⭐ <b>Сколько платим</b>\n• {st['rate']:g} ⭐ за коммент\n• С нашей картинкой: +{st['img_bonus']}%\n• Выплата на баланс GiftMafia\n\n"
-        f"🔥 <b>Бонус дня</b>\n" + "\n".join(f"• от {k} комментов +{p}%" for k, p in CM_TIERS) + "\n⏳ Счёт обнуляется в 00:00 МСК\n\n"
-        f"📥 <b>Как отправить</b>\nПрисылайте сюда скриншоты своих комментариев (можно альбомом до 10 штук). "
-        f"На скрине должны быть видны ваш ник и текст с {setting('cm_mention')}.\nОдин скриншот — один коммент, повторы не засчитываются.",
+        f"💬 <b>Платим за комментарии</b> с {E(setting('cm_mention'))}\n\n"
+        f"✈️ <b>Где писать</b>\n<blockquote>• TikTok — под видео с {E(setting('cm_tags'))}\n• Telegram — в открытых чатах от 2 000 участников</blockquote>\n\n"
+        f"⭐ <b>Сколько платим</b>\n<blockquote>• <b>{st['rate']:g}</b> ⭐ за комментарий\n• С нашей картинкой <b>+{st['img_bonus']}%</b>\n• Выплата на баланс GiftMafia</blockquote>\n\n"
+        f"🔥 <b>Бонус дня</b>\n<blockquote>" + "\n".join(f"• от <b>{N(k)}</b> комментариев — <b>+{p}%</b>" for k, p in CM_TIERS) + "\n⏳ Обнуляется в 00:00 МСК</blockquote>\n\n"
+        f"📥 <b>Как отправить</b>\n<blockquote>Присылайте сюда скриншоты своих комментариев — можно альбомом до 10 штук.\n"
+        f"На скриншоте должны быть видны ваш ник и текст с {E(setting('cm_mention'))}.</blockquote>\n\n<i>1 скриншот = 1 комментарий, повторы не засчитываются</i>",
         parse_mode="HTML", reply_markup=kb)
 
 
 @dp.callback_query(F.data == "cmimg")
 async def cm_img(c):
-    await c.message.answer_photo(FSInputFile("static/cm_pic.jpg"), caption="🎁 Прикрепляйте эту картинку к комментарию — получите +%s%% ⭐" % setting("cm_img_bonus"))
+    await c.message.answer_photo(FSInputFile("static/cm_pic.jpg"), caption="🖼 <b>Наша картинка</b>\n\nПрикрепляйте её к комментарию — получите <b>+%s%%</b> ⭐" % E(setting("cm_img_bonus")), parse_mode="HTML")
     await c.answer()
 
 
@@ -1559,7 +1570,7 @@ async def a_win(wid: int, act: str):
     w = q1("SELECT * FROM wins WHERE id=?", wid)
     run("UPDATE wins SET status=? WHERE id=?", act, wid)
     if act == "sent":
-        try: await bot.send_message(w["user_id"], f"✅ Ваш подарок {w['prize']} отправлен! 🎁")
+        try: await bot.send_message(w["user_id"], f"✅ <b>Подарок отправлен!</b>\n\n<blockquote>🎁 {E(w['prize'])}</blockquote>\n\n🎉 Он уже в вашем профиле Telegram", parse_mode="HTML")
         except Exception: pass
     return {"ok": True}
 
