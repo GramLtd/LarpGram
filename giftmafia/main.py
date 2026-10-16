@@ -1,4 +1,4 @@
-import asyncio, hashlib, hmac, io, json, os, random, secrets, sqlite3, time, urllib.parse, urllib.request
+import asyncio, hashlib, hmac, io, json, math, os, random, secrets, sqlite3, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from urllib.parse import parse_qsl
 
@@ -23,14 +23,17 @@ REF_BONUS = 5      # ⭐ пригласившему за нового друга
 REF_PERCENT = 10   # % от трат друга на кейсы
 MAX_MULTI = 5      # сколько платных кейсов можно открыть за раз
 STORY_MIN_DELAY = 20  # сек между нажатием "в сторис" и выводом
-CASE_RTP = 0.88    # средний возврат платного кейса (доля цены)
+CASE_RTP = 0.85    # средний возврат платного кейса (доля цены)
+ECONOMY_VERSION = "2"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
 SELL_RATE = 0.9    # продажа подарка из инвентаря: доля оценки на баланс
 MINES_EDGE = 0.96  # множитель мин = EDGE * честный коэффициент
 MINES_MAX_WIN = 181818  # максимум выплаты за раунд мин, ⭐
 UPGRADE_EDGE = 0.9  # шанс апгрейда = стоимость источника / стоимость цели * EDGE
 UPGRADE_MAX_CHANCE = 0.8
 CELLS = 25
-TOPUP_MIN, TOPUP_MAX = 1, 10000  # пополнение на любую сумму в этих пределах, ⭐
+TOPUP_MIN, TOPUP_MAX = 50, 10000  # пополнение на любую сумму в этих пределах, ⭐
+PLINKO_RTP = 0.95  # средний возврат плинко
+PLINKO_MAX_BET = 10000
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
@@ -38,7 +41,7 @@ BOT_USERNAME = ""
 
 # ---------- каталог NFT ----------
 # static/gifts.json: все NFT-подарки Telegram и их модели с редкостью (обновить: python tools/fetch_gifts.py).
-# Данные и картинки моделей: api.changes.tg / cdn.changes.tg (@GiftChanges).
+# Данные и картинки моделей: api.changes.tg / cdn.changes.tg. Условие API: видимая благодарность в приложении (строка в профиле).
 CATALOG = {g["name"]: g for g in json.load(open("static/gifts.json", encoding="utf-8"))}
 TON_STARS = 69  # ⭐ за 1 TON, поменяйте под курс
 # Floor коллекций в TON (примерно, по маркетплейсам). Не указан — DEFAULT_FLOOR. Правьте под рынок и перезапускайте.
@@ -60,8 +63,8 @@ FLOORS = {
     "Fresh Socks": 3.9, "Input Key": 3.9, "Happy Brownie": 3.8, "Spring Basket": 4.0, "Pretty Posy": 4.0, "Money Pot": 4.0,
 }
 
-def model_mult(permille):  # редкие модели дороже флора коллекции
-    return min(6.0, max(1.0, (20 / max(permille, 1)) ** 0.55))
+def model_mult(permille):  # редкие модели дороже флора коллекции: 2% -> x1, 1% -> x1.4, 0.5% -> x2, 0.1% -> x4
+    return min(4.0, max(1.0, (20 / max(permille, 1)) ** 0.5))
 
 MODELS = {g: dict((m, p) for m, p in c["models"]) for g, c in CATALOG.items()}
 
@@ -86,6 +89,8 @@ CREATE TABLE IF NOT EXISTS prizes(id INTEGER PRIMARY KEY AUTOINCREMENT, case_id 
 CREATE TABLE IF NOT EXISTS wins(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, case_id INT, kind TEXT DEFAULT 'nft', prize TEXT, emoji TEXT DEFAULT '🎁',
   gift TEXT DEFAULT '', model TEXT DEFAULT '', img TEXT DEFAULT '', value INT DEFAULT 0, source TEXT DEFAULT 'case',
   status TEXT, story_at INT DEFAULT 0, shares INT DEFAULT 0, last_share INT DEFAULT 0, created INT);
+CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS plinko(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, rows INT, risk TEXT, slot INT, mult REAL, payout INT, created INT);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
 """)
@@ -129,34 +134,57 @@ def pick_models(gifts, count, rng, rare_first=False):
     return out
 
 
+NICE = [49, 79, 99, 149, 199, 249, 299, 399, 499, 749, 999, 1499, 1999, 2499, 2999, 3999, 4999, 7499, 9999, 14999, 19999,
+        24999, 29999, 39999, 49999, 74999, 99999, 149999, 199999, 299999]
+def nice(x): return min(NICE, key=lambda n: abs(n - x))
+
+
+def near(value, rng, pool=None, spread=0.15):
+    """Случайная модель NFT стоимостью около value (из всего каталога или из коллекций pool)."""
+    cands = [(g, m) for g in (pool or CATALOG) for m in MODELS[g]]
+    vals = {(g, m): nft_value(g, m) for g, m in cands}
+    best = min(cands, key=lambda k: abs(vals[k] - value))
+    close = [k for k in cands if abs(vals[k] - vals[best]) <= vals[best] * spread]
+    return nft_item(*rng.choice(close))
+
+
 def build_cases():
-    """Кейсы собираются из каталога. Цены/веса потом можно править в админке."""
-    rng = random.Random(7)
-    by_floor = sorted(CATALOG, key=floor_stars)
-    cheap = [g for g in by_floor if floor_stars(g) <= 6 * TON_STARS]
-    mid = [g for g in by_floor if 6 * TON_STARS < floor_stars(g) <= 40 * TON_STARS]
-    top = [g for g in by_floor if floor_stars(g) > 40 * TON_STARS]
-    C = []  # (id, title, price, cat, items)
-    C.append((1, "Подарок дня", 0, "free", [stars_item(n) for n in (1, 2, 3, 5, 10)] + pick_models(rng.sample(cheap, 6), 1, rng)))
-    for i, (t, p) in enumerate([("Мелочь", 39), ("Сдача", 49), ("Копилка", 59), ("Заначка", 79)]):
-        C.append((10 + i, t, p, "change", [stars_item(round(p * k)) for k in (0.1, 0.3, 0.5, 0.8, 1.2, 2)] +
-                  pick_models(rng.sample(cheap, 5), 1, rng) + pick_models(rng.sample(mid, 2), 1, rng)))
-    for i, (t, p) in enumerate([("Орёл или решка", 149), ("Всё или ничего", 299), ("Двойной шанс", 599)]):
-        C.append((20 + i, t, p, "fifty", [stars_item(round(p * 0.45)), stars_item(round(p * 1.8))] + pick_models(rng.sample(cheap, 2), 1, rng)))
-    for i, (t, p, pool) in enumerate([("Семья", 199, cheap), ("Капо", 499, mid), ("Крёстный отец", 999, mid + top[:4]), ("Дон", 2499, top)]):
-        C.append((30 + i, t, p, "premium", [stars_item(round(p * k)) for k in (0.3, 0.6)] + pick_models(rng.sample(pool, min(8, len(pool))), 1, rng)))
+    """Кейсы собираются из каталога: цена «красивая», у каждого кейса есть дешёвые призы, призы около цены и джекпоты.
+    Веса подбираются так, чтобы средний возврат был CASE_RTP. Потом цены и веса можно править в админке."""
+    if (q1("SELECT v FROM meta WHERE k='economy'") or {}).get("v") == ECONOMY_VERSION: return
+    run("DELETE FROM prizes"); run("DELETE FROM cases")
+    rng = random.Random(11)
+    C = []  # (id, title, price, cat, items, rtp)
+    free = [stars_item(n) for n in (1, 2, 3, 5, 10, 25)] + [near(v, rng) for v in (260, 280, 300, 330)]
+    C.append((1, "Подарок дня", 0, "free", free, None))
+    for i, (t, p) in enumerate([("Мелочь", 49), ("Сдача", 99), ("Копилка", 149), ("Заначка", 249)]):
+        items = [stars_item(round(p * k)) for k in (0.2, 0.4, 0.6, 0.8)]
+        items += [near(p * k, rng) for k in (1.3, 2, 3, 5, 8, 15, 30)]
+        C.append((10 + i, t, p, "change", items, CASE_RTP))
+    for i, (t, p) in enumerate([("Орёл или решка", 199), ("Всё или ничего", 499), ("Двойной шанс", 999)]):
+        C.append((20 + i, t, p, "fifty", [near(p * 1.3, rng, spread=0.05)], None))  # проигрышный приз добавим ниже
+    for i, (t, p) in enumerate([("Семья", 499), ("Капо", 999), ("Крёстный отец", 2499), ("Дон", 4999)]):
+        items = [stars_item(round(p * k)) for k in (0.3, 0.5, 0.7)]
+        items += [near(p * k, rng) for k in (1, 1.5, 2, 3, 5, 10, 25, 50)]
+        C.append((30 + i, t, p, "premium", items, CASE_RTP))
     for i, g in enumerate(["Plush Pepe", "Durov's Cap", "Precious Peach", "Heart Locket", "Snoop Dogg", "Scared Cat", "Toy Bear", "Diamond Ring"]):
         if g not in CATALOG: continue
-        p = max(49, round(floor_stars(g) * 0.12, -1) - 1)
-        C.append((40 + i, g, int(p), "coll", [stars_item(round(p * k)) for k in (0.2, 0.5, 0.9)] + pick_models([g], 6, rng, True) + pick_models([g], 4, rng)))
-    for cid, title, price, cat, items in C:
-        if q1("SELECT 1 FROM cases WHERE id=?", cid): continue
+        f = floor_stars(g); p = nice(f * 0.45)
+        ms = sorted(CATALOG[g]["models"], key=lambda x: x[1])  # от редких к частым
+        items = [stars_item(round(p * k)) for k in (0.25, 0.5, 0.75)]
+        items += [nft_item(g, m) for m, _ in ms[:4]] + [nft_item(g, m) for m, _ in rng.sample(ms[4:], min(6, len(ms) - 4))]
+        C.append((40 + i, g, p, "coll", items, CASE_RTP))
+    for cid, title, price, cat, items, rtp in C:
         run("INSERT INTO cases(id,title,price,emoji,cat) VALUES(?,?,?,?,?)", cid, title, price, "🎁", cat)
-        target = (price * CASE_RTP) if price else 3
-        ws = solve_weights([it["stars"] for it in items], target)
+        if cat == "fifty":  # честные 50/50: проигрыш - звёзды, выигрыш - NFT около x1.3
+            win = items[0]; lose = max(1, round(2 * CASE_RTP * price - win["stars"]))
+            items, ws = [stars_item(lose), win], [50, 50]
+        else:
+            ws = solve_weights([it["stars"] for it in items], price * rtp if rtp else 4)
         for it, w in zip(items, ws):
             run("INSERT INTO prizes(case_id,kind,name,gift,model,img,stars,weight) VALUES(?,?,?,?,?,?,?,?)",
                 cid, it["kind"], it["name"], it["gift"], it["model"], it["img"], it["stars"], w)
+    run("INSERT OR REPLACE INTO meta(k,v) VALUES('economy',?)", ECONOMY_VERSION)
 
 
 build_cases()
@@ -341,7 +369,7 @@ async def start(m):
         "💣 Мины и 🚀 апгрейды\n"
         "🎁 Подарок дня — бесплатно каждые 24 часа\n"
         "👥 Приглашай друзей и получай ⭐\n\n"
-        "<i>Каталог NFT: thanks to @GiftChanges for the API</i>"), parse_mode="HTML", reply_markup=kb)
+        ""), parse_mode="HTML", reply_markup=kb)
 
 
 @dp.pre_checkout_query()
@@ -385,7 +413,8 @@ def state(uid: int = Depends(auth)):
             "inventory": inventory(uid), "balance": u["balance"], "mines": mines_view(g) if g else None,
             "refs": q1("SELECT COUNT(*) n FROM users WHERE ref_by=?", uid)["n"], "ref_earned": u["ref_earned"],
             "ref_bonus": REF_BONUS, "ref_percent": REF_PERCENT, "uid": uid, "need": FRIENDS_REQUIRED, "bot": BOT_USERNAME,
-            "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX, "upgrade_max": UPGRADE_MAX_CHANCE}
+            "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX,
+            "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "upgrade_max": UPGRADE_MAX_CHANCE}
 
 
 @app.get("/api/catalog")
@@ -552,6 +581,46 @@ def mines_cashout(gid: int, uid: int = Depends(auth)):
     return mines_view(q1("SELECT * FROM mines WHERE id=?", gid))
 
 
+# ---------- плинко ----------
+# Базовые таблицы множителей (ряды -> риск -> ячейки слева направо), затем масштабируются до PLINKO_RTP.
+PLINKO_BASE = {
+    8: {"low": [5.6, 2.1, 1.1, 1, 0.5, 1, 1.1, 2.1, 5.6], "mid": [13, 3, 1.3, 0.7, 0.4, 0.7, 1.3, 3, 13],
+        "high": [29, 4, 1.5, 0.3, 0.2, 0.3, 1.5, 4, 29]},
+    12: {"low": [10, 3, 1.6, 1.4, 1.1, 1, 0.5, 1, 1.1, 1.4, 1.6, 3, 10], "mid": [33, 11, 4, 2, 1.1, 0.6, 0.3, 0.6, 1.1, 2, 4, 11, 33],
+         "high": [170, 24, 8.1, 2, 0.7, 0.2, 0.2, 0.2, 0.7, 2, 8.1, 24, 170]},
+    16: {"low": [16, 9, 2, 1.4, 1.4, 1.2, 1.1, 1, 0.5, 1, 1.1, 1.2, 1.4, 1.4, 2, 9, 16],
+         "mid": [110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110],
+         "high": [1000, 130, 26, 9, 4, 2, 0.2, 0.2, 0.2, 0.2, 0.2, 2, 4, 9, 26, 130, 1000]},
+}
+
+
+def _plinko_table(rows, base):
+    probs = [math.comb(rows, k) / 2 ** rows for k in range(rows + 1)]
+    rtp = lambda t: sum(p * m for p, m in zip(probs, t))
+    rnd = lambda k: [round(m * k) if m * k >= 100 else max(0.1, round(m * k, 1)) for m in base]
+    k = PLINKO_RTP / rtp(base)
+    while rtp(rnd(k)) > PLINKO_RTP + 0.004: k *= 0.997  # после округления возврат не выше цели
+    return rnd(k)
+
+
+PLINKO = {r: {risk: _plinko_table(r, t) for risk, t in v.items()} for r, v in PLINKO_BASE.items()}
+
+
+@app.post("/api/plinko")
+def plinko(b: dict = Body(...), uid: int = Depends(auth)):
+    rows, risk = int(b.get("rows", 12)), b.get("risk", "mid")
+    if rows not in PLINKO or risk not in PLINKO[rows]: raise HTTPException(400, "Неверные настройки")
+    bet = int(b.get("bet", 0))
+    if not 1 <= bet <= PLINKO_MAX_BET: raise HTTPException(400, f"Ставка от 1 до {PLINKO_MAX_BET} ⭐")
+    charge(uid, bet)
+    rnd = secrets.SystemRandom()
+    path = [rnd.randrange(2) for _ in range(rows)]
+    slot = sum(path); mult = PLINKO[rows][risk][slot]; payout = int(bet * mult)
+    if payout: credit(uid, payout)
+    run("INSERT INTO plinko(user_id,bet,rows,risk,slot,mult,payout,created) VALUES(?,?,?,?,?,?,?,?)", uid, bet, rows, risk, slot, mult, payout, int(time.time()))
+    return {"path": path, "slot": slot, "mult": mult, "payout": payout, "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
+
+
 # ---------- апгрейд ----------
 @app.post("/api/upgrade")
 def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
@@ -618,7 +687,8 @@ def a_stats():
     return {"users": q1("SELECT COUNT(*) n FROM users")["n"], "wins": q1("SELECT COUNT(*) n FROM wins")["n"],
             "requested": q1("SELECT COUNT(*) n FROM wins WHERE status='requested'")["n"],
             "sent": q1("SELECT COUNT(*) n FROM wins WHERE status='sent'")["n"],
-            "mines": q1("SELECT COALESCE(SUM(bet),0)-COALESCE(SUM(payout),0) n FROM mines WHERE status!='live'")["n"]}
+            "mines": q1("SELECT COALESCE(SUM(bet),0)-COALESCE(SUM(payout),0) n FROM mines WHERE status!='live'")["n"],
+            "plinko": q1("SELECT COALESCE(SUM(bet),0)-COALESCE(SUM(payout),0) n FROM plinko")["n"]}
 
 
 @app.get("/img/{size}")

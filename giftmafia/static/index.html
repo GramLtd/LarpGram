@@ -6,19 +6,19 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Unbounded:wght@700;800&display=swap">
 <style>
-:root{--bg:#171828;--bg2:#1d1e33;--card:#23243b;--card2:#2b2c47;--line:#ffffff14;--txt:#fff;--mut:#a3a5c3;--acc1:#5a6cff;--acc2:#7a5af0;
+:root{--bg:#121329;--bg2:#1a1b36;--card:#1f2142;--card2:#2a2c55;--line:#ffffff14;--txt:#fff;--mut:#9fa2cc;--acc1:#4f7bff;--acc2:#8b5cff;
 --grad:linear-gradient(90deg,var(--acc1),var(--acc2));--ok:#3ee08f;--bad:#ff5a6e;--gold:#ffc83d;
 --hd:800 26px/1.1 "Unbounded",system-ui,sans-serif}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg);-webkit-text-size-adjust:100%;touch-action:manipulation}
 button,a,input,label,.cell{touch-action:manipulation}
-body{background:var(--bg);color:var(--txt);font:600 15px/1.35 "Manrope",-apple-system,system-ui,sans-serif;padding:0 16px 120px;max-width:520px;margin:auto;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{background:radial-gradient(700px 360px at 50% -140px,#5b46d455,transparent 70%) no-repeat,var(--bg);color:var(--txt);font:600 15px/1.35 "Manrope",-apple-system,system-ui,sans-serif;padding:0 16px 120px;max-width:520px;margin:auto;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--acc1);outline-offset:2px}
 img{-webkit-user-drag:none;user-select:none}
 .st{width:1em;height:1em;vertical-align:-.12em;flex:none}
 /* шапка */
-.top{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:8px;padding:12px 0 10px;background:var(--bg);margin:0 -16px;padding-left:16px;padding-right:16px}
+.top{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:8px;padding:12px 0 10px;background:#121329d9;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);margin:0 -16px;padding-left:16px;padding-right:16px}
 .logo{font:800 23px/1 "Unbounded",system-ui,sans-serif;letter-spacing:-.03em;margin-right:auto;white-space:nowrap}.logo b{background:linear-gradient(180deg,#ffe07a,#f3a514);-webkit-background-clip:text;background-clip:text;color:transparent}
 .bal{display:flex;align-items:center;gap:8px;height:46px;padding:0 12px 0 6px;border-radius:999px;background:#13142299;border:1px solid var(--line);font-weight:800;font-size:17px}
 .bal .ic{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#3a3d63,#22233a);display:grid;place-items:center;font-size:20px}
@@ -33,7 +33,7 @@ img{-webkit-user-drag:none;user-select:none}
 .live{display:flex;gap:8px;margin:4px -16px 0;padding:0 16px;overflow-x:auto;scrollbar-width:none}.live::-webkit-scrollbar{display:none}
 .ltag{flex:none;width:30px;border-radius:16px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font:800 11px "Unbounded";letter-spacing:.1em;color:var(--mut)}
 .ltag span{writing-mode:vertical-rl;transform:rotate(180deg)}.ltag i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
-.lc{flex:none;display:flex;align-items:center;gap:8px;height:60px;padding:0 14px 0 8px;border-radius:16px;background:linear-gradient(180deg,#2d2f4c,#24253c);border:1px solid var(--line);border-bottom:2px solid #6d74b8}
+.lc{flex:none;display:flex;align-items:center;gap:8px;height:60px;padding:0 14px 0 8px;border-radius:16px;background:linear-gradient(180deg,#2b2d58,#212246);border:1px solid var(--line);border-bottom:2px solid #6d74b8}
 .lc.t3{border-bottom-color:#ff5a6e}.lc.t2{border-bottom-color:#d35bd6}.lc.t1{border-bottom-color:#8b6cff}
 .lc img,.lc .coin{width:44px;height:44px;object-fit:contain}.lc div{display:flex;flex-direction:column;gap:2px}
 .lc small{display:flex;align-items:center;gap:5px;color:var(--mut);font-size:12px;white-space:nowrap}.lc small i{width:18px;height:18px;border-radius:50%;background:var(--acc2);font:800 10px/18px "Manrope";text-align:center;font-style:normal;color:#fff}
@@ -50,7 +50,7 @@ h2{font:var(--hd);margin:26px 0 14px;display:flex;align-items:baseline;justify-c
 h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 /* карточки кейсов */
 .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-.cc{display:block;width:100%;min-width:0;text-align:left;border-radius:26px;padding:8px;background:linear-gradient(180deg,#26273f,#202136);border:1px solid var(--line);transition:transform .12s}
+.cc{display:block;width:100%;min-width:0;text-align:left;border-radius:26px;padding:8px;background:linear-gradient(180deg,#25274e,#1c1d3c);border:1px solid var(--line);transition:transform .12s}
 .cc:active{transform:scale(.97)}
 .cov{position:relative;aspect-ratio:1;border-radius:20px;overflow:hidden;background:radial-gradient(circle at 50% 50%,var(--gl,#6c63ff66),transparent 62%),linear-gradient(160deg,#2a2c48,#14152a)}
 .cov:after{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,transparent 0 10%,#ffffff0c 12% 14%,transparent 16% 35%,#ffffff0a 37% 40%,transparent 42% 60%,#ffffff0c 62% 65%,transparent 67% 85%,#ffffff08 87% 90%,transparent 92%)}
@@ -64,7 +64,7 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .pr{flex:none;display:inline-flex;align-items:center;gap:4px;height:38px;padding:0 13px;border-radius:999px;background:var(--grad);font-weight:800;font-size:16px;white-space:nowrap;box-shadow:0 6px 16px -8px #6c63ff}
 .pr.free{background:linear-gradient(90deg,#20b56b,#3ee08f)}.pr.wait{background:var(--card2);color:var(--mut);box-shadow:none;font-variant-numeric:tabular-nums}
 /* экран кейса */
-.panel{background:linear-gradient(180deg,#25263f,#1f2035);border:1px solid var(--line);border-radius:30px;padding:16px;margin-top:8px}
+.panel{background:linear-gradient(180deg,#24264d,#1b1c3a);border:1px solid var(--line);border-radius:30px;padding:16px;margin-top:8px}
 .ph{display:flex;align-items:center;gap:16px;margin-bottom:16px}
 .ph .cov{width:84px;flex:none;border-radius:20px}.ph h1{font:800 26px/1.1 "Unbounded",system-ui,sans-serif;min-width:0}
 .reels{display:flex;flex-direction:column;gap:8px;margin:0 -16px;padding:0 16px}
@@ -101,12 +101,14 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .x{width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;flex:none}.x svg{width:20px;height:20px}
 /* таббар */
 .tabs{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:496px;margin:auto;display:flex;gap:2px;padding:7px;border-radius:999px;
-  background:#1f2036e8;border:1px solid #ffffff1c;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 40px #000a;z-index:18}
-.tabs button{position:relative;flex:1;height:54px;border-radius:999px;color:var(--mut);font-weight:800;font-size:16px}
-.tabs button.on{color:#fff;background:#2c2e52;box-shadow:inset 0 0 0 1px #ffffff26}
-.tabs .fb{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--gold);color:#3a2600;font:800 10px/1 "Manrope";padding:4px 7px;border-radius:7px;letter-spacing:.05em}
+  background:#1a1b3ae8;border:1px solid #ffffff1c;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 40px #000a;z-index:18}
+.tabs button{position:relative;flex:1;height:58px;border-radius:999px;color:var(--mut);font-weight:800;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:color .2s,background .2s}
+.tabs button svg{width:23px;height:23px;transition:transform .2s}
+.tabs button.on{color:#fff;background:linear-gradient(180deg,#363a7a,#2b2e66);box-shadow:inset 0 0 0 1px #ffffff26,0 6px 16px -8px #6c63ff}
+.tabs button.on svg{color:#a9a4ff;transform:translateY(-1px)}
+.tabs .fb{position:absolute;top:-6px;left:58%;background:var(--gold);color:#3a2600;font:800 10px/1 "Manrope";padding:4px 7px;border-radius:7px;letter-spacing:.05em}
 /* мины */
-.gsw{display:flex;gap:8px;margin-top:6px}
+.gsw{display:flex;gap:6px;margin-top:6px}.gsw .chip{flex:1 1 0;min-width:0;padding:0 8px;font-size:15px}
 .gbar{display:flex;align-items:center;gap:6px;margin-top:12px}
 .gbar .ib{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;color:#d9daf0;flex:none}.gbar .ib.on{color:var(--gold)}.gbar .ib svg{width:26px;height:26px}
 .mults{position:relative;flex:1;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-width:0;padding:0 8px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent)}.mults::-webkit-scrollbar{display:none}
@@ -129,7 +131,7 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .gsel{flex:1;display:flex;align-items:center;gap:10px;padding:4px 8px;text-align:left;min-width:0}.gsel img{width:44px;height:44px;object-fit:contain}.gsel b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gsel small{color:var(--mut)}
 /* апгрейд */
 .upw{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center;margin-top:12px}.upw>button{display:block;width:100%}
-.slot{width:100%;min-width:0;aspect-ratio:.72;border-radius:24px;background:linear-gradient(180deg,#2b2c47,#202136);border:1px dashed #ffffff30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;text-align:center}
+.slot{width:100%;min-width:0;aspect-ratio:.72;border-radius:24px;background:linear-gradient(180deg,#2a2c55,#1d1e3d);border:1px dashed #ffffff30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;text-align:center}
 .slot.full{border-style:solid;background:linear-gradient(180deg,var(--c1),var(--c2));border-color:#ffffff1a;border-bottom:3px solid var(--c3)}
 .slot img,.slot .coin{width:78%;aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 6px 8px #0008)}.slot b{font-size:13px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.slot small{color:var(--mut);font-size:12px}
 .slot em{font-style:normal;font-weight:800;display:flex;align-items:center;gap:3px}
@@ -138,8 +140,17 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .gauge .pc2{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font:800 24px "Unbounded",system-ui}.gauge .pc2 small{font:700 12px "Manrope";color:var(--mut)}
 .gauge.win .pc2{color:var(--ok)}.gauge.lose .pc2{color:var(--bad)}
 .ks{display:flex;gap:6px;margin-top:12px}.ks button{flex:1;height:42px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-weight:800;color:#d9daf0}
+/* плинко */
+.plb{position:relative;margin:14px -4px 0;border-radius:24px;background:radial-gradient(circle at 50% 0,#3b3a8a55,transparent 70%),linear-gradient(180deg,#1d1f40,#16172f);border:1px solid var(--line);padding:10px 4px 10px}
+.plb canvas{display:block;width:100%}
+.pls{display:flex;margin-top:6px}
+.pls div{flex:1 1 0;min-width:0;margin:0 1px;height:30px;border-radius:7px;display:grid;place-items:center;font:800 var(--fs,11px)/1 "Manrope";letter-spacing:-.03em;overflow:hidden;color:#2a1600;background:var(--sc);box-shadow:0 3px 0 color-mix(in srgb,var(--sc) 60%,#000);transition:transform .15s}
+.pls div.hit{animation:slotHit .45s ease}
+@keyframes slotHit{30%{transform:translateY(5px);filter:brightness(1.35)}}
+.plh{display:flex;gap:6px;min-height:30px;margin-top:10px;overflow:hidden}
+.plh span{flex:none;padding:6px 10px;border-radius:10px;font-weight:800;font-size:13px;color:#2a1600;background:var(--sc);animation:rise .3s ease}
 /* каталог */
-.coll{position:relative;min-width:0;border-radius:20px;padding:8px 8px 10px;background:linear-gradient(180deg,#2b2c47,#202136);border:1px solid var(--line);text-align:left}
+.coll{position:relative;min-width:0;border-radius:20px;padding:8px 8px 10px;background:linear-gradient(180deg,#2a2c55,#1d1e3d);border:1px solid var(--line);text-align:left}
 .coll .pi{aspect-ratio:1;display:grid;place-items:center}.coll img{width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 6px 8px #0008)}
 .coll b{display:block;font-size:13px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.coll small{display:flex;align-items:center;gap:3px;color:var(--mut);font-size:12px;white-space:nowrap}
 /* инвентарь */
@@ -150,11 +161,11 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .iv b{font-size:13.5px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.iv em{font-style:normal;display:flex;align-items:center;gap:4px;font-weight:800}
 .iv .btn{height:40px;font-size:14px;box-shadow:none}.iv .tag{font-size:12px;color:#ffffffb0}
 .iv ul{list-style:none;padding:0;font-size:12px;color:#ffffffb0}.iv li.ok{color:var(--ok)}.iv li:before{content:"○ "}.iv li.ok:before{content:"✓ "}
-.card{background:linear-gradient(180deg,#25263f,#1f2035);border:1px solid var(--line);border-radius:26px;padding:18px;margin-top:12px}
+.card{background:linear-gradient(180deg,#24264d,#1b1c3a);border:1px solid var(--line);border-radius:26px;padding:18px;margin-top:12px}
 .card h3{font:800 19px "Unbounded",system-ui;margin-bottom:8px}
 .line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;color:var(--mut);border-bottom:1px solid var(--line)}.line:last-of-type{border:0}.line b{color:#fff;display:flex;align-items:center;gap:4px}
 .big{font:800 34px "Unbounded",system-ui;display:flex;align-items:center;gap:8px}
-.empty{color:var(--mut);padding:14px 2px}
+.empty{color:var(--mut);padding:14px 2px;grid-column:1/-1}
 .credit{color:#6f7194;font-size:12px;text-align:center;margin-top:22px}.credit a{color:#8f92bb}
 /* шторки */
 .sheet{position:fixed;left:0;right:0;top:0;height:var(--tg-viewport-height,100vh);background:#0008;display:none;align-items:flex-end;z-index:40}
@@ -218,6 +229,9 @@ img{opacity:0;transition:opacity .35s ease}img.ld{opacity:1}
 @media(max-width:375px){.logo .full{display:none}.logo .short{display:inline}}
 @media(prefers-reduced-motion:reduce){.ov.on,.sheet>div,body.ready main:not([hidden]),#winfx *{animation:none!important}}
 </style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<linearGradient id="tgS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset=".5" stop-color="#ffb81f"/><stop offset="1" stop-color="#f08a00"/></linearGradient>
+<radialGradient id="tgG"><stop offset="0" stop-color="#ffc83d" stop-opacity=".45"/><stop offset="1" stop-color="#ffc83d" stop-opacity="0"/></radialGradient></defs></svg>
 <div id="boot" aria-live="polite"><div class="bgl"></div><div class="bl">Gift<b>Mafia</b></div><div class="bbar"><i id="bootp"></i></div></div>
 <div id="winfx" role="dialog" aria-modal="true" aria-label="Выигрыш"><canvas id="cfx"></canvas><div class="wf" id="wfIn"></div></div>
 <header class="top">
@@ -228,9 +242,10 @@ img{opacity:0;transition:opacity .35s ease}img.ld{opacity:1}
 </header>
 
 <main id="v-games" hidden>
-  <div class="gsw"><button class="chip on" data-g="mines">Мины</button><button class="chip" data-g="upgrade">Апгрейд</button></div>
+  <div class="gsw"><button class="chip on" data-g="mines">💣 Мины</button><button class="chip" data-g="upgrade">🚀 Апгрейд</button><button class="chip" data-g="plinko">🔴 Плинко</button></div>
   <section id="g-mines"></section>
   <section id="g-upgrade" hidden></section>
+  <section id="g-plinko" hidden></section>
 </main>
 
 <main id="v-cases">
@@ -254,7 +269,7 @@ img{opacity:0;transition:opacity .35s ease}img.ld{opacity:1}
 
 <main id="v-bonus" hidden><div id="bonusCase"></div></main>
 
-<nav class="tabs"><button data-t="games">Игры</button><button data-t="cases" class="on"><span class="fb">FREE</span>Кейсы</button><button data-t="earn">Заработок</button><button data-t="bonus">Бонусы</button></nav>
+<nav class="tabs"><button data-t="games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M7 10v4M5 12h4"/><circle cx="15.5" cy="13" r=".6" fill="currentColor"/><circle cx="18" cy="10.8" r=".6" fill="currentColor"/></svg>Игры</button><button data-t="cases" class="on"><span class="fb">FREE</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Кейсы</button><button data-t="earn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Заработок</button><button data-t="bonus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>Бонусы</button></nav>
 
 <div class="ov" id="ovCase"><div class="ovi" id="caseIn"></div></div>
 <div class="ov z2" id="ovProf"><div class="ovi" id="profIn"></div></div>
@@ -272,8 +287,8 @@ new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.no
 const tg=window.Telegram?.WebApp||{initData:'',ready(){},expand(){},BackButton:{show(){},hide(){},onClick(){}},HapticFeedback:null,isVersionAtLeast:()=>false,openTelegramLink:u=>open(u),openInvoice(){},shareToStory(){},shareMessage(){}};
 tg.ready();tg.expand();try{tg.setHeaderColor('#171828');tg.setBackgroundColor('#171828')}catch(e){}
 const $=id=>document.getElementById(id),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-const STAR='<svg class="st" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" fill="#ffc83d" stroke="#e59a12" stroke-width=".8"/></svg>';
-const COIN='<svg class="coin" viewBox="0 0 64 64"><circle cx="32" cy="34" r="27" fill="#c9800f"/><circle cx="32" cy="31" r="27" fill="#ffc93f"/><path d="M14 22a21 21 0 0 1 30-9" fill="none" stroke="#fff3b0" stroke-width="3" stroke-linecap="round" opacity=".8"/><circle cx="32" cy="31" r="20" fill="none" stroke="#e8a21f" stroke-width="2.5"/><path d="M32 17l4.3 8.8 9.7 1.4-7 6.8 1.6 9.6L32 39.1l-8.6 4.5 1.6-9.6-7-6.8 9.7-1.4z" fill="#fff6cf" stroke="#c77f10" stroke-width="1.2"/></svg>';
+const STAR='<svg class="st" viewBox="0 0 24 24"><polygon points="12.00,2.90 14.88,8.94 21.51,9.81 16.66,14.41 17.88,20.99 12.00,17.80 6.12,20.99 7.34,14.41 2.49,9.81 9.12,8.94" fill="url(#tgS)" stroke="url(#tgS)" stroke-width="2.2" stroke-linejoin="round"/><polygon points="12.00,7.20 13.47,10.38 16.95,10.79 14.38,13.17 15.06,16.61 12.00,14.90 8.94,16.61 9.62,13.17 7.05,10.79 10.53,10.38" fill="#fff6c2" opacity=".55" stroke="#fff6c2" stroke-width="1" stroke-linejoin="round"/></svg>';
+const COIN='<svg class="coin" viewBox="0 0 64 64"><circle cx="32" cy="33" r="30" fill="url(#tgG)"/><polygon points="32.00,10.00 38.94,24.45 54.83,26.58 43.22,37.65 46.11,53.42 32.00,45.80 17.89,53.42 20.78,37.65 9.17,26.58 25.06,24.45" fill="url(#tgS)" stroke="url(#tgS)" stroke-width="5" stroke-linejoin="round"/><polygon points="32.00,20.30 35.53,27.95 43.89,28.94 37.71,34.65 39.35,42.91 32.00,38.80 24.65,42.91 26.29,34.65 20.11,28.94 28.47,27.95" fill="#fff6c2" opacity=".5" stroke="#fff6c2" stroke-width="2" stroke-linejoin="round"/></svg>';
 const IC={x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
  sort:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4"/></svg>',
@@ -287,7 +302,7 @@ $('bal').querySelector('.ic').innerHTML=STAR;$$('.sti').forEach(e=>e.outerHTML=S
 let S=null,CAT=[],FL={},TS=69,left=0,filt='all',asc=true,query='',tab='cases';
 let fast=false,sound=true;try{fast=localStorage.gmFast=='1';sound=localStorage.gmSnd!='0'}catch(e){}
 const save=()=>{try{localStorage.gmFast=fast?'1':'0';localStorage.gmSnd=sound?'1':'0'}catch(e){}};
-const toast=t=>{const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2800)};
+const toast=t=>{const e=$('toast');t=String(t);e.innerHTML=t.includes('<svg')?t:esc(t).replace(/\u2B50/g,STAR);e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2800)};
 const hap=t=>{try{tg.HapticFeedback&&(t=='ok'||t=='err'?tg.HapticFeedback.notificationOccurred(t=='ok'?'success':'error'):tg.HapticFeedback.impactOccurred(t||'light'))}catch(e){}};
 async function api(p,m='GET',body){const r=await fetch('/api/'+p,{method:m,headers:{'X-Init':tg.initData,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||'Ошибка');return j}
@@ -367,7 +382,7 @@ CaseView.prototype.render=function(){const c=this.c,me=this;
   this.q('[data-fair]').onclick=fairInfo;
   this.build(1);this.refresh();preload(c.prizes.filter(p=>p.kind=='nft').map(p=>imgOf(p)))};
 function inline_bar(inline,c){return inline?'':`<div class="bar"><button class="x" data-x aria-label="Закрыть">${IC.x}</button><h3>${esc(c.title)}</h3></div>`}
-CaseView.prototype.card=function(p){return `<div class="it ${p.kind=='stars'?'ts':'t'+tierV(valOf(p),this.c.price||5)}">${pic(p)}<span>${p.kind=='stars'?num(valOf(p))+' ⭐':esc(p.gift||p.name)}</span></div>`};
+CaseView.prototype.card=function(p){return `<div class="it ${p.kind=='stars'?'ts':'t'+tierV(valOf(p),this.c.price||5)}">${pic(p)}<span>${p.kind=='stars'?num(valOf(p))+' '+STAR:esc(p.gift||p.name)}</span></div>`};
 CaseView.prototype.build=function(n,items){const el=this.q('[data-r]');el.className='reels'+(n>1?' m':'');const pool=this.c.prizes;
   const base=items||[...Array(24)].map((_,i)=>pool[i%pool.length]);
   el.innerHTML=[...Array(n)].map(()=>`<div class="reel"><div class="strip">${base.map(p=>this.card(p)).join('')}</div></div>`).join('');
@@ -410,7 +425,7 @@ const permOf=(g,m)=>{const c=CAT.find(x=>x.name==g);const r=c&&c.models.find(x=>
 function showWins(wins){const nft=wins.filter(w=>w.kind=='nft'),sum=wins.filter(w=>w.kind=='stars').reduce((a,w)=>a+w.value,0);
   if(nft.length)return winFx(nft,sum);
   sheet(`<h4>${wins.length>1?'Ваши призы':'Ваш приз'}</h4><div class="wins">${wins.map(w=>`<div class="pc ts"><div class="pi">${pic(w)}</div><b>${title(w)}</b><em>${num(w.value)} ${STAR}</em></div>`).join('')}</div>
-  <p>${num(sum)} ⭐ уже на балансе.</p><button class="btn" id="okW">Отлично</button>`);
+  <p>${num(sum)} ${STAR} уже на балансе.</p><button class="btn" id="okW">Отлично</button>`);
   $('okW').onclick=closeSheet}
 function winFx(nft,sum){const best=[...nft].sort((a,b)=>b.value-a.value)[0],rest=nft.filter(w=>w!==best),ready=nft.filter(w=>w.status=='ready');
   const pm=permOf(best.gift,best.model),tier=pm!=null?tierP(pm):tierV(best.value,300),fx=$('winfx');
@@ -420,7 +435,7 @@ function winFx(nft,sum){const best=[...nft].sort((a,b)=>b.value-a.value)[0],rest
   <div class="wf-n">${esc(best.gift)}</div>
   <div class="wf-m">${esc(best.model)}${pm!=null?`<span class="wf-r">${RAR[tier]} · ${(pm/10).toLocaleString('ru-RU')}%</span>`:''}</div>
   <div class="wf-v">${num(best.value)} ${STAR}</div>
-  ${rest.length||sum?`<div class="wf-more">${rest.map(w=>`<div>${pic(w,128)}${esc(w.gift)} · ${num(w.value)} ⭐</div>`).join('')}${sum?`<div>${COIN}+${num(sum)} ⭐ на баланс</div>`:''}</div>`:''}
+  ${rest.length||sum?`<div class="wf-more">${rest.map(w=>`<div>${pic(w,128)}${esc(w.gift)} · ${num(w.value)} ${STAR}</div>`).join('')}${sum?`<div>${COIN}+${num(sum)} ${STAR} на баланс</div>`:''}</div>`:''}
   ${nft.some(w=>w.status=='locked')?'<p class="wf-note">Чтобы вывести подарок дня, выполните задания в профиле.</p>':''}
   <div class="wf-b">${nft.some(w=>w.status=='locked')?'<button class="btn" id="wfTask">К заданиям</button>':'<button class="btn" id="wfOk">Забрать в инвентарь</button>'}
    ${ready.length?`<button class="btn ghost" id="wfSell">Продать за ${num(ready.reduce((a,w)=>a+Math.floor(w.value*S.sell_rate),0))} ${STAR}</button>`:''}</div>`;
@@ -428,7 +443,7 @@ function winFx(nft,sum){const best=[...nft].sort((a,b)=>b.value-a.value)[0],rest
   const close=()=>{fx.classList.remove('on');confetti.stop&&confetti.stop()};
   const ok=$('wfOk'),tk=$('wfTask'),sl=$('wfSell');
   if(ok)ok.onclick=close;if(tk)tk.onclick=()=>{close();closeCase();openProfile()};
-  if(sl)sl.onclick=async()=>{sl.disabled=true;try{let t=0;for(const w of ready)t+=(await api(`win/${w.id}/sell`,'POST')).amount;toast(`+${num(t)} ⭐ на баланс`);close();await load()}catch(e){toast(e.message);sl.disabled=false}}}
+  if(sl)sl.onclick=async()=>{sl.disabled=true;try{let t=0;for(const w of ready)t+=(await api(`win/${w.id}/sell`,'POST')).amount;toast(`+${num(t)} ${STAR} на баланс`);close();await load()}catch(e){toast(e.message);sl.disabled=false}}}
 function confetti(main){confetti.stop&&confetti.stop();if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const cv=$('cfx'),dpr=Math.min(2,devicePixelRatio||1),W=cv.clientWidth,H=cv.clientHeight,x=cv.getContext('2d');cv.width=W*dpr;cv.height=H*dpr;x.scale(dpr,dpr);
   const cols=[main,'#ffc83d','#ffffff','#5a6cff','#3ee08f'],P=[...Array(150)].map(()=>{const a=-Math.PI/2+(Math.random()-.5)*2.2,v=7+Math.random()*9;
@@ -442,7 +457,7 @@ function confetti(main){confetti.stop&&confetti.stop();if(matchMedia('(prefers-r
 /* ---------- live ---------- */
 const AV=['#7a5af0','#4f9dff','#e05ce2','#3ee08f','#ff8a3d'];
 async function loadLive(){try{const l=await api('live');
-  $('live').innerHTML=l.length?`<div class="ltag"><span>LIVE</span><i></i></div>`+l.map((x,i)=>`<div class="lc t${x.kind=='stars'?0:tierV(x.value,300)}">${x.kind=='stars'?COIN:`<img src="${esc(imgOf(x,128))}" alt="" loading="lazy">`}<div><small><i style="background:${AV[i%5]}">${esc((x.who||'?')[0])}</i>${esc(x.who||'Игрок')}</small><b>${num(x.value)} ⭐</b></div></div>`).join(''):''}catch(e){}}
+  $('live').innerHTML=l.length?`<div class="ltag"><span>LIVE</span><i></i></div>`+l.map((x,i)=>`<div class="lc t${x.kind=='stars'?0:tierV(x.value,300)}">${x.kind=='stars'?COIN:`<img src="${esc(imgOf(x,128))}" alt="" loading="lazy">`}<div><small><i style="background:${AV[i%5]}">${esc((x.who||'?')[0])}</i>${esc(x.who||'Игрок')}</small><b>${num(x.value)} ${STAR}</b></div></div>`).join(''):''}catch(e){}}
 
 /* ---------- мины ---------- */
 const M={mode:'bal',bet:10,bombs:3,auto:false,sel:new Set(),gift:null,g:null,busy:false};
@@ -457,14 +472,14 @@ function renderMines(){const el=$('g-mines'),g=M.g,live=g&&g.status=='live',k=g?
   <div class="field" id="field">${[...Array(25)].map((_,i)=>cellHtml(i)).join('')}</div>
   <div class="box seg"><button data-m="bal" class="${M.mode=='bal'?'on':''}">Балансом</button><button data-m="gift" class="${M.mode=='gift'?'on':''}">Подарком</button></div>
   ${M.mode=='bal'?`<div class="box"><div class="bet">${STAR}<input id="mBet" inputmode="numeric" value="${live?g.bet:M.bet}" ${live?'disabled':''} aria-label="Ставка"></div><button class="sb" data-b="h">½</button><button class="sb" data-b="d">2×</button><button class="sb" data-b="max" style="color:#fff">МАКС</button></div>`
-   :`<div class="box"><button class="gsel" id="mGift">${M.gift?`<img src="${esc(imgOf(M.gift,128))}" alt=""><span style="min-width:0"><b>${title(M.gift)}</b><small>${num(M.gift.value)} ⭐</small></span>`:'<span style="color:var(--mut);padding:12px 6px">Выберите подарок из инвентаря</span>'}</button></div>`}
+   :`<div class="box"><button class="gsel" id="mGift">${M.gift?`<img src="${esc(imgOf(M.gift,128))}" alt=""><span style="min-width:0"><b>${title(M.gift)}</b><small>${num(M.gift.value)} ${STAR}</small></span>`:'<span style="color:var(--mut);padding:12px 6px">Выберите подарок из инвентаря</span>'}</button></div>`}
   <div class="row2"><div class="box"><button class="sb" data-bm="-1" aria-label="Меньше мин">−</button><span class="cnt">💣 ${b}</span><button class="sb" data-bm="1" aria-label="Больше мин">+</button></div>
    <div class="box seg"><button data-a="0" class="${M.auto?'':'on'}">Ручная</button><button data-a="1" class="${M.auto?'on':''}">Авто</button></div></div>
   <button class="btn" id="mGo" style="margin-top:12px"></button>
   ${M.auto&&!live?`<p class="maxw" style="justify-content:center">Выберите клетки на поле: ${M.sel.size}</p>`:''}`;
   const lk=live||M.busy;
   $('mSnd').onclick=()=>{sound=!sound;save();renderMines()};$('mFast').onclick=()=>{fast=!fast;save();renderMines()};
-  $('mFair').onclick=fairInfo;$('mHelp').onclick=()=>sheet(`<h4>Мины</h4><p>Выберите ставку и количество мин, затем открывайте клетки. Каждая безопасная клетка увеличивает множитель. Заберите выигрыш в любой момент — или потеряете ставку, если откроете мину.</p><p>В режиме «Авто» отметьте клетки заранее: они откроются по очереди, и выигрыш заберётся сам.</p><p>Ставка «Подарком» — NFT из инвентаря по его оценке, выигрыш приходит в ⭐.</p><button class="btn" onclick="closeSheet()">Понятно</button>`);
+  $('mFair').onclick=fairInfo;$('mHelp').onclick=()=>sheet(`<h4>Мины</h4><p>Выберите ставку и количество мин, затем открывайте клетки. Каждая безопасная клетка увеличивает множитель. Заберите выигрыш в любой момент — или потеряете ставку, если откроете мину.</p><p>В режиме «Авто» отметьте клетки заранее: они откроются по очереди, и выигрыш заберётся сам.</p><p>Ставка «Подарком» — NFT из инвентаря по его оценке, выигрыш приходит в ${STAR}.</p><button class="btn" onclick="closeSheet()">Понятно</button>`);
   $$('[data-m]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.mode=x.dataset.m;renderMines()});
   $$('[data-a]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.auto=x.dataset.a=='1';M.sel.clear();renderMines()});
   $$('[data-bm]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.bombs=Math.min(24,Math.max(1,M.bombs+ +x.dataset.bm));[...M.sel].forEach(i=>M.sel.size>25-M.bombs&&M.sel.delete(i));renderMines()});
@@ -502,10 +517,10 @@ async function startMines(){if(M.busy)return;
 async function openCell(i,auto){if(!auto&&M.busy)return;if(M.g.opened.includes(i))return;M.busy=!auto?true:M.busy;
   try{const g=await api(`mines/${M.g.id}/open/${i}`,'POST');M.g=g;
     if(g.status=='lost'){sfx.lose();hap('err');toast('Мина! Ставка сгорела')}
-    else if(g.status=='won'){sfx.win();hap('ok');toast(`Выигрыш: ${num(g.payout)} ⭐`)}
+    else if(g.status=='won'){sfx.win();hap('ok');toast(`Выигрыш: ${num(g.payout)} ${STAR}`)}
     else{sfx.pop(g.opened.length-1);hap()}}
   catch(e){toast(e.message)}if(!auto)M.busy=false;renderMines();if(M.g.status!='live')load()}
-async function cashout(){if(!M.g)return;M.busy=true;try{M.g=await api(`mines/${M.g.id}/cashout`,'POST');sfx.win();hap('ok');toast(`Выигрыш: ${num(M.g.payout)} ⭐`)}catch(e){toast(e.message)}
+async function cashout(){if(!M.g)return;M.busy=true;try{M.g=await api(`mines/${M.g.id}/cashout`,'POST');sfx.win();hap('ok');toast(`Выигрыш: ${num(M.g.payout)} ${STAR}`)}catch(e){toast(e.message)}
   M.busy=false;renderMines();load()}
 
 /* ---------- апгрейд ---------- */
@@ -548,7 +563,65 @@ async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
     U.busy=false;renderUpgrade();await load();
     if(r.ok)showWins([r.win]);else toast('Не повезло — попробуйте ещё')}
   catch(e){U.busy=false;toast(e.message);renderUpgrade()}}
-$$('.gsw .chip').forEach(b=>b.onclick=()=>{$$('.gsw .chip').forEach(x=>x.classList.toggle('on',x==b));$('g-mines').hidden=b.dataset.g!='mines';$('g-upgrade').hidden=b.dataset.g!='upgrade'});
+$$('.gsw .chip').forEach(b=>b.onclick=()=>{$$('.gsw .chip').forEach(x=>x.classList.toggle('on',x==b));
+  ['mines','upgrade','plinko'].forEach(g=>$('g-'+g).hidden=b.dataset.g!=g);if(b.dataset.g=='plinko')renderPlinko()});
+
+/* ---------- плинко ---------- */
+const P={bet:10,risk:'mid',rows:12,balls:[],flash:{},hist:[],geo:null,raf:0,inflight:0};
+const RISK=[['low','Низкий'],['mid','Средний'],['high','Высокий']];
+const plTable=()=>(S?.plinko?.[P.rows]||S?.plinko?.[String(P.rows)]||{})[P.risk]||[];
+const slotColor=(k,n)=>{const d=Math.abs(k-n/2)/(n/2);return `hsl(${48-50*d} 95% ${60-6*d}%)`};
+const fmtX=m=>(+m).toString().replace('.',',')+'×';
+const plBusy=()=>P.balls.length||P.inflight;
+const fmtS=m=>(m>=10?Math.round(m):+m).toString().replace('.',',');
+function renderPlinko(){const el=$('g-plinko');if(!el||!S||plBusy())return;const t=plTable();
+  el.innerHTML=`<div class="plb"><canvas id="plc"></canvas><div class="pls" id="pls">${t.map((m,k)=>`<div style="--sc:${slotColor(k,P.rows)}">${fmtS(m)}</div>`).join('')}</div></div>
+  <div class="plh" id="plh">${P.hist.map(h=>`<span style="--sc:${h.c}">${fmtX(h.m)}</span>`).join('')}</div>
+  <div class="box"><div class="bet">${STAR}<input id="pBet" inputmode="numeric" value="${P.bet}" aria-label="Ставка"></div><button class="sb" data-pb="h">½</button><button class="sb" data-pb="d">2×</button><button class="sb" data-pb="max" style="color:#fff">МАКС</button></div>
+  <div class="box seg">${RISK.map(([k,t])=>`<button data-pr="${k}" class="${P.risk==k?'on':''}">${t}</button>`).join('')}</div>
+  <div class="box seg">${[8,12,16].map(r=>`<button data-pn="${r}" class="${P.rows==r?'on':''}">${r} рядов</button>`).join('')}</div>
+  <button class="btn" id="pGo" style="margin-top:12px">Бросить шар</button>
+  <p class="maxw" style="justify-content:center">Шар падает случайно, выигрыш = ставка × множитель ячейки</p>`;
+  const bi=$('pBet');bi.oninput=()=>{P.bet=Math.max(0,parseInt(bi.value.replace(/\D/g,''))||0)};
+  $$('[data-pb]',el).forEach(b=>b.onclick=()=>{const v=Math.max(1,P.bet);P.bet=b.dataset.pb=='h'?Math.max(1,v/2|0):b.dataset.pb=='d'?v*2:Math.max(1,S.balance);
+    P.bet=Math.min(P.bet,S.plinko_max||10000);bi.value=P.bet});
+  $$('[data-pr]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.risk=b.dataset.pr;renderPlinko()});
+  $$('[data-pn]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.rows=+b.dataset.pn;renderPlinko()});
+  $('pGo').onclick=drop;plLayout()}
+function plLayout(){const cv=$('plc');if(!cv)return;const W=cv.clientWidth;if(!W)return;
+  const R=P.rows,dx=W/(R+2),dy=dx*.86,top=dx*.7,H=top+(R-1)*dy+dx*.55,dpr=Math.min(2,devicePixelRatio||1);
+  cv.style.height=H+'px';cv.width=W*dpr;cv.height=H*dpr;const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);
+  $('pls').style.padding=`0 ${dx/2-1}px`;$('pls').style.setProperty('--fs',Math.max(7.5,Math.min(13,dx*.4))+'px');
+  P.geo={W,H,R,dx,dy,top,pr:Math.max(2.2,dx*.12),br:Math.max(4,dx*.24),x};plDraw()}
+const pegX=(i,j)=>P.geo.W/2+(j-(i+2)/2)*P.geo.dx;
+function plDraw(){const g=P.geo;if(!g)return;const{x,W,H,R,dy,top,pr,br}=g;x.clearRect(0,0,W,H);
+  for(let i=0;i<R;i++)for(let j=0;j<i+3;j++){const f=P.flash[i+':'+j]||0;x.beginPath();x.arc(pegX(i,j),top+i*dy,pr+f*2,0,6.283);
+    x.fillStyle=f?`rgba(255,${200+55*f|0},${120+135*f|0},${.6+.4*f})`:'#c9cbf0';x.shadowColor=f?'#ffd23f':'transparent';x.shadowBlur=f?12*f:0;x.fill()}
+  x.shadowBlur=0;
+  for(const b of P.balls){const gr=x.createRadialGradient(b.x-br*.35,b.y-br*.35,br*.2,b.x,b.y,br);gr.addColorStop(0,'#fff3c4');gr.addColorStop(1,'#ff5a6e');
+    x.beginPath();x.arc(b.x,b.y,br,0,6.283);x.fillStyle=gr;x.shadowColor='#ff5a6e';x.shadowBlur=10;x.fill();x.shadowBlur=0}}
+function plLoop(){const now=performance.now(),g=P.geo;if(!g){P.raf=0;return}const seg=fast?70:125;
+  for(const k in P.flash){P.flash[k]-=.06;if(P.flash[k]<=0)delete P.flash[k]}
+  P.balls=P.balls.filter(b=>{const t=(now-b.t0)/seg,i=Math.floor(t),f=t-i;const R=g.R;
+    const xs=r=>g.W/2+(b.path.slice(0,r).reduce((a,v)=>a+v,0)-r/2)*g.dx, ys=r=>r<R?g.top+r*g.dy-g.pr-g.br:g.H+g.br;
+    if(i<0){b.x=g.W/2;b.y=-g.br+(ys(0)+g.br)*Math.max(0,1+t)**2;return true}
+    if(i>=R){land(b);return false}
+    if(i!==b.hit){b.hit=i;const j=b.path.slice(0,i).reduce((a,v)=>a+v,0)+1;P.flash[i+':'+j]=1;if(sound&&i%2==0)tone(900+i*40,{d:.03,v:.012})}
+    const x0=xs(i),x1=xs(i+1),y0=ys(i),y1=ys(i+1);b.x=x0+(x1-x0)*f;b.y=y0+(y1-y0)*f*f-g.dy*.42*Math.sin(Math.PI*f);return true});
+  plDraw();P.raf=(P.balls.length||Object.keys(P.flash).length)?requestAnimationFrame(plLoop):0}
+function land(b){const g=P.geo,sl=$('pls')?.children[b.res.slot];if(sl){sl.classList.remove('hit');void sl.offsetWidth;sl.classList.add('hit')}
+  S.balance+=b.res.payout;$('balv').textContent=num(S.balance);
+  const m=b.res.mult;if(m>=2){sfx.win();hap('ok')}else if(m>=1)sfx.pop(4);else tone(330,{d:.18,v:.03});
+  P.hist.unshift({m,c:slotColor(b.res.slot,g.R)});P.hist=P.hist.slice(0,8);const h=$('plh');
+  if(h)h.innerHTML=P.hist.map(x=>`<span style="--sc:${x.c}">${fmtX(x.m)}</span>`).join('');
+  if(!plBusy()&&!P.balls.length)setTimeout(()=>{if(!plBusy())load()},400)}
+async function drop(){if(!P.geo)plLayout();const bet=P.bet|0;
+  if(bet<1)return toast('Введите ставку');if(S.balance<bet)return openTop(bet-S.balance);if(P.balls.length+P.inflight>=12)return;
+  S.balance-=bet;$('balv').textContent=num(S.balance);P.inflight++;hap();
+  try{const r=await api('plinko','POST',{bet,rows:P.rows,risk:P.risk});P.inflight--;
+    P.balls.push({path:r.path,res:r,t0:performance.now()+(fast?70:125),hit:-1,x:P.geo.W/2,y:-10});if(!P.raf)P.raf=requestAnimationFrame(plLoop)}
+  catch(e){P.inflight--;S.balance+=bet;$('balv').textContent=num(S.balance);toast(e.message)}}
+addEventListener('resize',()=>{if(!plBusy()&&!$('g-plinko').hidden)plLayout()});
 
 /* ---------- каталог всех NFT ---------- */
 let catPick=null,catColl=null,catQ='';
@@ -557,7 +630,7 @@ function closeCat(){if(catColl&&!catQ){catColl=null;renderCat();return}$('ovCat'
 function renderCat(){const total=CAT.reduce((a,g)=>a+g.models.length,0);
   $('catIn').innerHTML=`<div class="bar"><button class="x" id="catX" aria-label="Назад">${IC.x}</button><h3>${catColl?esc(catColl.name):catPick?'Выберите цель':'Все NFT'}</h3></div>
   <input class="inp" id="catQ" placeholder="Поиск: ${CAT.length} коллекций, ${num(total)} моделей" value="${esc(catQ)}" autocomplete="off">
-  <div id="catList" style="margin-top:12px"></div><p class="credit">Каталог NFT: thanks to <a href="https://t.me/GiftChanges" target="_blank" rel="noopener">@GiftChanges</a> for the API</p>`;
+  <div id="catList" style="margin-top:12px"></div>`;
   $('catX').onclick=closeCat;const qi=$('catQ');qi.oninput=()=>{catQ=qi.value.trim().toLowerCase();list()};list();
   function list(){const L=$('catList');
     if(catQ||catColl){let ms=catColl?catColl.models.map(([m,pm])=>({kind:'nft',gift:catColl.name,model:m,pm,img:mimg(catColl.name,m),value:nftVal(catColl.name,pm)})):allModels();
@@ -577,9 +650,9 @@ function renderProfile(){if(!$('ovProf').classList.contains('on'))return;const u
   $('profIn').innerHTML=`<div class="bar"><button class="x" id="pX" aria-label="Закрыть">${IC.x}</button><h3>Профиль</h3></div>
   <div class="prof"><div class="ava" style="${u.photo_url?`background-image:url('${esc(u.photo_url)}')`:''}">${u.photo_url?'':esc((u.first_name||'?')[0])}</div><div><b>${esc(u.first_name||'Игрок')}</b><div class="big" style="font-size:22px;margin-top:4px">${num(S.balance)} ${STAR}</div></div></div>
   <div class="row2" style="margin-top:14px"><button class="btn" id="pTop">Пополнить</button><button class="btn ghost" id="pCat">Все NFT</button></div>
-  <h2>Инвентарь<small>${act.length} ${plural(act.length,'подарок','подарка','подарков')} · ${num(act.reduce((a,w)=>a+w.value,0))} ⭐</small></h2>
+  <h2>Инвентарь<small>${act.length} ${plural(act.length,'подарок','подарка','подарков')} · ${num(act.reduce((a,w)=>a+w.value,0))} ${STAR}</small></h2>
   <div class="inv">${inv.map(invCard).join('')||'<p class="empty">Пока пусто — откройте кейс или сыграйте.</p>'}</div>
-  <p class="credit">Каталог NFT и картинки моделей: thanks to <a href="https://t.me/GiftChanges" target="_blank" rel="noopener">@GiftChanges</a> for the API</p>`;
+  <p class="credit">Данные NFT: thanks to <a href="https://t.me/GiftChanges" target="_blank" rel="noopener">GiftChanges</a></p>`;
   $('pX').onclick=closeProf;$('pTop').onclick=()=>openTop();$('pCat').onclick=()=>openCatalog();
   $$('#profIn [data-a]').forEach(b=>b.onclick=()=>act_(b.dataset.a,+b.dataset.w,b))}
 function closeProf(){$('ovProf').classList.remove('on');afterClose()}
@@ -589,7 +662,7 @@ function invCard(w){const st={sent:'Отправлен',requested:'Ждёт от
     <button class="btn ghost" data-a="story" data-w="${w.id}">${s?'Сторис ещё раз':'В сторис'}</button>
     <button class="btn ghost" data-a="friend" data-w="${w.id}" ${fr>=S.need?'disabled':''}>Другу</button>
     <button class="btn" data-a="withdraw" data-w="${w.id}" ${s&&fr>=S.need?'':'disabled'}>Вывести</button>`}
-  else if(w.status=='ready')body=`<button class="btn" data-a="withdraw" data-w="${w.id}">Вывести</button><button class="btn ghost" data-a="sell" data-w="${w.id}">Продать ${num(Math.floor(w.value*S.sell_rate))} ⭐</button>`;
+  else if(w.status=='ready')body=`<button class="btn" data-a="withdraw" data-w="${w.id}">Вывести</button><button class="btn ghost" data-a="sell" data-w="${w.id}">Продать ${num(Math.floor(w.value*S.sell_rate))} ${STAR}</button>`;
   else body=`<span class="tag">${st||''}</span>`;
   return `<div class="iv t${tierV(w.value,300)}"><div class="pi"><img src="${esc(imgOf(w))}" alt="" loading="lazy"></div><b>${esc(w.gift)}</b><span class="tag">${esc(w.model)}</span><em>${num(w.value)} ${STAR}</em>${body}</div>`}
 async function act_(a,id,b){try{b.disabled=true;
@@ -598,7 +671,7 @@ async function act_(a,id,b){try{b.disabled=true;
   if(a=='friend'){if(!tg.isVersionAtLeast('8.0')){b.disabled=false;return toast('Обновите Telegram')}
     const {id:mid}=await api(`win/${id}/prepare`,'POST');tg.shareMessage(mid,async ok=>{if(ok){await api(`win/${id}/shared`,'POST');await load()}})}
   if(a=='withdraw'){await api(`win/${id}/withdraw`,'POST');toast('Заявка отправлена. Подарок отправит админ.')}
-  if(a=='sell'){const r=await api(`win/${id}/sell`,'POST');toast(`+${num(r.amount)} ⭐ на баланс`);hap('ok')}
+  if(a=='sell'){const r=await api(`win/${id}/sell`,'POST');toast(`+${num(r.amount)} ${STAR} на баланс`);hap('ok')}
   await load()}catch(e){toast(e.message);b.disabled=false}}
 function pickInv(cb){const inv=(S?.inventory||[]).filter(w=>w.status=='ready');
   if(!inv.length){toast('В инвентаре нет подарков — откройте кейс');return}
@@ -609,23 +682,23 @@ function pickInv(cb){const inv=(S?.inventory||[]).filter(w=>w.status=='ready');
 function sheet(h){$('sheetIn').innerHTML=h;$('sheet').style.display='flex'}
 function closeSheet(){$('sheet').style.display='none'}
 $('sheet').onclick=e=>{if(e.target==$('sheet'))closeSheet()};
-function openTop(need){closeSheet();const mn=S?.topup_min||1,mx=S?.topup_max||10000,pre=[50,100,250,500,1000,2500];
+function openTop(need){closeSheet();const mn=S?.topup_min||50,mx=S?.topup_max||10000,pre=[50,100,250,500,1000,2500];
   $('topIn').innerHTML=`<div class="bar"><button class="x" id="tX" aria-label="Закрыть">${IC.x}</button><h3>Пополнить баланс</h3></div>
   <div class="card" style="margin-top:4px"><p style="color:var(--mut)">Сейчас на балансе</p><div class="big">${num(S?.balance||0)} ${STAR}</div>
-   ${need?`<p style="color:var(--gold);margin-top:6px">Не хватает ${num(need)} ⭐</p>`:''}</div>
+   ${need?`<p style="color:var(--gold);margin-top:6px">Не хватает ${num(need)} ${STAR}</p>`:''}</div>
   <label class="amt">${STAR}<input id="tAmt" inputmode="numeric" pattern="[0-9]*" placeholder="Сумма" value="${need?Math.max(mn,Math.ceil(need)):''}" aria-label="Сумма пополнения" enterkeyhint="done"></label>
-  <p class="maxw">От ${num(mn)} до ${num(mx)} ⭐</p>
+  <p class="maxw">От ${num(mn)} до ${num(mx)} ${STAR}</p>
   <div class="presets">${pre.map(a=>`<button data-p="${a}">${STAR} ${num(a)}</button>`).join('')}</div>
   <button class="btn" id="tGo" style="margin-top:18px"></button>
   <p class="maxw" style="justify-content:center">Оплата через Telegram Stars, звёзды приходят на баланс сразу</p>`;
   const inp=$('tAmt'),go=$('tGo'),val=()=>parseInt(inp.value.replace(/\D/g,''))||0;
   const upd=()=>{const v=val();inp.value=v?String(v):'';$$('#topIn [data-p]').forEach(b=>b.classList.toggle('on',+b.dataset.p==v));
-    go.disabled=v<mn||v>mx;go.innerHTML=v>mx?`Максимум ${num(mx)} ⭐`:v?`Пополнить на ${num(v)} ${STAR}`:'Введите сумму'};
+    go.disabled=v<mn||v>mx;go.innerHTML=v>mx?`Максимум ${num(mx)} ${STAR}`:v?`Пополнить на ${num(v)} ${STAR}`:'Введите сумму'};
   inp.oninput=upd;inp.onkeydown=e=>{if(e.key=='Enter'){inp.blur();go.click()}};
   $$('#topIn [data-p]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.p;upd();hap()});
   $('tX').onclick=closeTop;
   go.onclick=async()=>{const v=val();if(v<mn||v>mx)return;go.disabled=true;
-    try{const {link}=await api('topup/'+v,'POST');tg.openInvoice(link,s=>{go.disabled=false;if(s=='paid'){toast(`Баланс пополнен на ${num(v)} ⭐`);sfx.win();closeTop();setTimeout(load,1500)}})}
+    try{const {link}=await api('topup/'+v,'POST');tg.openInvoice(link,s=>{go.disabled=false;if(s=='paid'){toast(`Баланс пополнен на ${num(v)} ${STAR}`);sfx.win();closeTop();setTimeout(load,1500)}})}
     catch(e){toast(e.message);go.disabled=false}};
   upd();$('ovTop').classList.add('on');$('ovTop').scrollTop=0;document.body.style.overflow='hidden';try{tg.BackButton.show()}catch(e){}}
 function closeTop(){$('ovTop').classList.remove('on');afterClose()}
@@ -646,7 +719,7 @@ async function load(){S=await api('state');left=S.free_in;
   const u=tg.initDataUnsafe?.user;if(u){const a=$('ava');if(u.photo_url)a.style.backgroundImage=`url('${u.photo_url}')`;else a.textContent=(u.first_name||'?')[0]}
   if(M.g==null&&S.mines)M.g=S.mines;
   if(!$('chips').children.length)renderChips();
-  renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();renderProfile();
+  renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();if(!$('g-plinko').hidden)renderPlinko();renderProfile();
   if(tab=='bonus'&&!(BV&&BV.spinning))renderBonus();
   $('rb').innerHTML='+'+S.ref_bonus+' '+STAR;$('rp').textContent=S.ref_percent+'%';$('rn').textContent=S.refs;$('re').textContent=num(S.ref_earned);
   if(CV){CV.c=S.cases.find(c=>c.id==CV.c.id)||CV.c;CV.refresh()}

@@ -26,7 +26,7 @@ let T=localStorage.adm||prompt('Admin token');localStorage.adm=T;
 const api=async(p,m='GET',b)=>{const r=await fetch('/api/admin/'+p,{method:m,headers:{'X-Admin':T,'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
  if(r.status==401){localStorage.removeItem('adm');alert('Неверный токен');location.reload()}return r.json()};
 async function load(){
- const s=await api('stats');$('stats').innerHTML=Object.entries({Пользователи:s.users,Выигрышей:s.wins,'Ждут отправки':s.requested,Отправлено:s.sent,'Мины, доход ⭐':s.mines}).map(([k,v])=>`<div>${k}<br><b style="font-size:22px">${v}</b></div>`).join('');
+ const s=await api('stats');$('stats').innerHTML=Object.entries({Пользователи:s.users,Выигрышей:s.wins,'Ждут отправки':s.requested,Отправлено:s.sent,'Мины, доход ⭐':s.mines,'Плинко, доход ⭐':s.plinko}).map(([k,v])=>`<div>${k}<br><b style="font-size:22px">${v}</b></div>`).join('');
  const r=await api('requests');
  $('req').innerHTML='<tr><th>#</th><th>Пользователь</th><th>Подарок</th><th>Статус</th><th></th></tr>'+r.map(w=>`<tr><td>${w.id}</td><td>${w.username?`<a href="https://t.me/${w.username}" target="_blank">@${w.username}</a>`:`<a href="tg://user?id=${w.user_id}">${w.name||w.user_id}</a>`}</td><td>${w.img?`<img src="${w.img}" style="width:28px;height:28px;vertical-align:middle;object-fit:contain"> `:''}${w.prize} <small>(≈${w.value} ⭐)</small></td><td>${w.status}</td><td>${w.status=='requested'?`<button onclick="win(${w.id},'sent')">Отправлен</button> <button class="x" onclick="win(${w.id},'rejected')">Отклонить</button>`:''}</td></tr>`).join('');
  const p=await api('prizes');
