@@ -187,6 +187,8 @@ SETTINGS_DEFAULT = {
     "cm_tags": "#тгподарки #подаркитг #нфт #giftmafia",  # хэштеги видео в TikTok
     "cm_max": "300",                           # скриншотов в день на человека
     "cm_chat": "",                             # id чата модерации (пусто = ADMIN_CHAT_ID)
+    "stats_exclude": "@IbuyBalenciaga",        # аккаунты, которые не учитываются в дашборде и статистике (через запятую)
+    "stats_since": "0",                        # статистика админки считается с этого момента (unix-время), кнопка «Сбросить»
 }
 NICK_HOLD, NICK_WINDOW = 24 * 3600, 10 * 3600  # держать 24 ч, потом 10 ч на сбор награды
 
@@ -196,11 +198,25 @@ def setting(k):
     return r["v"] if r else SETTINGS_DEFAULT[k]
 
 
+def stat_ex(col="user_id"):
+    """SQL-условие: исключить из статистики аккаунты из настройки stats_exclude (по @username или id)."""
+    names = [x.strip().lstrip("@").lower() for x in setting("stats_exclude").replace(";", ",").split(",") if x.strip()]
+    ids = {int(x) for x in names if x.isdigit()} | {r["id"] for r in q(f"SELECT id FROM users WHERE lower(username) IN ({','.join('?' * len(names))})", *names)} if names else set()
+    return f" AND {col} NOT IN ({','.join(map(str, ids))})" if ids else ""
+
+
+def stat_since(): return int(setting("stats_since") or 0)
+
+
 def chat_ref(s):
     """'https://t.me/x', 't.me/x', '@x' -> ('@x', 'https://t.me/x')."""
     s = (s or "").strip()
     m = re.search(r"(?:t\.me/|@)([A-Za-z0-9_]{4,})", s) or re.fullmatch(r"([A-Za-z0-9_]{4,})", s)
     return (f"@{m.group(1)}", f"https://t.me/{m.group(1)}") if m else ("", "")
+
+
+if not q1("SELECT 1 FROM meta WHERE k='stats_reset_1'"):  # разовый сброс дашборда при обновлении
+    run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:stats_since',?)", str(int(time.time()))); run("INSERT OR REPLACE INTO meta(k,v) VALUES('stats_reset_1','1')")
 
 
 if not q1("SELECT 1 FROM meta WHERE k='tasks_seeded'"):  # задания для примера
@@ -1138,7 +1154,7 @@ def a_cm(status: str = "pending"):
     for r in rows: r["files"] = json.loads(r["files"])
     d0 = msk_day_start()
     return {"reports": rows, "pending": q1("SELECT COUNT(*) n, COALESCE(SUM(n),0) s FROM cm_reports WHERE status='pending'"),
-            "today": q1("SELECT COALESCE(SUM(n),0) n, COALESCE(SUM(reward),0) stars, COUNT(DISTINCT user_id) users FROM cm_reports WHERE status='ok' AND decided>=?", d0),
+            "today": q1("SELECT COALESCE(SUM(n),0) n, COALESCE(SUM(reward),0) stars, COUNT(DISTINCT user_id) users FROM cm_reports WHERE status='ok' AND decided>=?" + stat_ex(), max(d0, stat_since())),
             "settings": {k: setting(k) for k in ("cm_on", "cm_rate", "cm_img_bonus", "cm_mention", "cm_tags", "cm_max", "cm_chat")}}
 
 
@@ -1590,6 +1606,7 @@ def a_settings(b: dict):
         if k == "gift_rate" and not (v.isdigit() and 1 <= int(v) <= 100): raise HTTPException(400, "Курс подарков: от 1 до 100%")
         if k == "ton_wallet" and v and not re.fullmatch(r"[A-Za-z0-9_\-:]{48,67}", v): raise HTTPException(400, "Неверный адрес кошелька")
         if k in ("free_notify", "cm_on"): v = "1" if v in ("1", "true", "True") else "0"
+        if k == "stats_since" and not v.isdigit(): raise HTTPException(400, "Неверное время")
         if k in ("cm_img_bonus", "cm_max") and not v.isdigit(): raise HTTPException(400, "Нужно целое число")
         if k == "cm_rate" and not re.fullmatch(r"\d+(\.\d+)?", v): raise HTTPException(400, "Ставка: число, например 1 или 0.5")
         if k == "cm_chat" and v and not re.fullmatch(r"-?\d+", v): raise HTTPException(400, "id чата: число, например -1001234567890")
@@ -1632,33 +1649,33 @@ def buckets(period):
 @app.get("/api/admin/dash", dependencies=[Depends(admin)])
 def a_dash(period: str = "week"):
     if period not in ("day", "week", "month", "year"): period = "week"
-    bs = buckets(period); t0 = bs[0][0]
+    bs = buckets(period); t0 = max(bs[0][0], stat_since()); X = stat_ex()
     idx = lambda t: next((i for i, (a, b, _) in enumerate(bs) if a <= t < b), None)
     series = {k: [0] * len(bs) for k in ("users", "deposits", "turnover", "ggr")}
-    for r in q("SELECT created FROM users WHERE created>=?", t0):
+    for r in q("SELECT created FROM users WHERE created>=?" + stat_ex("id"), t0):
         i = idx(r["created"])
         if i is not None: series["users"][i] += 1
-    pays = q("SELECT method,stars,bonus,user_id,paid_at FROM payments WHERE status='paid' AND paid_at>=?", t0)
+    pays = q("SELECT method,stars,bonus,user_id,paid_at FROM payments WHERE status='paid' AND paid_at>=?" + X, t0)
     for r in pays:
         i = idx(r["paid_at"])
         if i is not None: series["deposits"][i] += r["stars"]
     games = {}
-    for r in q("SELECT game,amount,payout,created FROM bets WHERE created>=?", t0):
+    for r in q("SELECT game,amount,payout,created FROM bets WHERE created>=?" + X, t0):
         i = idx(r["created"])
         if i is not None: series["turnover"][i] += r["amount"]; series["ggr"][i] += r["amount"] - r["payout"]
         g = games.setdefault(r["game"], {"n": 0, "turnover": 0, "ggr": 0}); g["n"] += 1; g["turnover"] += r["amount"]; g["ggr"] += r["amount"] - r["payout"]
     methods = {}
     for r in pays: m = methods.setdefault(r["method"], {"n": 0, "stars": 0}); m["n"] += 1; m["stars"] += r["stars"]
     cases = q("SELECT c.title, COUNT(*) n, SUM(b.amount) turnover, SUM(b.amount-b.payout) ggr FROM bets b JOIN cases c ON c.id=b.ref "
-              "WHERE b.game IN('case','free') AND b.created>=? GROUP BY c.id ORDER BY n DESC LIMIT 8", t0)
-    return {"period": period, "labels": [b[2] for b in bs], "series": series, "games": games, "methods": methods, "top_cases": cases,
-            "totals": {"users": sum(series["users"]), "all_users": q1("SELECT COUNT(*) n FROM users")["n"],
-                       "active": q1("SELECT COUNT(*) n FROM users WHERE last_seen>=?", t0)["n"],
+              "WHERE b.game IN('case','free') AND b.created>=?" + stat_ex("b.user_id") + " GROUP BY c.id ORDER BY n DESC LIMIT 8", t0)
+    return {"period": period, "exclude": setting("stats_exclude"), "labels": [b[2] for b in bs], "series": series, "games": games, "methods": methods, "top_cases": cases,
+            "totals": {"users": sum(series["users"]), "all_users": q1("SELECT COUNT(*) n FROM users WHERE created>=?" + stat_ex("id"), stat_since())["n"], "since": stat_since(),
+                       "active": q1("SELECT COUNT(*) n FROM users WHERE last_seen>=?" + stat_ex("id"), t0)["n"],
                        "deposits": sum(series["deposits"]), "deposit_n": len(pays), "depositors": len({p["user_id"] for p in pays}),
                        "bonus": sum(p["bonus"] for p in pays), "turnover": sum(series["turnover"]), "ggr": sum(series["ggr"]),
                        "bets": sum(g["n"] for g in games.values()),
-                       "withdraw_n": q1("SELECT COUNT(*) n FROM wins WHERE status IN('requested','sent') AND created>=?", t0)["n"],
-                       "withdraw_value": q1("SELECT COALESCE(SUM(value),0) n FROM wins WHERE status IN('requested','sent') AND created>=?", t0)["n"],
+                       "withdraw_n": q1("SELECT COUNT(*) n FROM wins WHERE status IN('requested','sent') AND created>=?" + X, t0)["n"],
+                       "withdraw_value": q1("SELECT COALESCE(SUM(value),0) n FROM wins WHERE status IN('requested','sent') AND created>=?" + X, t0)["n"],
                        "requested": q1("SELECT COUNT(*) n FROM wins WHERE status='requested'")["n"]}}
 
 
@@ -1667,6 +1684,12 @@ USER_COLS = ("SELECT u.id,u.username,u.name,u.balance,u.created,u.last_seen,u.ut
              "(SELECT COALESCE(SUM(amount),0) FROM bets b WHERE b.user_id=u.id) turnover,"
              "(SELECT COALESCE(SUM(amount-payout),0) FROM bets b WHERE b.user_id=u.id) ggr,"
              "(SELECT COUNT(*) FROM bets b WHERE b.user_id=u.id AND b.game!='free') games FROM users u")
+
+
+@app.post("/api/admin/stats/reset", dependencies=[Depends(admin)])
+def a_stats_reset():
+    """Обнулить дашборд: статистика считается с текущего момента (данные в базе не удаляются)."""
+    run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:stats_since',?)", str(int(time.time()))); return {"since": stat_since()}
 
 
 @app.get("/api/admin/users", dependencies=[Depends(admin)])
@@ -1689,11 +1712,12 @@ def a_user(uid: int):
 
 @app.get("/api/admin/utm", dependencies=[Depends(admin)])
 def a_utm():
-    rows = q("SELECT t.*, (SELECT COUNT(*) FROM utm_hits h WHERE h.code=t.code) starts,"
-             "(SELECT COUNT(*) FROM users u WHERE u.utm=t.code) users,"
-             "(SELECT COUNT(DISTINCT p.user_id) FROM payments p JOIN users u ON u.id=p.user_id WHERE u.utm=t.code AND p.status='paid') payers,"
-             "(SELECT COALESCE(SUM(p.stars),0) FROM payments p JOIN users u ON u.id=p.user_id WHERE u.utm=t.code AND p.status='paid') deposits,"
-             "(SELECT COALESCE(SUM(b.amount),0) FROM bets b JOIN users u ON u.id=b.user_id WHERE u.utm=t.code) turnover FROM utm t ORDER BY created DESC")
+    t, X = stat_since(), stat_ex("u.id")
+    rows = q("SELECT t.*, (SELECT COUNT(*) FROM utm_hits h WHERE h.code=t.code AND h.created>=?" + stat_ex("h.user_id") + ") starts,"
+             "(SELECT COUNT(*) FROM users u WHERE u.utm=t.code AND u.created>=?" + X + ") users,"
+             "(SELECT COUNT(DISTINCT p.user_id) FROM payments p JOIN users u ON u.id=p.user_id WHERE u.utm=t.code AND p.status='paid' AND p.paid_at>=?" + X + ") payers,"
+             "(SELECT COALESCE(SUM(p.stars),0) FROM payments p JOIN users u ON u.id=p.user_id WHERE u.utm=t.code AND p.status='paid' AND p.paid_at>=?" + X + ") deposits,"
+             "(SELECT COALESCE(SUM(b.amount),0) FROM bets b JOIN users u ON u.id=b.user_id WHERE u.utm=t.code AND b.created>=?" + X + ") turnover FROM utm t ORDER BY created DESC", t, t, t, t, t)
     for r in rows: r["bot_link"] = f"https://t.me/{BOT_USERNAME}?start=u_{r['code']}"; r["app_link"] = f"https://t.me/{BOT_USERNAME}?startapp=u_{r['code']}"
     return {"links": rows}
 

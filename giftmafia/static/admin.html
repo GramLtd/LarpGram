@@ -92,6 +92,7 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .kp{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:12px}.kp span{border-radius:14px;background:#ffffff08;padding:8px 10px}.kp small{display:block;color:var(--mut);font-size:11px}.kp b{font-size:15px}
 .shots{display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:4px}.shots img{height:180px;border-radius:12px;border:1px solid var(--line);display:block}
 .cmrep .acts{flex-wrap:wrap}
+.rst{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:12px 16px}.rst span{flex:1;min-width:180px;color:var(--mut);font-size:14px}
 </style></head><body>
 <div id="app"></div><div id="toast" role="status"></div>
 <script>
@@ -177,9 +178,11 @@ async function renderDash(){const M=$('main');
   M.innerHTML=`<h2>Дашборд<small id="dper"></small></h2><div class="chips">${[['day','День'],['week','Неделя'],['month','Месяц'],['year','Год']].map(([k,t])=>`<button class="chip ${DP==k?'on':''}" data-p="${k}">${t}</button>`).join('')}</div><div id="dash"><p class="empty">Загрузка…</p></div>`;
   $$('[data-p]',M).forEach(b=>b.onclick=()=>{DP=b.dataset.p;renderDash()});
   try{DD=await api('dash?period='+DP)}catch(e){return toast(e.message)}drawDash()}
+function resetStats(){if(!confirm('Обнулить дашборд и статистику? Данные в базе останутся, отсчёт начнётся с этого момента.'))return;act(api('stats/reset','POST'),'Статистика обнулена',renderDash)}
 const sgn=v=>`<b class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${num(v)} ⭐</b>`;
 function drawDash(){const d=DD,t=d.totals,el=$('dash');if(!el)return;
-  el.innerHTML=`<div class="stats">
+  el.innerHTML=`<div class="card rst"><span>${t.since?'Считается с '+new Date(t.since*1000).toLocaleString('ru-RU'):'Считается за всё время'}${DD.exclude?' · без '+esc(DD.exclude):''}</span><button class="btn ghost sm" id="rstGo">Сбросить статистику</button></div>
+  <div class="stats">
     <div class="card stat"><small>Новых пользователей</small><b>${num(t.users)}</b><em>всего ${num(t.all_users)}</em></div>
     <div class="card stat"><small>Активных</small><b>${num(t.active)}</b><em>заходили за период</em></div>
     <div class="card stat"><small>Пополнения</small><b>${num(t.deposits)} ⭐</b><em>${num(t.deposit_n)} платежей · ${num(t.depositors)} чел.</em></div>
@@ -192,7 +195,7 @@ function drawDash(){const d=DD,t=d.totals,el=$('dash');if(!el)return;
       ${t.bonus?`<div class="tr"><span>Бонусы по промокодам</span><span></span><b>${num(t.bonus)} ⭐</b></div>`:''}</div></div>
     <div><h2>Игры</h2><div class="card tbl">${Object.entries(d.games).sort((a,b)=>b[1].turnover-a[1].turnover).map(([k,v])=>`<div class="tr"><span>${GAME[k]||k}</span><span>${num(v.n)}</span><span>${num(v.turnover)} ⭐</span>${sgn(v.ggr)}</div>`).join('')||'<p class="empty">Ставок нет</p>'}</div></div></div>
   <h2>Популярные кейсы</h2><div class="card tbl">${d.top_cases.map(c=>`<div class="tr"><span>${esc(c.title)}</span><span>${num(c.n)} откр.</span><span>${num(c.turnover)} ⭐</span>${sgn(c.ggr)}</div>`).join('')||'<p class="empty">Кейсы не открывали</p>'}</div>`;
-  $$('[data-m]',el).forEach(b=>b.onclick=()=>{DM=b.dataset.m;drawDash()});
+  $$('[data-m]',el).forEach(b=>b.onclick=()=>{DM=b.dataset.m;drawDash()});$('rstGo').onclick=resetStats;
   $('dper').textContent={day:'последние 24 часа',week:'7 дней',month:'30 дней',year:'12 месяцев'}[d.period];
   drawChart()}
 function drawChart(){const el=$('chart'),d=DD,v=d.series[DM],L=d.labels,u=METRIC[DM][1];if(!el)return;
@@ -294,6 +297,7 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     <label>Кошелёк для оплаты GRAM через TON Connect (пусто — способ выключен)<input class="inp" id="sTon" value="${esc(st.ton_wallet)}" placeholder="UQ..."></label>
     <label>Аккаунт для пополнения подарками (бизнес-аккаунт, подключённый к боту)<input class="inp" id="sGa" value="${esc(st.gift_account)}" placeholder="@account"></label>
     <label>Сколько % от оценки NFT зачислять за подарок<input class="inp" id="sGr" type="number" min="1" max="100" value="${esc(st.gift_rate)}"></label>
+    <label>Не учитывать в дашборде и статистике (аккаунты через запятую: @username или id)<input class="inp" id="sEx" value="${esc(st.stats_exclude)}" placeholder="@IbuyBalenciaga"></label>
     <label style="display:flex;align-items:center;gap:10px;color:#fff"><button class="sw ${st.free_notify=='1'?'on':''}" id="sFn" type="button" aria-label="Напоминание"></button>Писать в бота, когда снова доступен «Подарок дня»</label>
     <button class="btn" id="sSave">Сохранить</button>
     <p style="color:var(--mut);font-size:13px">Чтобы бот мог проверять подписку, добавьте его администратором в канал.</p></div>
@@ -310,7 +314,7 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
   const kind=()=>{$('nTgL').style.display=['channel','link'].includes($('nK').value)?'':'none'};$('nK').onchange=kind;kind();
   $('sFn').onclick=()=>$('sFn').classList.toggle('on');
   $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value,
-    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0'}),'Настройки сохранены',renderTasksAdmin);
+    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value}),'Настройки сохранены',renderTasksAdmin);
   $('nAdd').onclick=()=>act(api('task','POST',{kind:$('nK').value,title:$('nT').value,target:$('nTg').value,reward:$('nR').value}),'Задание добавлено',renderTasksAdmin);
   $$('[data-trw]').forEach(i=>i.onchange=()=>act(api(`task/${i.dataset.trw}`,'PATCH',{reward:i.value}),'Награда сохранена',renderTasksAdmin));
   $$('[data-ton]').forEach(b=>b.onclick=()=>act(api(`task/${b.dataset.ton}`,'PATCH',{active:!b.classList.contains('on')}),b.classList.contains('on')?'Задание выключено':'Задание включено',renderTasksAdmin));
