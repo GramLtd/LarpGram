@@ -286,6 +286,10 @@ SETTINGS_DEFAULT = {
     "cm_tags": "#тгподарки #подаркитг #нфт #giftmafia",  # хэштеги видео в TikTok
     "cm_max": "300",                           # скриншотов в день на человека
     "cm_chat": "",                             # id чата модерации (пусто = ADMIN_CHAT_ID)
+    "maint_on": "0",                           # технические работы: мини-апп закрыт для всех, кроме maint_allow
+    "maint_text": "Мы обновляем GiftMafia и скоро вернёмся. Баланс и подарки в безопасности.",
+    "maint_until": "",                         # ориентировочное окончание (unix-время), пусто = без времени
+    "maint_allow": "@IbuyBalenciaga",          # кому доступен мини-апп во время работ (через запятую: @username или id)
     "emoji_set": "GiftMafiaNFT",               # набор премиум-эмодзи для текстов бота (t.me/addemoji/ИМЯ)
     "emoji_alias": "{}",                       # ручные сопоставления: {"🚀": "<custom_emoji_id>"}
     "stats_exclude": "@IbuyBalenciaga",        # аккаунты, которые не учитываются в дашборде и статистике (через запятую)
@@ -617,9 +621,20 @@ def auth(x_init: str = Header("")):
         run("INSERT OR IGNORE INTO users(id,username,name,created,ref_by,utm) VALUES(?,?,?,?,?,?)", u["id"], u.get("username"), u.get("first_name"), int(time.time()), ref, utm)
         if utm: run("INSERT OR IGNORE INTO utm_hits(code,user_id,created) VALUES(?,?,?)", utm, u["id"], int(time.time()))
         if ref: credit(ref, REF_BONUS, True)
+    if setting("maint_on") == "1" and not maint_allowed(u): raise HTTPException(503, detail=maint_info())
     now = int(time.time())
     db.execute("UPDATE users SET last_seen=?, username=?, name=? WHERE id=? AND last_seen<?", (now, u.get("username"), u.get("first_name"), u["id"], now - 60)); db.commit()
     return u["id"]
+
+
+def maint_info():
+    u = setting("maint_until")
+    return {"maint": True, "text": setting("maint_text"), "until": int(u) if u.isdigit() and int(u) > time.time() else 0}
+
+
+def maint_allowed(u):
+    allow = {x.strip().lstrip("@").lower() for x in setting("maint_allow").replace(";", ",").split(",") if x.strip()}
+    return str(u.get("id")) in allow or (u.get("username") or "").lower() in allow
 
 
 def credit(uid, amount, ref=False):
@@ -715,6 +730,11 @@ def inventory(uid):
     ws = q("SELECT * FROM wins WHERE user_id=? AND kind='nft' AND status IN('locked','ready','requested','sent') ORDER BY id DESC LIMIT 200", uid)
     for w in ws: w["story_url"] = story_url(w["id"])
     return ws
+
+
+@app.get("/api/maint")
+def maint_status():  # без авторизации: показать заглушку ещё до загрузки
+    return maint_info() if setting("maint_on") == "1" else {"maint": False}
 
 
 @app.get("/api/state")
@@ -1710,7 +1730,8 @@ def a_settings(b: dict):
         if k == "free_channel" and v and not chat_ref(v)[0]: raise HTTPException(400, "Канал: https://t.me/имя или @имя, пусто - без условия")
         if k == "gift_rate" and not (v.isdigit() and 1 <= int(v) <= 100): raise HTTPException(400, "Курс подарков: от 1 до 100%")
         if k == "ton_wallet" and v and not re.fullmatch(r"[A-Za-z0-9_\-:]{48,67}", v): raise HTTPException(400, "Неверный адрес кошелька")
-        if k in ("free_notify", "cm_on"): v = "1" if v in ("1", "true", "True") else "0"
+        if k == "maint_until" and v and not v.isdigit(): raise HTTPException(400, "Неверное время окончания")
+        if k in ("free_notify", "cm_on", "maint_on"): v = "1" if v in ("1", "true", "True") else "0"
         if k == "stats_since" and not v.isdigit(): raise HTTPException(400, "Неверное время")
         if k in ("cm_img_bonus", "cm_max") and not v.isdigit(): raise HTTPException(400, "Нужно целое число")
         if k == "cm_rate" and not re.fullmatch(r"\d+(\.\d+)?", v): raise HTTPException(400, "Ставка: число, например 1 или 0.5")

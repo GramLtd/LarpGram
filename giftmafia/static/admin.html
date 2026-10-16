@@ -101,6 +101,7 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .eu img+small,.eu img+button{margin-left:auto}.eu small{color:var(--gold);font-size:12px}.eu .btn{margin-left:auto}.eu small+.btn{margin-left:8px}.eu.no{background:#ffc83d12}
 .epick{position:fixed;inset:0;z-index:50;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}.epick .card{max-width:520px;width:100%;max-height:80vh;overflow:auto}
 .eadd{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:8px;margin-top:8px;max-width:100%}.eadd .btn{padding:0 12px}.eadd .inp{min-width:0}#eaE{text-align:center;font-size:20px}
+.mtc.on{border-color:#ff5a6e66;box-shadow:0 0 0 1px #ff5a6e33}
 </style></head><body>
 <div id="app"></div><div id="toast" role="status"></div>
 <script>
@@ -317,7 +318,16 @@ async function renderEmoji(reload){const el=$('emInfo');if(!el)return;let e;try{
     document.body.appendChild(box);box.onclick=ev=>{const t=ev.target.closest('[data-id]');if(t)act(api('emoji_alias','POST',{emoji:em,id:t.dataset.id}),'Сохранено',()=>renderEmoji());if(t||ev.target==box||ev.target.matches('.btn'))box.remove()}})}
 const KIND={channel:'Подписка на канал',bot:'Запустить бота',story:'Сторис',link:'Перейти по ссылке'};
 async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks')}catch(e){return toast(e.message)}const st=d.settings;
-  M.innerHTML=`<h2>Настройки</h2><div class="card set">
+  const mu=+st.maint_until||0,muv=mu?new Date(mu*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16):'';
+  M.innerHTML=`<h2>Технические работы${st.maint_on=='1'?'<small style="color:var(--bad)">● включены</small>':'<small>выключены</small>'}</h2>
+  <div class="card set mtc ${st.maint_on=='1'?'on':''}">
+    <label style="display:flex;align-items:center;gap:10px;color:#fff;font-size:15px"><button class="sw ${st.maint_on=='1'?'on':''}" id="mOn" type="button" aria-label="Технические работы"></button>Закрыть мини-апп на технические работы</label>
+    <label>Текст для пользователей<textarea class="inp" id="mTx" rows="3" style="height:auto;padding:10px 12px;resize:vertical;font:600 15px/1.4 Manrope,system-ui,sans-serif;color:#fff">${esc(st.maint_text)}</textarea></label>
+    <label>Ориентировочно до (необязательно)<input class="inp" id="mUn" type="datetime-local" value="${muv}"></label>
+    <label>Кому доступно во время работ (через запятую: @username или id)<input class="inp" id="mAl" value="${esc(st.maint_allow)}" placeholder="@IbuyBalenciaga"></label>
+    <button class="btn ${st.maint_on=='1'?'ok':''}" id="mSave">${st.maint_on=='1'?'Сохранить':'Сохранить'}</button>
+    <p style="color:var(--mut);font-size:13px">Пока работы включены, у всех остальных в мини-аппе экран «Технические работы», а сервер не принимает их запросы (игры, кейсы, вывод). Как только выключите — приложение у них откроется само в течение 20 секунд.</p></div>
+  <h2>Настройки</h2><div class="card set">
     <label>Канал для «Подарка дня» (подписка обязательна; пусто — без условия)<input class="inp" id="sCh" value="${esc(st.free_channel)}" placeholder="https://t.me/канал или @канал"></label>
     <label>Что поставить в имя (программа «Поставь в ник»)<input class="inp" id="sTag" value="${esc(st.nick_tag)}"></label>
     <label>Что поставить в описание (должно содержать то же имя)<input class="inp" id="sBio" value="${esc(st.nick_bio)}"></label>
@@ -343,6 +353,10 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     <button class="btn" id="nAdd">Добавить задание</button></div>`;
   const kind=()=>{$('nTgL').style.display=['channel','link'].includes($('nK').value)?'':'none'};$('nK').onchange=kind;kind();
   $('sFn').onclick=()=>$('sFn').classList.toggle('on');
+  $('mOn').onclick=()=>$('mOn').classList.toggle('on');
+  $('mSave').onclick=()=>{const on=$('mOn').classList.contains('on'),un=$('mUn').value?String(Math.floor(new Date($('mUn').value).getTime()/1000)):'';
+    if(on&&st.maint_on!='1'&&!confirm('Закрыть мини-апп для всех пользователей на технические работы?'))return;
+    act(api('settings','POST',{maint_on:on?'1':'0',maint_text:$('mTx').value,maint_until:un,maint_allow:$('mAl').value}),on?'Технические работы включены':'Технические работы выключены',renderTasksAdmin)};
   $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value,
     ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value,emoji_set:$('sEm').value}),'Настройки сохранены',async()=>{await api('emoji?reload=1');renderTasksAdmin()});
   renderEmoji();

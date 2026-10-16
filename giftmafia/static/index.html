@@ -358,6 +358,18 @@ h2{animation:rise .45s ease both}
 .cmr .line b{color:var(--gold);font:800 18px "Unbounded",system-ui}
 .cms{display:flex;align-items:center;gap:14px;padding:14px 16px;margin-top:10px}.cms span{width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:800;background:linear-gradient(180deg,#ff6b86,#e0294f);box-shadow:0 6px 14px -6px #ff3d6b}.cms p{font-weight:700;line-height:1.35}
 .btn.tgb{margin-top:16px;background:linear-gradient(90deg,#37aee2,#5ec0ff);box-shadow:0 10px 30px -10px #37aee2aa}
+/* технические работы */
+#maint{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 22px calc(24px + env(safe-area-inset-bottom,0px));overflow:hidden;animation:fin .4s ease}
+body.maint>header,body.maint>main,body.maint>nav{display:none!important}
+.mt-glow{position:absolute;left:50%;top:38%;width:520px;height:520px;margin:-260px 0 0 -260px;border-radius:50%;background:radial-gradient(circle,#6c63ff40,transparent 62%);animation:pulse 4s ease-in-out infinite}
+.mt-in{position:relative;max-width:380px;text-align:center}
+.mt-ic{width:132px;height:132px;margin:0 auto 18px;filter:drop-shadow(0 16px 30px #6c63ff66)}.mt-ic svg{width:100%;height:100%;overflow:visible}
+.mt-gear{transform-origin:32px 30.5px;animation:spin 9s linear infinite}.mt-key{animation:mtk 3s ease-in-out infinite;transform-origin:44px 40px}
+@keyframes mtk{50%{transform:rotate(-14deg)}}
+.mt-logo{font:800 20px/1 "Unbounded",system-ui;letter-spacing:-.03em;color:#fff;opacity:.9}.mt-logo b{background:linear-gradient(180deg,#ffe07a,#f3a514);-webkit-background-clip:text;background-clip:text;color:transparent}
+#maint h1{font:800 28px/1.15 "Unbounded",system-ui;margin:14px 0 10px}#maint p{color:#c9cbe4;font-weight:600}
+.mt-until{display:inline-flex;margin-top:14px;padding:9px 16px;border-radius:999px;background:#ffffff10;border:1px solid #ffffff1f;font-weight:800}
+#maint .btn{margin-top:22px}#maint .mt-sm{color:var(--mut);font-size:13px;margin-top:12px}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.ov.on,.sheet>div,body.ready main:not([hidden]),#winfx *{animation:none!important}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -454,7 +466,26 @@ const save=()=>{try{localStorage.gmFast=fast?'1':'0';localStorage.gmSnd=sound?'1
 const toast=t=>{const e=$('toast');t=String(t);e.innerHTML=t.includes('<svg')?t:esc(t).replace(/\u2B50/g,STAR);e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2800)};
 const hap=t=>{try{tg.HapticFeedback&&(t=='ok'||t=='err'?tg.HapticFeedback.notificationOccurred(t=='ok'?'success':'error'):tg.HapticFeedback.impactOccurred(t||'light'))}catch(e){}};
 async function api(p,m='GET',body){const r=await fetch('/api/'+p,{method:m,headers:{'X-Init':tg.initData,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||'Ошибка');return j}
+  const j=await r.json().catch(()=>({}));if(r.status==503&&j.detail&&j.detail.maint){showMaint(j.detail);throw new Error('Технические работы')}
+  if(!r.ok)throw new Error(j.detail||'Ошибка');return j}
+/* ---------- технические работы ---------- */
+let maintT=0;
+function showMaint(d){let el=$('maint');
+  if(!el){el=document.createElement('div');el.id='maint';el.setAttribute('role','alertdialog');el.setAttribute('aria-modal','true');document.body.appendChild(el)}
+  const until=d.until?new Date(d.until*1000):null,day=until&&until.toDateString()!=new Date().toDateString();
+  el.innerHTML=`<div class="mt-glow"></div><div class="mt-in">
+   <div class="mt-ic"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mtg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6c8cff"/><stop offset="1" stop-color="#925cff"/></linearGradient></defs>
+    <g class="mt-gear"><path fill="url(#mtg)" d="M27.5 4h9l1.6 7.2a21 21 0 0 1 5.4 2.2l6.2-4 6.4 6.4-4 6.2a21 21 0 0 1 2.2 5.4l7.2 1.6v9l-7.2 1.6a21 21 0 0 1-2.2 5.4l4 6.2-6.4 6.4-6.2-4a21 21 0 0 1-5.4 2.2L36.5 60h-9l-1.6-7.2a21 21 0 0 1-5.4-2.2l-6.2 4-6.4-6.4 4-6.2a21 21 0 0 1-2.2-5.4L2.5 35v-9l7.2-1.6a21 21 0 0 1 2.2-5.4l-4-6.2 6.4-6.4 6.2 4a21 21 0 0 1 5.4-2.2z"/><circle cx="32" cy="30.5" r="10" fill="#121329"/></g>
+    <path class="mt-key" d="M44 40l12 12a3.5 3.5 0 0 1-5 5L39 45" fill="none" stroke="url(#tgS)" stroke-width="5" stroke-linecap="round"/></svg></div>
+   <div class="mt-logo">Gift<b>Mafia</b></div>
+   <h1>Технические работы</h1>
+   <p>${esc(d.text||'Мы скоро вернёмся.')}</p>
+   ${until?`<div class="mt-until">Ориентировочно до ${day?until.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+', ':''}${until.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</div>`:''}
+   <button class="btn ghost" id="mtRe">Проверить снова</button>
+   <p class="mt-sm">Приложение откроется само, как только всё будет готово</p></div>`;
+  document.body.classList.add('ready','maint');$('boot')?.remove();
+  $('mtRe').onclick=()=>checkMaint(true);clearInterval(maintT);maintT=setInterval(checkMaint,20000)}
+async function checkMaint(btn){try{const r=await fetch('/api/state',{headers:{'X-Init':tg.initData}});if(r.status!=503){location.reload();return}if(btn){hap();toast('Работы ещё идут')}}catch(e){}}
 const fmt=s=>[s/3600|0,(s%3600)/60|0,s%60].map(x=>String(x).padStart(2,'0')).join(':');
 const num=n=>Math.round(n).toLocaleString('ru-RU');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1068,7 +1099,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{const t0=Date.now();bootP(15);
   try{const [g,c]=await Promise.all([fetch('/static/gifts.json').then(r=>r.json()),fetch('/api/catalog').then(r=>r.json())]);CAT=g;TS=c.ton_stars;FL=c.floors_ton;for(const x of g)VAL[x.name]=Object.fromEntries(x.models.map(([m],i)=>[m,c.prices?.[x.name]?.[i]??0]))}catch(e){}
   bootP(40);
-  try{await load()}catch(e){toast(e.message)}
+  try{await load()}catch(e){if(!document.body.classList.contains('maint'))toast(e.message)}
   bootP(65);
   // ждём картинки первого экрана и шрифты, но не дольше 5 с
   const first=[...$$('#live img'),...$$('#cases img').slice(0,30)].map(i=>i.src);let done=0;
