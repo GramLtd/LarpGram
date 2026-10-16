@@ -138,6 +138,10 @@ CREATE TABLE IF NOT EXISTS utm(code TEXT PRIMARY KEY, name TEXT, created INT);
 CREATE TABLE IF NOT EXISTS utm_hits(code TEXT, user_id INT, created INT, PRIMARY KEY(code, user_id));
 CREATE TABLE IF NOT EXISTS promos(code TEXT PRIMARY KEY, percent INT, max_uses INT DEFAULT 0, expires INT DEFAULT 0, active INT DEFAULT 1, created INT);
 CREATE TABLE IF NOT EXISTS promo_use(user_id INT, code TEXT, created INT, used_at INT DEFAULT 0, bonus INT DEFAULT 0, PRIMARY KEY(user_id, code));
+CREATE TABLE IF NOT EXISTS cm_reports(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, n INT, files TEXT, status TEXT, img INT DEFAULT 0, reward INT DEFAULT 0,
+  created INT, decided INT DEFAULT 0, moderator INT DEFAULT 0, mod_msg INT DEFAULT 0);
+CREATE INDEX IF NOT EXISTS cm_user ON cm_reports(user_id, status);
+CREATE TABLE IF NOT EXISTS cm_files(uid TEXT PRIMARY KEY, created INT);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
 """)
@@ -176,6 +180,13 @@ SETTINGS_DEFAULT = {
     "gift_account": "",                        # @аккаунт (бизнес-аккаунт, подключённый к боту), куда отправлять подарки
     "gift_rate": "90",                         # % от оценки NFT, который зачисляется за отправленный подарок
     "free_notify": "1",                        # 1 = писать в бота, когда снова доступен «Подарок дня»
+    "cm_on": "1",                              # программа «Комментарии»
+    "cm_rate": "1",                            # ⭐ за один зачтённый коммент (скриншот)
+    "cm_img_bonus": "50",                      # +% за коммент с нашей картинкой
+    "cm_mention": "@GiftMafiaRobot",           # что упоминать в комменте
+    "cm_tags": "#тгподарки #подаркитг #нфт #giftmafia",  # хэштеги видео в TikTok
+    "cm_max": "300",                           # скриншотов в день на человека
+    "cm_chat": "",                             # id чата модерации (пусто = ADMIN_CHAT_ID)
 }
 NICK_HOLD, NICK_WINDOW = 24 * 3600, 10 * 3600  # держать 24 ч, потом 10 ч на сбор награды
 
@@ -534,6 +545,7 @@ async def start(m):
     utm = arg[2:] if arg.startswith("u_") and q1("SELECT 1 FROM utm WHERE code=?", arg[2:]) else ""
     run("INSERT OR IGNORE INTO bot_started(user_id,created,utm) VALUES(?,?,?)", m.from_user.id, int(time.time()), utm)
     if utm: run("INSERT OR IGNORE INTO utm_hits(code,user_id,created) VALUES(?,?,?)", utm, m.from_user.id, int(time.time()))
+    if arg == "cm": return await cm_start_msg(m)
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎁 Открыть GiftMafia", web_app=WebAppInfo(url=WEBAPP_URL), style="primary")],
         [InlineKeyboardButton(text="🎉 Подарок дня бесплатно", web_app=WebAppInfo(url=WEBAPP_URL), style="success")]])
@@ -572,6 +584,8 @@ async def lifespan(_):
     warm = asyncio.create_task(asyncio.to_thread(warm_thumbs))
     mk = asyncio.create_task(market_loop())
     pl = asyncio.create_task(pay_loop())
+    global _cm_queue
+    _cm_queue = asyncio.Queue(); cmw = asyncio.create_task(cm_worker())
     t = asyncio.create_task(dp.start_polling(bot))
     yield
     t.cancel()
@@ -598,7 +612,7 @@ def state(uid: int = Depends(auth)):
             "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX,
             "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET,
             "free_channel": chat_ref(setting("free_channel")), "ton_stars": TON_STARS,
-            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
+            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
 
 
 CATALOG_CACHE = {}
@@ -976,6 +990,181 @@ def user_stats(uid):
 
 @app.get("/api/me/stats")
 def me_stats(uid: int = Depends(auth)): return user_stats(uid)
+
+
+
+# ---------- заработок на комментариях (отчёты скриншотами) ----------
+# Пользователь пишет комменты с упоминанием бота под видео в TikTok или в больших Telegram-чатах и шлёт скриншоты в бота.
+# Скриншоты не скачиваем и не храним: только file_id. Бот пересылает их альбомом в чат модерации с кнопками,
+# модератор зачитывает прямо в Telegram (или во вкладке админки «Комменты»). Повтор скрина отсекается по file_unique_id.
+CM_TIERS = [(100, 5), (500, 10), (1000, 15), (2000, 20)]  # от N зачтённых за день: +%
+_cm_albums, _cm_queue = {}, None
+
+
+def msk_day_start(t=None):
+    t = int(t or time.time()); return (t + 3 * 3600) // 86400 * 86400 - 3 * 3600
+
+
+def cm_tier(n): return max([p for k, p in CM_TIERS if n >= k], default=0)
+
+
+def cm_state(uid):
+    d0 = msk_day_start()
+    r = q1("SELECT COALESCE(SUM(CASE WHEN status='ok' AND decided>=? THEN n END),0) today, COALESCE(SUM(CASE WHEN status='pending' THEN n END),0) pending,"
+           "COALESCE(SUM(CASE WHEN status='ok' THEN reward END),0) earned FROM cm_reports WHERE user_id=?", d0, uid)
+    return {**r, "rate": float(setting("cm_rate")), "img_bonus": int(setting("cm_img_bonus")), "tiers": CM_TIERS, "tier": cm_tier(r["today"]),
+            "mention": setting("cm_mention"), "tags": setting("cm_tags"), "on": setting("cm_on") == "1", "max": int(setting("cm_max"))}
+
+
+def cm_chat(): return int(setting("cm_chat") or 0) or ADMIN_CHAT_ID
+
+
+async def cm_report(m, photos):
+    """photos: [(file_id, file_unique_id)] - один отчёт (одно фото или альбом)."""
+    uid = m.from_user.id
+    if setting("cm_on") != "1": return await m.answer("Программа «Комментарии» сейчас на паузе.")
+    st = cm_state(uid); left = st["max"] - st["today"] - st["pending"]
+    if left <= 0: return await m.answer(f"⏳ Лимит {st['max']} скриншотов в день. Счёт обнуляется в 00:00 МСК.")
+    fresh, dup = [], 0
+    for f, u in photos:
+        if len(fresh) >= left: break
+        if not changed("INSERT OR IGNORE INTO cm_files(uid,created) VALUES(?,?)", u, int(time.time())): dup += 1
+        else: fresh.append((f, u))
+    over = len(photos) - len(fresh) - dup
+    if not fresh: return await m.answer("⚠️ Эти скриншоты уже отправлялись.")
+    run("INSERT OR IGNORE INTO users(id,username,name,created) VALUES(?,?,?,?)", uid, m.from_user.username, m.from_user.first_name, int(time.time()))
+    rid = run("INSERT INTO cm_reports(user_id,n,files,status,created) VALUES(?,?,?,'pending',?)", uid, len(fresh), json.dumps([f for f, _ in fresh]), int(time.time()))
+    if _cm_queue and cm_chat(): _cm_queue.put_nowait(rid)
+    await m.answer(f"📥 Отчёт #{rid} принят: {len(fresh)} {('скриншот', 'скриншота', 'скриншотов')[0 if len(fresh) % 10 == 1 and len(fresh) % 100 != 11 else 1 if 2 <= len(fresh) % 10 <= 4 and not 12 <= len(fresh) % 100 <= 14 else 2]}"
+                   f"{f' · повторы не засчитаны: {dup}' if dup else ''}{f' · сверх дневного лимита: {over}' if over else ''}.\nПосле проверки ⭐ придут на баланс.")
+
+
+@dp.message(F.photo, F.chat.type == "private")
+async def cm_photo(m):
+    ph = (m.photo[-1].file_id, m.photo[-1].file_unique_id)
+    if not m.media_group_id: return await cm_report(m, [ph])
+    key = (m.from_user.id, m.media_group_id)
+    if key in _cm_albums: _cm_albums[key][1].append(ph); return
+    _cm_albums[key] = (m, [ph])
+    await asyncio.sleep(2)  # альбом приходит отдельными сообщениями - собираем их в один отчёт
+    first, photos = _cm_albums.pop(key)
+    await cm_report(first, photos)
+
+
+def cm_kb(rid, n):
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=f"✅ Зачесть {n}", callback_data=f"cm:ok:{rid}", style="success"),
+                                                  InlineKeyboardButton(text="🖼 С картинкой", callback_data=f"cm:img:{rid}", style="primary")],
+                                                 [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"cm:no:{rid}", style="danger")]])
+
+
+async def cm_worker():
+    """Отправка отчётов в чат модерации не чаще 1 в 6 с (лимит Telegram ~20 сообщений в минуту на группу)."""
+    for r in q("SELECT id FROM cm_reports WHERE status='pending' AND mod_msg=0 ORDER BY id"): _cm_queue.put_nowait(r["id"])
+    while True:
+        rid = await _cm_queue.get()
+        r = q1("SELECT c.*, u.username, u.name FROM cm_reports c LEFT JOIN users u ON u.id=c.user_id WHERE c.id=?", rid)
+        if not r or r["status"] != "pending" or r["mod_msg"]: continue
+        try:
+            from aiogram.types import InputMediaPhoto
+            files = json.loads(r["files"])
+            for i in range(0, len(files), 10):
+                part = files[i:i + 10]
+                if len(part) == 1: await bot.send_photo(cm_chat(), part[0])
+                else: await bot.send_media_group(cm_chat(), [InputMediaPhoto(media=f) for f in part])
+            st = cm_state(r["user_id"])
+            msg = await bot.send_message(cm_chat(), f"💬 Отчёт #{rid} · {r['n']} скр. · {('@' + r['username']) if r['username'] else (r['name'] or '')} (id {r['user_id']})\n"
+                                         f"Сегодня зачтено: {st['today']}", reply_markup=cm_kb(rid, r["n"]))
+            run("UPDATE cm_reports SET mod_msg=? WHERE id=?", msg.message_id, rid)
+        except Exception as e: print("cm send:", e)
+        await asyncio.sleep(6)
+
+
+def cm_decide(rid, act, by=0):
+    """Зачесть / отклонить. Возвращает (отчёт, награда) или None, если уже решён."""
+    r = q1("SELECT * FROM cm_reports WHERE id=?", rid)
+    if not r or not changed("UPDATE cm_reports SET status=?, img=?, decided=?, moderator=? WHERE id=? AND status='pending'",
+                            "no" if act == "no" else "ok", 1 if act == "img" else 0, int(time.time()), by, rid): return None
+    reward = 0
+    if act != "no":
+        today = q1("SELECT COALESCE(SUM(n),0) n FROM cm_reports WHERE user_id=? AND status='ok' AND decided>=?", r["user_id"], msk_day_start())["n"]
+        reward = max(1, round(r["n"] * float(setting("cm_rate")) * (1 + (int(setting("cm_img_bonus")) / 100 if act == "img" else 0)) * (1 + cm_tier(today) / 100)))
+        run("UPDATE cm_reports SET reward=? WHERE id=?", reward, rid); credit(r["user_id"], reward)
+    return r, reward
+
+
+async def cm_notify(r, act, reward):
+    try:
+        await bot.send_message(r["user_id"], f"✅ Отчёт #{r['id']} зачтён: +{reward} ⭐ на баланс" if act != "no" else
+                               f"❌ Отчёт #{r['id']} отклонён. Проверьте правила: коммент с {setting('cm_mention')}, видно ник и текст.")
+    except Exception: pass
+
+
+@dp.callback_query(F.data.startswith("cm:"))
+async def cm_cb(c):
+    _, act, rid = c.data.split(":")
+    if c.message.chat.id != cm_chat(): return await c.answer()
+    res = cm_decide(int(rid), act, c.from_user.id)
+    if not res: return await c.answer("Уже проверен")
+    r, reward = res
+    await c.message.edit_text(c.message.text + ("\n\n❌ Отклонён" if act == "no" else f"\n\n✅ Зачтён{' с картинкой' if act == 'img' else ''}: +{reward} ⭐")
+                              + f" · {c.from_user.first_name}", reply_markup=None)
+    await c.answer("Готово"); await cm_notify(r, act, reward)
+
+
+async def cm_start_msg(m):
+    st = cm_state(m.from_user.id)
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🖼 Наша картинка (+%d%%)" % st["img_bonus"], callback_data="cmimg", style="primary")],
+                                               [InlineKeyboardButton(text="📊 Мой заработок", web_app=WebAppInfo(url=WEBAPP_URL + "?go=earn"), style="success")]])
+    await m.answer(
+        f"💬 <b>Платим за комментарии с {setting('cm_mention')}</b>\n\n"
+        f"<b>Где писать</b>\n• TikTok: под видео с {setting('cm_tags')}\n• Telegram: в открытых чатах от 2 000 участников\n\n"
+        f"<b>Сколько платим</b>\n• {st['rate']:g} ⭐ за коммент\n• С нашей картинкой: +{st['img_bonus']}%\n• Выплата на баланс GiftMafia\n\n"
+        f"<b>Бонус дня</b>\n" + "\n".join(f"• от {k} комментов +{p}%" for k, p in CM_TIERS) + "\nСчёт обнуляется в 00:00 МСК\n\n"
+        f"<b>Как отправить</b>\nПрисылайте сюда скриншоты своих комментариев (можно альбомом до 10 штук). "
+        f"На скрине должны быть видны ваш ник и текст с {setting('cm_mention')}.\nОдин скриншот — один коммент, повторы не засчитываются.",
+        parse_mode="HTML", reply_markup=kb)
+
+
+@dp.callback_query(F.data == "cmimg")
+async def cm_img(c):
+    await c.message.answer_photo(FSInputFile("static/banner.jpg"), caption="Прикрепляйте эту картинку к комментарию — получите +%s%%." % setting("cm_img_bonus"))
+    await c.answer()
+
+
+@app.get("/api/admin/cm", dependencies=[Depends(admin)])
+def a_cm(status: str = "pending"):
+    rows = q("SELECT c.id,c.user_id,c.n,c.files,c.status,c.img,c.reward,c.created,c.decided,u.username,u.name FROM cm_reports c LEFT JOIN users u ON u.id=c.user_id "
+             "WHERE c.status=? ORDER BY c.id DESC LIMIT 60", status)
+    for r in rows: r["files"] = json.loads(r["files"])
+    d0 = msk_day_start()
+    return {"reports": rows, "pending": q1("SELECT COUNT(*) n, COALESCE(SUM(n),0) s FROM cm_reports WHERE status='pending'"),
+            "today": q1("SELECT COALESCE(SUM(n),0) n, COALESCE(SUM(reward),0) stars, COUNT(DISTINCT user_id) users FROM cm_reports WHERE status='ok' AND decided>=?", d0),
+            "settings": {k: setting(k) for k in ("cm_on", "cm_rate", "cm_img_bonus", "cm_mention", "cm_tags", "cm_max", "cm_chat")}}
+
+
+@app.post("/api/admin/cm/{rid}/{act}", dependencies=[Depends(admin)])
+async def a_cm_act(rid: int, act: str):
+    if act not in ("ok", "img", "no"): raise HTTPException(400)
+    res = cm_decide(rid, act)
+    if not res: raise HTTPException(400, "Отчёт уже проверен")
+    r, reward = res
+    if r["mod_msg"]:
+        try: await bot.edit_message_reply_markup(chat_id=cm_chat(), message_id=r["mod_msg"], reply_markup=None)
+        except Exception: pass
+    await cm_notify(r, act, reward)
+    return {"reward": reward}
+
+
+_tg_files = {}  # file_id -> путь на серверах Telegram (картинку не храним, только проксируем при просмотре в админке)
+
+
+@app.get("/api/admin/cm_file")
+async def a_cm_file(f: str, t: str = ""):
+    if not hmac.compare_digest(t, ADMIN_TOKEN): raise HTTPException(401)
+    if f not in _tg_files: _tg_files[f] = (await bot.get_file(f)).file_path
+    url = f"https://api.telegram.org/file/bot{TOKEN}/{_tg_files[f]}"
+    data = await asyncio.to_thread(lambda: urllib.request.urlopen(url, timeout=20).read())
+    return Response(data, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
 
 
 # ---------- мины ----------
@@ -1400,7 +1589,10 @@ def a_settings(b: dict):
         if k == "free_channel" and v and not chat_ref(v)[0]: raise HTTPException(400, "Канал: https://t.me/имя или @имя, пусто - без условия")
         if k == "gift_rate" and not (v.isdigit() and 1 <= int(v) <= 100): raise HTTPException(400, "Курс подарков: от 1 до 100%")
         if k == "ton_wallet" and v and not re.fullmatch(r"[A-Za-z0-9_\-:]{48,67}", v): raise HTTPException(400, "Неверный адрес кошелька")
-        if k == "free_notify": v = "1" if v in ("1", "true", "True") else "0"
+        if k in ("free_notify", "cm_on"): v = "1" if v in ("1", "true", "True") else "0"
+        if k in ("cm_img_bonus", "cm_max") and not v.isdigit(): raise HTTPException(400, "Нужно целое число")
+        if k == "cm_rate" and not re.fullmatch(r"\d+(\.\d+)?", v): raise HTTPException(400, "Ставка: число, например 1 или 0.5")
+        if k == "cm_chat" and v and not re.fullmatch(r"-?\d+", v): raise HTTPException(400, "id чата: число, например -1001234567890")
         run("INSERT OR REPLACE INTO meta(k,v) VALUES(?,?)", "set:" + k, v.replace(" ", "") if k == "nick_rewards" else v)
     return {k: setting(k) for k in SETTINGS_DEFAULT}
 

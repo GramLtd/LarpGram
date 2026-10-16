@@ -90,6 +90,8 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .bk{margin-top:16px}
 .lnk{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}.lnk code{flex:1;min-width:0;font:12px ui-monospace,monospace;color:#c9cbe4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:10px 12px;border-radius:12px;background:#ffffff0a}
 .kp{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:12px}.kp span{border-radius:14px;background:#ffffff08;padding:8px 10px}.kp small{display:block;color:var(--mut);font-size:11px}.kp b{font-size:15px}
+.shots{display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:4px}.shots img{height:180px;border-radius:12px;border:1px solid var(--line);display:block}
+.cmrep .acts{flex-wrap:wrap}
 </style></head><body>
 <div id="app"></div><div id="toast" role="status"></div>
 <script>
@@ -110,7 +112,7 @@ function renderLogin(){$('app').innerHTML=`<div class="login"><div class="logo">
 function moveLens(){const bar=document.querySelector('.glass'),on=bar?.querySelector('button.on'),l=bar?.querySelector('.lens');if(on&&l){l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`;bar.scrollTo({left:on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2,behavior:'smooth'})}}
 addEventListener('resize',moveLens);
 function start(){$('app').innerHTML=`<header class="top"><span class="logo">Gift<b>Mafia</b></span><span class="tag">админка</span><span class="sp"></span><button class="btn ghost sm" id="out">Выйти</button></header>
-  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Дашборд</button><button data-v="users">Игроки</button><button data-v="req">Заявки</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button><button data-v="utm">UTM</button><button data-v="promo">Промокоды</button><button data-v="tasks">Настройки</button></nav><main id="main"></main>`;
+  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Дашборд</button><button data-v="users">Игроки</button><button data-v="req">Заявки</button><button data-v="cm">Комменты</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button><button data-v="utm">UTM</button><button data-v="promo">Промокоды</button><button data-v="tasks">Настройки</button></nav><main id="main"></main>`;
   $('out').onclick=logout;$$('#nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
   fetch('/static/gifts.json').then(r=>r.json()).then(g=>CATALOG=g).catch(()=>{});
   load()}
@@ -119,6 +121,7 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
   const M=$('main');if(!D.s)return;
   if(view=='stats'){renderDash()}
   if(view=='users'){renderUsers()}
+  if(view=='cm'){M.innerHTML='<p class="empty">Загрузка…</p>';renderCmAdmin()}
   if(view=='utm'){M.innerHTML='<p class="empty">Загрузка…</p>';renderUtm()}
   if(view=='promo'){M.innerHTML='<p class="empty">Загрузка…</p>';renderPromos()}
   if(view=='req'){const all=D.r,list=reqF=='all'?all:all.filter(w=>w.status==reqF);
@@ -258,6 +261,29 @@ async function renderPromos(){const M=$('main');let d;try{d=await api('promos')}
   $('pAdd').onclick=()=>act(api('promo','POST',{code:$('pC').value,percent:$('pP').value,max_uses:$('pU').value,days:$('pD').value}),'Промокод создан',renderPromos);
   $$('[data-pa]',M).forEach(b=>b.onclick=()=>act(api('promo/'+b.dataset.pa,'PATCH',{active:!b.classList.contains('on')}),b.classList.contains('on')?'Промокод выключен':'Промокод включён',renderPromos));
   $$('[data-pd]',M).forEach(b=>b.onclick=()=>{if(confirm('Удалить промокод?'))act(api('promo/'+b.dataset.pd,'DELETE'),'Промокод удалён',renderPromos)})}
+/* ---------- комментарии ---------- */
+let CMF='pending';
+async function renderCmAdmin(){const M=$('main');let d;try{d=await api('cm?status='+CMF)}catch(e){return toast(e.message)}const st=d.settings;
+  M.innerHTML=`<h2>Комментарии<small>${num(d.pending.n)} отчётов ждут · ${num(d.pending.s)} скр.</small></h2>
+   <div class="stats"><div class="card stat"><small>Зачтено сегодня</small><b>${num(d.today.n)}</b><em>${num(d.today.users)} чел.</em></div><div class="card stat"><small>Выплачено сегодня</small><b>${num(d.today.stars)} ⭐</b></div></div>
+   <div class="chips" style="margin-top:12px">${[['pending','Ждут'],['ok','Зачтены'],['no','Отклонены']].map(([k,t])=>`<button class="chip ${CMF==k?'on':''}" data-cf="${k}">${t}</button>`).join('')}</div>
+   <div class="list">${d.reports.map(r=>`<div class="card cmrep"><div class="tk"><div class="nm"><b>#${r.id} · ${r.n} скр.</b><small>${r.username?'@'+esc(r.username):esc(r.name||'')} · id ${r.user_id} · ${new Date(r.created*1000).toLocaleString('ru-RU')}${r.status=='ok'?` · +${num(r.reward)} ⭐${r.img?' (картинка)':''}`:''}</small></div>
+     ${r.status=='pending'?`<div class="acts"><button class="btn ok sm" data-ca="ok" data-r="${r.id}">Зачесть ${r.n}</button><button class="btn sm" data-ca="img" data-r="${r.id}">С картинкой</button><button class="btn bad sm" data-ca="no" data-r="${r.id}">Отклонить</button></div>`:''}</div>
+     <div class="shots">${r.files.map(f=>`<a href="/api/admin/cm_file?f=${encodeURIComponent(f)}&t=${encodeURIComponent(T)}" target="_blank" rel="noopener"><img loading="lazy" src="/api/admin/cm_file?f=${encodeURIComponent(f)}&t=${encodeURIComponent(T)}" alt="скриншот"></a>`).join('')}</div></div>`).join('')||'<p class="empty">Отчётов нет.</p>'}</div>
+   <h2>Настройки программы</h2><div class="card set">
+    <label style="display:flex;align-items:center;gap:10px;color:#fff"><button class="sw ${st.cm_on=='1'?'on':''}" id="cOn" type="button" aria-label="Включена"></button>Программа включена</label>
+    <label>⭐ за один коммент<input class="inp" id="cRate" value="${esc(st.cm_rate)}"></label>
+    <label>Бонус за нашу картинку, %<input class="inp" id="cImg" type="number" value="${esc(st.cm_img_bonus)}"></label>
+    <label>Что упоминать в комменте<input class="inp" id="cMen" value="${esc(st.cm_mention)}"></label>
+    <label>Хэштеги видео в TikTok<input class="inp" id="cTag" value="${esc(st.cm_tags)}"></label>
+    <label>Лимит скриншотов в день на человека<input class="inp" id="cMax" type="number" value="${esc(st.cm_max)}"></label>
+    <label>id чата модерации (пусто — ADMIN_CHAT_ID). Добавьте бота в чат<input class="inp" id="cChat" value="${esc(st.cm_chat)}" placeholder="-1001234567890"></label>
+    <button class="btn" id="cSave">Сохранить</button>
+    <p style="color:var(--mut);font-size:13px">Скриншоты хранит Telegram, сервер только показывает их при просмотре. В чат модерации бот присылает каждый отчёт альбомом с кнопками — проверять можно прямо там.</p></div>`;
+  $$('[data-cf]',M).forEach(b=>b.onclick=()=>{CMF=b.dataset.cf;renderCmAdmin()});
+  $$('[data-ca]',M).forEach(b=>b.onclick=()=>act(api(`cm/${b.dataset.r}/${b.dataset.ca}`,'POST'),b.dataset.ca=='no'?'Отклонено':'Зачтено',renderCmAdmin));
+  $('cOn').onclick=()=>$('cOn').classList.toggle('on');
+  $('cSave').onclick=()=>act(api('settings','POST',{cm_on:$('cOn').classList.contains('on')?'1':'0',cm_rate:$('cRate').value,cm_img_bonus:$('cImg').value,cm_mention:$('cMen').value,cm_tags:$('cTag').value,cm_max:$('cMax').value,cm_chat:$('cChat').value}),'Сохранено',renderCmAdmin)}
 const KIND={channel:'Подписка на канал',bot:'Запустить бота',story:'Сторис',link:'Перейти по ссылке'};
 async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks')}catch(e){return toast(e.message)}const st=d.settings;
   M.innerHTML=`<h2>Настройки</h2><div class="card set">
