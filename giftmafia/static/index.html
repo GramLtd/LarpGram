@@ -112,7 +112,7 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
   box-shadow:inset 0 1px 0 #ffffff59,inset 0 -1px 0 #ffffff14,inset 0 0 24px #ffffff0a,0 12px 40px #0009}
 .glass:before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
   background:radial-gradient(120% 80% at 20% -20%,#ffffff26,transparent 55%),radial-gradient(90% 70% at 100% 120%,#8b5cff26,transparent 60%)}
-.lens{position:absolute;top:7px;bottom:7px;left:0;border-radius:999px;z-index:0;pointer-events:none;
+.lens{position:absolute;top:7px;bottom:7px;left:0;border-radius:999px;z-index:0;pointer-events:none;opacity:0;
   background:linear-gradient(180deg,#ffffff2e,#ffffff0f);border:1px solid #ffffff38;
   box-shadow:inset 0 1px 0 #ffffff80,inset 0 -6px 14px #ffffff0d,0 6px 18px -6px #6c63ffaa;
   transition:transform .45s cubic-bezier(.3,1.35,.4,1),width .45s cubic-bezier(.3,1.35,.4,1)}
@@ -240,12 +240,13 @@ body.ready main:not([hidden]){animation:vin .3s ease}
 @keyframes vin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 img{opacity:0;transition:opacity .35s ease}img.ld{opacity:1}
 /* анимация выигрыша NFT */
-#winfx{position:fixed;left:0;right:0;top:0;height:var(--tg-viewport-height,100vh);z-index:55;display:none;align-items:center;justify-content:center;overflow:hidden;
+#winfx{position:fixed;left:0;right:0;top:0;height:var(--tg-viewport-height,100vh);z-index:55;display:none;align-items:flex-start;justify-content:center;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   background:#0b0c18f5;background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--wc) 38%,transparent),transparent 60%),#0b0c18f5;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 #winfx.on{display:flex;animation:fin .35s ease}
-#winfx canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+#winfx canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 @keyframes fin{from{opacity:0}to{opacity:1}}
-.wf{position:relative;width:100%;max-width:420px;padding:0 22px calc(18px + env(safe-area-inset-bottom,0px));text-align:center}
+.wf{position:relative;width:100%;max-width:420px;margin:auto 0;padding:16px 22px calc(18px + env(safe-area-inset-bottom,0px));text-align:center}
+.wf.many .wf-st{width:180px;height:180px}.wf.many .wf-img{width:160px;height:160px;inset:10px}.wf.many .wf-n{font-size:24px}.wf.many .wf-more{display:grid;grid-template-columns:1fr 1fr}.wf.many .wf-more div{min-width:0;font-size:12px}.wf.many .wf-more div{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 @media(max-height:680px){.wf-st{width:190px;height:190px}.wf-img{width:170px;height:170px;inset:10px}.wf-n{font-size:24px}.wf-b{margin-top:14px}}
 .wf-st{position:relative;width:250px;height:250px;margin:0 auto}
 .wf-rays{position:absolute;inset:-90px;border-radius:50%;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--wc) 30%,transparent) 0 7deg,transparent 7deg 22deg);
@@ -463,10 +464,10 @@ const sfx={tick:()=>tone(1400,{d:.03,v:.015}),pop:n=>tone(523.25*Math.pow(2,SCAL
   big:()=>[523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>tone(f,{d:.6,v:.035,at:i*.09}))};
 
 /* ---------- вкладки ---------- */
-function moveLens(bar){const on=bar&&bar.querySelector('button.on'),l=bar&&bar.querySelector('.lens');if(!on||!l||!on.offsetWidth)return;
+function moveLens(bar){const on=bar&&bar.querySelector('button.on'),l=bar&&bar.querySelector('.lens');if(!on||!l||!on.offsetWidth)return;l.style.opacity=1;if(!l._ok){l._ok=1;l.style.transition='none';requestAnimationFrame(()=>l.style.transition='')}
   l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`}
 addEventListener('resize',()=>$$('.glass').forEach(moveLens));
-function setCur(c){CUR=c;try{localStorage.gmCur=c}catch(e){}hap();
+function setCur(c){CUR=c;try{localStorage.gmCur=c}catch(e){}hap();if(S)setBal(S.balance);
   $('chips').innerHTML='';renderChips();renderCases();if(CV&&!CV.spinning){const sc=$('ovCase').scrollTop;CV.render();$('ovCase').scrollTop=sc}
   if(BV&&!BV.spinning)BV.render();if(!U.busy)renderUpgrade();if(!M.busy)renderMines();$('profIn')._h='';renderProfile();loadLive();if(catOn())renderCat()}
 function setTab(t){tab=t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));moveLens($$('.tabs')[0]);if(t=='games')requestAnimationFrame(()=>moveLens($('v-games').querySelector('.gsw')));
@@ -500,10 +501,11 @@ function cover(c){if(c.cat=='fifty'&&c.price)return fiftyCover(c);const n=[...c.
   if(!ps.length)return `<div class="cov" style="--gl:${gl}">${COIN}</div>`;
   const cls=['m','a','b','c','d'];return `<div class="cov" style="--gl:${gl}"><i class="cg"></i>${ps.map((p,i)=>`<img class="${cls[i]}" src="${esc(imgOf(p,i?128:256))}" alt="" loading="lazy" decoding="async">`).join('')}</div>`}
 let balShown=0;
-function setBal(v){const el=$('balv'),from=balShown;balShown=v;const big=num(v).length>5,t=$('top');
-  if(t.classList.contains('plus')!==big){t.classList.toggle('plus',big);t.innerHTML=big?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>':'Пополнить';t.setAttribute('aria-label','Пополнить')}if(from===v){el.textContent=num(v);return}
+const balTxt=v=>CUR=='gram'?fmtG(v/(TS||1)):num(v);
+function setBal(v){const el=$('balv'),from=balShown;balShown=v;const big=balTxt(v).length>5,t=$('top');$('bal').querySelector('.ic').innerHTML=CUR=='gram'?GRAM:STAR;
+  if(t.classList.contains('plus')!==big){t.classList.toggle('plus',big);t.innerHTML=big?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>':'Пополнить';t.setAttribute('aria-label','Пополнить')}if(from===v){el.textContent=balTxt(v);return}
   const b=$('bal');b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump');const t0=performance.now(),d=600;
-  (function f(t){if(balShown!==v)return;const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=num(from+(v-from)*e);if(k<1)requestAnimationFrame(f)})(t0)}
+  (function f(t){if(balShown!==v)return;const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=balTxt(from+(v-from)*e);if(k<1)requestAnimationFrame(f)})(t0)}
 const setHTML=(el,h)=>{if(!el||el._h===h)return false;el._h=h;el.innerHTML=h;return true};
 const plural=(n,a,b,c)=>n%10==1&&n%100!=11?a:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?b:c;
 function pill(c){return isFree(c)?(left>0?`<span class="pr wait" data-fp>${fmt(left)}</span>`:`<span class="pr free">Бесплатно</span>`):`<span class="pr">${price(c.price)}</span>`}
@@ -637,6 +639,7 @@ function showWins(wins){const nft=wins.filter(w=>w.kind=='nft'),sum=wins.filter(
 function winFx(nft,sum){const best=[...nft].sort((a,b)=>b.value-a.value)[0],rest=nft.filter(w=>w!==best),ready=nft.filter(w=>w.status=='ready');
   const pm=permOf(best.gift,best.model),tier=pm!=null?tierP(pm):tierV(best.value,300),fx=$('winfx');
   fx.style.setProperty('--wc',WC[tier]);
+  $('wfIn').classList.toggle('many',rest.length+(sum?1:0)>=3);fx.scrollTop=0;
   $('wfIn').innerHTML=`<div class="wf-st"><div class="wf-rays"></div><div class="wf-glow"></div><img class="wf-img" src="${esc(imgOf(best,512))}" alt=""></div>
   <div class="wf-t">${nft.length>1?'Вы выиграли '+nft.length+' NFT':'Поздравляем!'}</div>
   <div class="wf-n">${esc(best.gift)}</div>
@@ -888,7 +891,7 @@ function promoHtml(){const p=S?.promo;
    ${p?`<div class="pact"><span style="font-size:22px">🎁</span><span>Активен <b>${esc(p.code)}</b>: +${p.percent}% к пополнению</span></div><button class="btn" id="prTop" style="margin-top:12px">Пополнить с бонусом</button>`:''}</div>`}
 function renderProfile(){if(!$('ovProf').classList.contains('on'))return;const u=tg.initDataUnsafe?.user||{},inv=S?.inventory||[],act=inv.filter(w=>w.status=='locked'||w.status=='ready');
   if(!setHTML($('profIn'),`<div class="bar"><button class="x" id="pX" aria-label="Закрыть">${IC.x}</button><h3>Профиль</h3></div>
-  <div class="prof"><div class="ava" style="${u.photo_url?`background-image:url('${esc(u.photo_url)}')`:''}">${u.photo_url?'':esc((u.first_name||'?')[0])}</div><div style="flex:1;min-width:0"><b>${esc(u.first_name||'Игрок')}</b><div class="big" style="font-size:22px;margin-top:4px">${num(S.balance)} ${STAR}</div></div>
+  <div class="prof"><div class="ava" style="${u.photo_url?`background-image:url('${esc(u.photo_url)}')`:''}">${u.photo_url?'':esc((u.first_name||'?')[0])}</div><div style="flex:1;min-width:0"><b>${esc(u.first_name||'Игрок')}</b><div class="big" style="font-size:22px;margin-top:4px">${price(S.balance)}</div></div>
    <div class="cursw" role="group" aria-label="Валюта цен"><button data-cur="stars" class="${CUR=='stars'?'on':''}" aria-label="Цены в звёздах">${STAR}</button><button data-cur="gram" class="${CUR=='gram'?'on':''}" aria-label="Цены в GRAM">${GRAM}</button></div></div>
   <div class="row2" style="margin-top:14px"><button class="btn" id="pTop">Пополнить</button><button class="btn ghost" id="pCat">Все NFT</button></div>
   <div class="gsw glass ptabs" id="ptabs"><i class="lens" aria-hidden="true"></i><button data-pt="inv" class="${PT=='inv'?'on':''}">Инвентарь</button><button data-pt="stats" class="${PT=='stats'?'on':''}">Статистика</button><button data-pt="promo" class="${PT=='promo'?'on':''}">Промокод</button></div>
@@ -896,7 +899,7 @@ function renderProfile(){if(!$('ovProf').classList.contains('on'))return;const u
   <div class="inv">${inv.map(invCard).join('')||'<p class="empty">Пока пусто — откройте кейс или сыграйте.</p>'}</div>`:PT=='stats'?statsHtml():promoHtml()}
   <p class="credit">Данные NFT: thanks to <a href="https://t.me/GiftChanges" target="_blank" rel="noopener">GiftChanges</a></p>`))return;
   $('pX').onclick=closeProf;$('pTop').onclick=()=>openTop();$('pCat').onclick=()=>openCatalog();
-  requestAnimationFrame(()=>moveLens($('ptabs')));
+  requestAnimationFrame(()=>moveLens($('ptabs')));setTimeout(()=>moveLens($('ptabs')),480);
   $$('#profIn [data-pt]').forEach(b=>b.onclick=()=>{PT=b.dataset.pt;renderProfile();if(PT=='stats')loadStats()});
   $$('#profIn [data-cur]').forEach(b=>b.onclick=()=>setCur(b.dataset.cur));
   const pg=$('prGo');if(pg){const pi=$('prIn');pi.onkeydown=e=>{if(e.key=='Enter'){pi.blur();pg.click()}};

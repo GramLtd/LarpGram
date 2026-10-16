@@ -29,7 +29,7 @@ MAX_MULTI = 5      # сколько платных кейсов можно от�
 STORY_MIN_DELAY = 20  # сек между нажатием "в сторис" и выводом
 CASE_RTP = 0.85    # средний возврат платного кейса (доля цены)
 FREE_NFT_CHANCE = 3  # % шанс NFT в бесплатном «Подарке дня»
-ECONOMY_VERSION = "5"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
+ECONOMY_VERSION = "6"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
 SELL_RATE = 0.9    # продажа подарка из инвентаря: доля оценки на баланс
 MINES_EDGE = 0.96  # множитель мин = EDGE * честный коэффициент
 MINES_MAX_WIN = 181818  # максимум выплаты за раунд мин, ⭐
@@ -241,6 +241,14 @@ def near(value, rng, pool=None, spread=0.15):
     return nft_item(*rng.choice(close))
 
 
+def low_items(p, ks, rng, pool=None):
+    """Дешёвые призы кейса: в кейсах от 1000 ⭐ - недорогие NFT дешевле кейса, в остальных - немного звёзд."""
+    if p < 1000: return [stars_item(round(p * k)) for k in ks]
+    out = [it for it in (near(p * k, rng, pool, 0.1) for k in ks) if it["stars"] < p * 0.9]
+    if not out and pool: out = [it for it in (near(p * k, rng, None, 0.1) for k in ks) if it["stars"] < p * 0.9]
+    return out or [stars_item(round(p * ks[0]))]
+
+
 def dedup(items): return list({it["name"]: it for it in items}.values())
 
 
@@ -269,7 +277,7 @@ def build_cases(force=False):
         if len(cheapest) == 8: break
     C.append((1, "Подарок дня", 0, "free", [stars_item(n) for n in (1, 2, 3, 5, 10, 25)] + cheapest, None))
     for i, (t, p) in enumerate([("Мелочь", 49), ("Сдача", 99), ("Копилка", 149), ("Заначка", 249), ("Кошелёк", 399), ("Сейф", 749)]):
-        items = [stars_item(round(p * k)) for k in (0.2, 0.4, 0.6, 0.8)]
+        items = [stars_item(round(p * k)) for k in (0.3, 0.6)]  # меньше звёзд - больше шанс на подарок
         items += [near(p * k, rng) for k in (1.3, 1.6, 2, 2.5, 3, 4, 5, 8, 15, 30)]  # больше недорогих моделей
         C.append((10 + i, t, p, "change", dedup(items), CASE_RTP))
     min_nft = min(nft_value(g, m) for g in CATALOG for m in MODELS[g])
@@ -278,14 +286,14 @@ def build_cases(force=False):
         C.append((20 + i, t, p, "fifty", [near(p * 1.3, rng, spread=0.05)], None))  # проигрышный приз добавим ниже
     for i, (t, p) in enumerate([("Семья", 499), ("Капо", 999), ("Консильери", 1499), ("Крёстный отец", 2499), ("Дон", 4999),
                                 ("Босс", 9999), ("Легенда", 24999)]):
-        items = [stars_item(round(p * k)) for k in (0.3, 0.5)]
+        items = low_items(p, (0.25, 0.4, 0.55, 0.7) if p >= 1000 else (0.4,), rng)
         items += [near(p * k, rng) for k in (0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2, 3, 5, 10, 25, 50)]
         C.append((30 + i, t, p, "premium", dedup(items), CASE_RTP))
     for i, (t, pool) in enumerate(THEMES):
         pool = [g for g in pool if g in CATALOG]
         cheapest = min(nft_value(g, m) for g in pool for m in MODELS[g])
         p = nice(cheapest * 1.25)
-        items = [stars_item(round(p * k)) for k in (0.15, 0.3, 0.5)]
+        items = low_items(p, (0.3, 0.45, 0.6) if p >= 1000 else (0.3,), rng, pool)
         items += [near(p * k, rng, pool) for k in (0.8, 0.9, 1, 1.1, 1.3, 1.5, 2, 3, 5, 8, 15, 30)]
         C.append((60 + i, t, p, "theme", dedup(items), CASE_RTP))
     for i, g in enumerate(["Plush Pepe", "Durov's Cap", "Precious Peach", "Heart Locket", "Snoop Dogg", "Scared Cat", "Toy Bear", "Diamond Ring",
@@ -294,7 +302,7 @@ def build_cases(force=False):
         if g not in CATALOG: continue
         f = floor_stars(g); p = nice(f * 0.45)
         ms = sorted(CATALOG[g]["models"], key=lambda x: x[1])  # от редких к частым
-        items = [stars_item(round(p * k)) for k in (0.25, 0.5, 0.75)]
+        items = low_items(p, (0.3, 0.5, 0.7) if p >= 1000 else (0.4,), rng)
         cheap = sorted(ms[4:], key=lambda x: nft_value(g, x[0]))  # самые дешёвые модели коллекции
         items += [nft_item(g, m) for m, _ in ms[:4]] + [nft_item(g, m) for m, _ in cheap[:8]] + [nft_item(g, m) for m, _ in rng.sample(cheap[8:], min(3, len(cheap) - 8))]
         C.append((100 + i, g, p, "coll", dedup(items), CASE_RTP))
