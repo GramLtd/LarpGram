@@ -1,11 +1,11 @@
-import asyncio, functools, hashlib, shutil, subprocess, threading, hmac, io, json, math, os, random, re, secrets, sqlite3, time, urllib.parse, urllib.request
+import asyncio, base64, functools, hashlib, shutil, subprocess, threading, hmac, io, json, math, os, random, re, secrets, sqlite3, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from urllib.parse import parse_qsl
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.types import (FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultPhoto,
-                           InputTextMessageContent, LabeledPrice, WebAppInfo)
+                           InputProfilePhotoStatic, InputTextMessageContent, LabeledPrice, WebAppInfo)
 from dotenv import load_dotenv
 from fastapi import Body, Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, Response
@@ -19,6 +19,8 @@ TOKEN = os.environ["BOT_TOKEN"]
 WEBAPP_URL = os.environ["WEBAPP_URL"].rstrip("/")
 ADMIN_TOKEN = os.environ["ADMIN_TOKEN"]
 ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID", "0"))
+XROCKET_KEY = os.environ.get("XROCKET_KEY", "")  # API-ключ @xRocket → Rocket Pay (оплата криптой)
+TONCENTER_KEY = os.environ.get("TONCENTER_KEY", "")  # необязательно: ключ toncenter.com, без него лимит 1 запрос/с
 FREE_COOLDOWN = 24 * 3600
 FRIENDS_REQUIRED = 5
 REF_BONUS = 5      # ⭐ пригласившему за нового друга
@@ -27,7 +29,7 @@ MAX_MULTI = 5      # сколько платных кейсов можно от�
 STORY_MIN_DELAY = 20  # сек между нажатием "в сторис" и выводом
 CASE_RTP = 0.85    # средний возврат платного кейса (доля цены)
 FREE_NFT_CHANCE = 3  # % шанс NFT в бесплатном «Подарке дня»
-ECONOMY_VERSION = "4"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
+ECONOMY_VERSION = "5"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
 SELL_RATE = 0.9    # продажа подарка из инвентаря: доля оценки на баланс
 MINES_EDGE = 0.96  # множитель мин = EDGE * честный коэффициент
 MINES_MAX_WIN = 181818  # максимум выплаты за раунд мин, ⭐
@@ -127,9 +129,24 @@ CREATE TABLE IF NOT EXISTS nick(user_id INTEGER PRIMARY KEY, started INT DEFAULT
 CREATE TABLE IF NOT EXISTS market(gift TEXT, model TEXT, ton REAL, PRIMARY KEY(gift, model));
 CREATE TABLE IF NOT EXISTS model_prices(gift TEXT, model TEXT, stars INT, PRIMARY KEY(gift, model));
 CREATE TABLE IF NOT EXISTS plinko(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, rows INT, risk TEXT, slot INT, mult REAL, payout INT, created INT);
+CREATE TABLE IF NOT EXISTS bets(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, game TEXT, ref INT DEFAULT 0, amount INT, payout INT DEFAULT 0, created INT);
+CREATE INDEX IF NOT EXISTS bets_user ON bets(user_id);
+CREATE INDEX IF NOT EXISTS bets_created ON bets(created);
+CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, method TEXT, stars INT, bonus INT DEFAULT 0, amount REAL DEFAULT 0,
+  currency TEXT DEFAULT '', ext TEXT, status TEXT DEFAULT 'paid', created INT, paid_at INT DEFAULT 0, UNIQUE(method, ext));
+CREATE TABLE IF NOT EXISTS utm(code TEXT PRIMARY KEY, name TEXT, created INT);
+CREATE TABLE IF NOT EXISTS utm_hits(code TEXT, user_id INT, created INT, PRIMARY KEY(code, user_id));
+CREATE TABLE IF NOT EXISTS promos(code TEXT PRIMARY KEY, percent INT, max_uses INT DEFAULT 0, expires INT DEFAULT 0, active INT DEFAULT 1, created INT);
+CREATE TABLE IF NOT EXISTS promo_use(user_id INT, code TEXT, created INT, used_at INT DEFAULT 0, bonus INT DEFAULT 0, PRIMARY KEY(user_id, code));
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
 """)
+
+
+for t, c, d in [("users", "last_seen", "INT DEFAULT 0"), ("users", "utm", "TEXT DEFAULT ''"), ("users", "free_notified", "INT DEFAULT 0"),
+                ("bot_started", "utm", "TEXT DEFAULT ''")]:
+    try: db.execute(f"ALTER TABLE {t} ADD COLUMN {c} {d}")
+    except sqlite3.OperationalError: pass
 
 
 def q(sql, *a): return [dict(r) for r in db.execute(sql, a).fetchall()]
@@ -155,6 +172,10 @@ SETTINGS_DEFAULT = {
     "nick_tag": "@GiftMafiaRobot",             # что поставить в имя/фамилию
     "nick_bio": "под защитой @GiftMafiaRobot",  # что поставить в описание (проверяется наличие nick_tag)
     "nick_rewards": "10,20,60,120",            # ⭐ в день для уровней Telegram 0 / 1-4 / 5-9 / 10+
+    "ton_wallet": "",                          # кошелёк для оплаты GRAM через TON Connect (пусто = способ выключен)
+    "gift_account": "",                        # @аккаунт (бизнес-аккаунт, подключённый к боту), куда отправлять подарки
+    "gift_rate": "90",                         # % от оценки NFT, который зачисляется за отправленный подарок
+    "free_notify": "1",                        # 1 = писать в бота, когда снова доступен «Подарок дня»
 }
 NICK_HOLD, NICK_WINDOW = 24 * 3600, 10 * 3600  # держать 24 ч, потом 10 ч на сбор награды
 
@@ -220,6 +241,9 @@ def near(value, rng, pool=None, spread=0.15):
     return nft_item(*rng.choice(close))
 
 
+def dedup(items): return list({it["name"]: it for it in items}.values())
+
+
 THEMES = [  # тематические кейсы: (название, коллекции)
     ("Зимний", ["Santa Hat", "Snow Globe", "Xmas Stocking", "Candy Cane", "Ginger Cookie", "Winter Wreath", "Snow Mittens", "Sleigh Bell", "Jingle Bells", "Holiday Drink", "Spiced Wine", "Big Year"]),
     ("Хэллоуин", ["Mad Pumpkin", "Witch Hat", "Hex Pot", "Voodoo Doll", "Skull Flower", "Evil Eye", "Spy Agaric", "Scared Cat", "Trapped Heart", "Flying Broom", "Crystal Ball", "Electric Skull"]),
@@ -246,22 +270,24 @@ def build_cases(force=False):
     C.append((1, "Подарок дня", 0, "free", [stars_item(n) for n in (1, 2, 3, 5, 10, 25)] + cheapest, None))
     for i, (t, p) in enumerate([("Мелочь", 49), ("Сдача", 99), ("Копилка", 149), ("Заначка", 249), ("Кошелёк", 399), ("Сейф", 749)]):
         items = [stars_item(round(p * k)) for k in (0.2, 0.4, 0.6, 0.8)]
-        items += [near(p * k, rng) for k in (1.3, 2, 3, 5, 8, 15, 30)]
-        C.append((10 + i, t, p, "change", items, CASE_RTP))
+        items += [near(p * k, rng) for k in (1.3, 1.6, 2, 2.5, 3, 4, 5, 8, 15, 30)]  # больше недорогих моделей
+        C.append((10 + i, t, p, "change", dedup(items), CASE_RTP))
+    min_nft = min(nft_value(g, m) for g in CATALOG for m in MODELS[g])
     for i, (t, p) in enumerate([("Орёл или решка", 199), ("Всё или ничего", 499), ("Двойной шанс", 999), ("Ва-банк", 2499)]):
+        p = max(p, nice(min_nft / 1.25 * (1, 2, 4, 10)[i]))  # выигрыш ~x1.3, проигрыш не должен уйти в ноль
         C.append((20 + i, t, p, "fifty", [near(p * 1.3, rng, spread=0.05)], None))  # проигрышный приз добавим ниже
     for i, (t, p) in enumerate([("Семья", 499), ("Капо", 999), ("Консильери", 1499), ("Крёстный отец", 2499), ("Дон", 4999),
                                 ("Босс", 9999), ("Легенда", 24999)]):
-        items = [stars_item(round(p * k)) for k in (0.3, 0.5, 0.7)]
-        items += [near(p * k, rng) for k in (1, 1.5, 2, 3, 5, 10, 25, 50)]
-        C.append((30 + i, t, p, "premium", items, CASE_RTP))
+        items = [stars_item(round(p * k)) for k in (0.3, 0.5)]
+        items += [near(p * k, rng) for k in (0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2, 3, 5, 10, 25, 50)]
+        C.append((30 + i, t, p, "premium", dedup(items), CASE_RTP))
     for i, (t, pool) in enumerate(THEMES):
         pool = [g for g in pool if g in CATALOG]
         cheapest = min(nft_value(g, m) for g in pool for m in MODELS[g])
         p = nice(cheapest * 1.25)
         items = [stars_item(round(p * k)) for k in (0.15, 0.3, 0.5)]
-        items += [near(p * k, rng, pool) for k in (0.8, 1.1, 1.5, 2, 3, 5, 8, 15, 30)]
-        C.append((60 + i, t, p, "theme", list({it["name"]: it for it in items}.values()), CASE_RTP))
+        items += [near(p * k, rng, pool) for k in (0.8, 0.9, 1, 1.1, 1.3, 1.5, 2, 3, 5, 8, 15, 30)]
+        C.append((60 + i, t, p, "theme", dedup(items), CASE_RTP))
     for i, g in enumerate(["Plush Pepe", "Durov's Cap", "Precious Peach", "Heart Locket", "Snoop Dogg", "Scared Cat", "Toy Bear", "Diamond Ring",
                            "Signet Ring", "Swiss Watch", "Astral Shard", "Ion Gem", "Mini Oscar", "Perfume Bottle", "Magic Potion", "Genie Lamp",
                            "Kissed Frog", "Vintage Cigar", "Loot Bag", "Nail Bracelet"]):
@@ -269,8 +295,9 @@ def build_cases(force=False):
         f = floor_stars(g); p = nice(f * 0.45)
         ms = sorted(CATALOG[g]["models"], key=lambda x: x[1])  # от редких к частым
         items = [stars_item(round(p * k)) for k in (0.25, 0.5, 0.75)]
-        items += [nft_item(g, m) for m, _ in ms[:4]] + [nft_item(g, m) for m, _ in rng.sample(ms[4:], min(6, len(ms) - 4))]
-        C.append((100 + i, g, p, "coll", items, CASE_RTP))
+        cheap = sorted(ms[4:], key=lambda x: nft_value(g, x[0]))  # самые дешёвые модели коллекции
+        items += [nft_item(g, m) for m, _ in ms[:4]] + [nft_item(g, m) for m, _ in cheap[:8]] + [nft_item(g, m) for m, _ in rng.sample(cheap[8:], min(3, len(cheap) - 8))]
+        C.append((100 + i, g, p, "coll", dedup(items), CASE_RTP))
     for cid, title, price, cat, items, rtp in C:
         run("INSERT INTO cases(id,title,price,emoji,cat) VALUES(?,?,?,?,?)", cid, title, price, "🎁", cat)
         if cat == "free":  # звёзды 97%, NFT 3% поровну
@@ -288,6 +315,12 @@ def build_cases(force=False):
 
 
 build_cases()
+if not q1("SELECT 1 FROM meta WHERE k='bets_backfill'"):  # статистика игр из старых таблиц
+    db.execute("INSERT INTO bets(user_id,game,ref,amount,payout,created) SELECT user_id,'mines',id,bet,payout,created FROM mines WHERE status!='live'")
+    db.execute("INSERT INTO bets(user_id,game,ref,amount,payout,created) SELECT user_id,'plinko',id,bet,payout,created FROM plinko")
+    db.execute("INSERT INTO bets(user_id,game,ref,amount,payout,created) SELECT w.user_id,CASE WHEN c.price>0 THEN 'case' ELSE 'free' END,w.case_id,c.price,w.value,w.created "
+               "FROM wins w JOIN cases c ON c.id=w.case_id WHERE w.source='case'")
+    run("INSERT OR REPLACE INTO meta(k,v) VALUES('bets_backfill','1')")
 # стоимость NFT пересчитывается из FLOORS при каждом старте
 for p in q("SELECT id,gift,model FROM prizes WHERE kind='nft'"):
     try: run("UPDATE prizes SET stars=?,img=? WHERE id=?", nft_value(p["gift"], p["model"]), model_img(p["gift"], p["model"]), p["id"])
@@ -412,32 +445,22 @@ def make_story(w, ext):
         return path
 
 
-def make_banner():  # баннер 1280x720 для /start и приглашений
-    W, H = 1280, 720
-    base = Image.new("RGBA", (W, H)); d = ImageDraw.Draw(base)
-    top, bot = (35, 26, 86), (12, 13, 34)
-    for y in range(H): d.line([(0, y), (W, y)], fill=tuple(int(top[i] + (bot[i] - top[i]) * y / H) for i in range(3)))
-    rays = Image.new("RGBA", (W, H), (0, 0, 0, 0)); rd = ImageDraw.Draw(rays)
-    for i in range(24):
-        a, b = math.radians(i * 15), math.radians(i * 15 + 7)
-        rd.polygon([(1030, 380), (1030 + 1500 * math.cos(a), 380 + 1500 * math.sin(a)), (1030 + 1500 * math.cos(b), 380 + 1500 * math.sin(b))], fill=(122, 98, 255, 45))
-    base.alpha_composite(rays)
-    base.paste((139, 92, 255, 255), (0, 0), glow(W, H, 1030, 380, 280, 120))
-    ub = lambda s: ImageFont.truetype("static/fonts/Unbounded-ExtraBold.ttf", s)
-    mr = lambda s: ImageFont.truetype("static/fonts/Manrope-Bold.ttf", s)
-    d = ImageDraw.Draw(base)
-    d.text((80, 200), "Gift", font=ub(92), fill="#ffffff", anchor="ls")
-    d.text((80 + d.textlength("Gift", font=ub(92)), 200), "Mafia", font=ub(92), fill="#ffc83d", anchor="ls")
-    for k, line in enumerate(["NFT-кейсы Telegram", "Мины · Апгрейды · Плинко", "Подарок дня — бесплатно"]):
-        d.text((84, 290 + k * 58), line, font=mr(42), fill="#d6d8f5" if k else "#ffffff", anchor="ls")
-    d.rounded_rectangle((80, 520, 420, 610), 45, fill="#6c4dff")
-    d.text((250, 565), "Играть", font=ub(40), fill="#ffffff", anchor="mm")
-    pics = [("Plush Pepe", None), ("Durov's Cap", None), ("Precious Peach", None)]
-    for (g, _), (box, cx, cy) in zip(pics, [(210, 880, 200), (190, 1150, 545), (380, 1030, 380)]):
-        if g in CATALOG:
-            img = model_png(g, sorted(CATALOG[g]["models"], key=lambda x: x[1])[0][0])
-            if img: put_nft(base, img, box, cx, cy)
-    base.convert("RGB").save("static/banner.jpg", quality=92)
+AVATAR_VERSION = "1"  # поменяйте, чтобы бот заново поставил себе аватарку при старте
+
+
+def _rare_png(g):
+    return model_png(g, sorted(CATALOG[g]["models"], key=lambda x: x[1])[0][0]) if g in CATALOG else ""
+
+
+def make_banner():  # баннер 1280x720 для /start и приглашений, в стиле карточек кейсов мини-аппа
+    price = lambda t: f"{(q1('SELECT price FROM cases WHERE title=?', t) or {'price': 0})['price']:,}".replace(",", " ")
+    storygen.banner("static/banner.jpg", [(_rare_png("Durov's Cap"), "Дон", price("Дон"), (255, 90, 110), False),
+                                          (_rare_png("Precious Peach"), "Подарок дня", "Бесплатно", (62, 224, 143), True),
+                                          (_rare_png("Plush Pepe"), "Plush Pepe", price("Plush Pepe"), (139, 108, 255), False)])
+
+
+def make_avatar():
+    if not os.path.exists("static/avatar.png"): storygen.avatar("static/avatar.png", model_png("Top Hat", "Blackjack"))
 
 
 # ---------- auth ----------
@@ -453,8 +476,13 @@ def auth(x_init: str = Header("")):
     if not q1("SELECT 1 FROM users WHERE id=?", u["id"]):
         sp = d.get("start_param", "")
         ref = int(sp[1:]) if sp[:1] == "r" and sp[1:].isdigit() and int(sp[1:]) != u["id"] and q1("SELECT 1 FROM users WHERE id=?", int(sp[1:])) else 0
-        run("INSERT INTO users(id,username,name,created,ref_by) VALUES(?,?,?,?,?)", u["id"], u.get("username"), u.get("first_name"), int(time.time()), ref)
+        utm = sp[2:] if sp.startswith("u_") else (q1("SELECT utm FROM bot_started WHERE user_id=?", u["id"]) or {}).get("utm") or ""
+        if utm and not q1("SELECT 1 FROM utm WHERE code=?", utm): utm = ""
+        run("INSERT OR IGNORE INTO users(id,username,name,created,ref_by,utm) VALUES(?,?,?,?,?,?)", u["id"], u.get("username"), u.get("first_name"), int(time.time()), ref, utm)
+        if utm: run("INSERT OR IGNORE INTO utm_hits(code,user_id,created) VALUES(?,?,?)", utm, u["id"], int(time.time()))
         if ref: credit(ref, REF_BONUS, True)
+    now = int(time.time())
+    db.execute("UPDATE users SET last_seen=?, username=?, name=? WHERE id=? AND last_seen<?", (now, u.get("username"), u.get("first_name"), u["id"], now - 60)); db.commit()
     return u["id"]
 
 
@@ -464,6 +492,11 @@ def credit(uid, amount, ref=False):
 
 def charge(uid, amount):
     if changed("UPDATE users SET balance=balance-? WHERE id=? AND balance>=?", amount, uid, amount) == 0: raise HTTPException(400, "Недостаточно ⭐ на балансе")
+
+
+def log_bet(uid, game, amount, payout, ref=0):
+    """Ставка для статистики: кейсы, мины, плинко, апгрейд."""
+    run("INSERT INTO bets(user_id,game,ref,amount,payout,created) VALUES(?,?,?,?,?,?)", uid, game, ref, amount, payout, int(time.time()))
 
 
 def take_item(uid, wid):
@@ -489,7 +522,10 @@ def own_win(wid, uid):
 # ---------- bot ----------
 @dp.message(CommandStart())
 async def start(m):
-    run("INSERT OR IGNORE INTO bot_started(user_id,created) VALUES(?,?)", m.from_user.id, int(time.time()))
+    arg = (m.text or "").split(maxsplit=1)[1] if len((m.text or "").split()) > 1 else ""
+    utm = arg[2:] if arg.startswith("u_") and q1("SELECT 1 FROM utm WHERE code=?", arg[2:]) else ""
+    run("INSERT OR IGNORE INTO bot_started(user_id,created,utm) VALUES(?,?,?)", m.from_user.id, int(time.time()), utm)
+    if utm: run("INSERT OR IGNORE INTO utm_hits(code,user_id,created) VALUES(?,?,?)", utm, m.from_user.id, int(time.time()))
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎁 Открыть GiftMafia", web_app=WebAppInfo(url=WEBAPP_URL), style="primary")],
         [InlineKeyboardButton(text="🎉 Подарок дня бесплатно", web_app=WebAppInfo(url=WEBAPP_URL), style="success")]])
@@ -509,8 +545,8 @@ async def pre(p): await p.answer(ok=True)
 @dp.message(F.successful_payment)
 async def paid(m):
     amount = int(m.successful_payment.invoice_payload.split(":")[1])
-    credit(m.from_user.id, amount)
-    await m.answer(f"Баланс пополнен на ⭐ {amount}.")
+    r = deposit(m.from_user.id, amount, "stars", m.successful_payment.telegram_payment_charge_id, amount, "XTR")
+    if r: await m.answer(f"✅ Баланс пополнен на ⭐ {r[0]}{f' + {r[1]} бонус по промокоду' if r[1] else ''}.")
 
 
 # ---------- app ----------
@@ -519,8 +555,15 @@ async def lifespan(_):
     global BOT_USERNAME
     BOT_USERNAME = (await bot.get_me()).username
     await asyncio.to_thread(make_banner)
+    await asyncio.to_thread(make_avatar)
+    if (q1("SELECT v FROM meta WHERE k='avatar_set'") or {}).get("v") != AVATAR_VERSION:  # ставим аватарку бота один раз
+        try:
+            await bot.set_my_profile_photo(photo=InputProfilePhotoStatic(photo=FSInputFile("static/avatar.png")))
+            run("INSERT OR REPLACE INTO meta(k,v) VALUES('avatar_set',?)", AVATAR_VERSION)
+        except Exception as e: print("avatar:", e)
     warm = asyncio.create_task(asyncio.to_thread(warm_thumbs))
     mk = asyncio.create_task(market_loop())
+    pl = asyncio.create_task(pay_loop())
     t = asyncio.create_task(dp.start_polling(bot))
     yield
     t.cancel()
@@ -546,7 +589,8 @@ def state(uid: int = Depends(auth)):
             "ref_bonus": REF_BONUS, "ref_percent": REF_PERCENT, "uid": uid, "need": FRIENDS_REQUIRED, "bot": BOT_USERNAME,
             "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX,
             "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET,
-            "free_channel": chat_ref(setting("free_channel")), "tasks": user_tasks(uid), "nick": nick_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
+            "free_channel": chat_ref(setting("free_channel")), "ton_stars": TON_STARS,
+            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
 
 
 CATALOG_CACHE = {}
@@ -575,7 +619,8 @@ async def free(uid: int = Depends(auth)):
     ch, url = chat_ref(setting("free_channel"))
     if ch and await is_member(ch, uid) is False: raise HTTPException(400, f"Подпишитесь на канал {ch}, чтобы открыть подарок дня")
     if changed("UPDATE users SET last_free=? WHERE id=? AND last_free<=?", int(time.time()), uid, int(time.time()) - FREE_COOLDOWN) == 0: raise HTTPException(400, "Кейс ещё не готов")
-    return open_one(uid, 1, "locked")
+    w = open_one(uid, 1, "locked"); log_bet(uid, "free", 0, w["value"], 1)
+    return w
 
 
 @app.post("/api/topup/{amount}")
@@ -596,7 +641,9 @@ def buy(case_id: int, n: int = 1, uid: int = Depends(auth)):
     charge(uid, cost)
     ref = q1("SELECT ref_by FROM users WHERE id=?", uid)["ref_by"]
     if ref and cost * REF_PERCENT // 100: credit(ref, cost * REF_PERCENT // 100, True)
-    return {"wins": [open_one(uid, case_id, "ready") for _ in range(n)]}  # платные кейсы выводятся без заданий
+    wins = [open_one(uid, case_id, "ready") for _ in range(n)]  # платные кейсы выводятся без заданий
+    for w in wins: log_bet(uid, "case", c["price"], w["value"], case_id)
+    return {"wins": wins}
 
 
 @app.get("/api/live")
@@ -681,7 +728,9 @@ async def withdraw(wid: int, uid: int = Depends(auth)):
     if ADMIN_CHAT_ID:
         u = q1("SELECT * FROM users WHERE id=?", uid)
         await bot.send_message(ADMIN_CHAT_ID, f"Заявка #{wid}: {w['prize']} → @{u['username'] or u['id']} (id {uid})")
-    return {"ok": True}
+    try: await bot.send_message(uid, f"📦 Заявка на вывод {w['prize']} принята.\n⏳ Вывод подарка в течение 24 ч.")
+    except Exception: pass
+    return {"ok": True, "eta": "24 ч"}
 
 
 @app.post("/api/win/{wid}/unlock")
@@ -692,6 +741,233 @@ def unlock(wid: int, uid: int = Depends(auth)):
     if not w["story_at"] or time.time() - w["story_at"] < STORY_MIN_DELAY or w["shares"] < FRIENDS_REQUIRED:
         raise HTTPException(400, "Сначала выполните все задания")
     run("UPDATE wins SET status='ready' WHERE id=?", wid); return {"ok": True}
+
+
+
+# ---------- пополнение: звёзды, GRAM (TON Connect), xRocket, подарки ----------
+# Все способы зачисляют ⭐ через deposit(): там же применяется промокод (бонус к пополнению %) и пишется история для статистики.
+# GRAM - бывший Toncoin (нативная монета TON), курс к ⭐ = TON_STARS (обновляется раз в сутки).
+XR_API = "https://pay.xrocket.tg"
+XR_CURRENCIES = ("GRAM", "USDT")
+CRYPTO_MIN = 50  # минимальное пополнение криптой, ⭐
+
+
+def deposit(uid, stars, method, ext, amount=0, currency=""):
+    """Зачислить пополнение один раз (по method+ext). Возвращает (зачислено, бонус) или None, если уже было."""
+    p = q1("SELECT * FROM payments WHERE method=? AND ext=?", method, ext)
+    if p and p["status"] == "paid": return None
+    if not p:
+        run("INSERT OR IGNORE INTO payments(user_id,method,stars,amount,currency,ext,status,created) VALUES(?,?,?,?,?,?,'pending',?)",
+            uid, method, stars, amount, currency, ext, int(time.time()))
+        p = q1("SELECT * FROM payments WHERE method=? AND ext=?", method, ext)
+    if not changed("UPDATE payments SET status='paid', paid_at=? WHERE id=? AND status='pending'", int(time.time()), p["id"]): return None
+    bonus = 0
+    pr = q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 ORDER BY u.created DESC LIMIT 1", uid)
+    if pr and changed("UPDATE promo_use SET used_at=?, bonus=? WHERE user_id=? AND code=? AND used_at=0", int(time.time()), stars * pr["percent"] // 100, uid, pr["code"]):
+        bonus = stars * pr["percent"] // 100
+    run("UPDATE payments SET bonus=? WHERE id=?", bonus, p["id"])
+    credit(uid, stars + bonus)
+    return stars, bonus
+
+
+async def notify_deposit(uid, stars, bonus, how):
+    try: await bot.send_message(uid, f"✅ Баланс пополнен на ⭐ {stars}{f' + {bonus} бонус по промокоду' if bonus else ''} ({how}).")
+    except Exception: pass
+
+
+def gram_for(stars): return math.ceil(stars / TON_STARS * 10000) / 10000  # сколько GRAM стоит N ⭐
+
+
+def comment_boc(text):
+    """BOC одной ячейки с текстовым комментарием (op=0 + текст) для TON Connect sendTransaction."""
+    data = b"\0\0\0\0" + text.encode()[:110]
+    cell = bytes([0, len(data) * 2]) + data
+    return base64.b64encode(b"\xb5\xee\x9c\x72" + bytes([1, 1, 1, 1, 0, len(cell), 0]) + cell).decode()
+
+
+@app.get("/tonconnect-manifest.json")
+def ton_manifest():
+    return {"url": WEBAPP_URL, "name": "GiftMafia", "iconUrl": f"{WEBAPP_URL}/static/avatar.png"}
+
+
+@app.get("/api/pay/options")
+def pay_options(uid: int = Depends(auth)):
+    pr = q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 ORDER BY u.created DESC LIMIT 1", uid)
+    acc = chat_ref(setting("gift_account"))[0]
+    return {"ton": bool(setting("ton_wallet")), "xrocket": list(XR_CURRENCIES) if XROCKET_KEY else [], "gift_account": acc,
+            "gift_rate": int(setting("gift_rate") or 90), "ton_stars": TON_STARS, "star_usd": STAR_USD, "crypto_min": CRYPTO_MIN,
+            "promo": pr, "gift_ready": bool(q1("SELECT 1 FROM meta WHERE k='biz_conn'"))}
+
+
+@app.post("/api/pay/ton")
+def pay_ton(b: dict = Body(...), uid: int = Depends(auth)):
+    wallet = setting("ton_wallet")
+    if not wallet: raise HTTPException(400, "Оплата GRAM пока недоступна")
+    stars = int(b.get("stars") or 0)
+    if not CRYPTO_MIN <= stars <= TOPUP_MAX * 10: raise HTTPException(400, f"Сумма от {CRYPTO_MIN} ⭐")
+    gram = gram_for(stars); comment = f"GM{uid}-{secrets.token_hex(3)}"
+    pid = run("INSERT INTO payments(user_id,method,stars,amount,currency,ext,status,created) VALUES(?,?,?,?,?,?,'pending',?)",
+              uid, "ton", stars, gram, "GRAM", comment, int(time.time()))
+    return {"id": pid, "address": wallet, "nano": str(int(round(gram * 1e9))), "gram": gram, "comment": comment, "payload": comment_boc(comment)}
+
+
+def _toncenter(path):
+    req = urllib.request.Request("https://toncenter.com/api/v3/" + path, headers={"User-Agent": "giftmafia", **({"X-API-Key": TONCENTER_KEY} if TONCENTER_KEY else {})})
+    with urllib.request.urlopen(req, timeout=20) as r: return json.load(r)
+
+
+def check_ton():
+    """Ищет входящие переводы на кошелёк с комментарием ожидающих оплат. Возвращает список (uid, stars, bonus)."""
+    pend = {p["ext"]: p for p in q("SELECT * FROM payments WHERE method='ton' AND status='pending' AND created>?", int(time.time()) - 6 * 3600)}
+    if not pend: return []
+    wallet = setting("ton_wallet")
+    txs = _toncenter(f"transactions?account={urllib.parse.quote(wallet)}&limit=100&sort=desc").get("transactions", [])
+    done = []
+    for t in txs:
+        m = t.get("in_msg") or {}
+        c = (((m.get("message_content") or {}).get("decoded") or {}).get("comment") or "").strip()
+        p = pend.get(c)
+        if p and int(m.get("value") or 0) >= int(p["amount"] * 1e9 * 0.98):
+            r = deposit(p["user_id"], p["stars"], "ton", c)
+            if r: done.append((p["user_id"], *r))
+    return done
+
+
+async def xr(method, path, body=None):
+    def go():
+        req = urllib.request.Request(XR_API + path, method=method, data=json.dumps(body).encode() if body else None,
+                                     headers={"Rocket-Pay-Key": XROCKET_KEY, "Content-Type": "application/json", "User-Agent": "giftmafia"})
+        with urllib.request.urlopen(req, timeout=20) as r: return json.load(r)
+    return await asyncio.to_thread(go)
+
+
+@app.post("/api/pay/xrocket")
+async def pay_xrocket(b: dict = Body(...), uid: int = Depends(auth)):
+    if not XROCKET_KEY: raise HTTPException(400, "Оплата через xRocket пока недоступна")
+    stars, cur = int(b.get("stars") or 0), b.get("currency", "GRAM")
+    if cur not in XR_CURRENCIES: raise HTTPException(400, "Неверная валюта")
+    if not CRYPTO_MIN <= stars <= TOPUP_MAX * 10: raise HTTPException(400, f"Сумма от {CRYPTO_MIN} ⭐")
+    amount = gram_for(stars) if cur == "GRAM" else math.ceil(stars * STAR_USD * 100) / 100
+    try:
+        r = await xr("POST", "/tg-invoices", {"amount": amount, "numPayments": 1, "currency": cur, "description": f"{stars} ⭐ на баланс GiftMafia",
+                                              "payload": f"u{uid}", "callbackUrl": f"https://t.me/{BOT_USERNAME}", "expiredIn": 3600})
+    except Exception as e: raise HTTPException(502, f"xRocket не ответил: {e}")
+    inv = r.get("data") or {}
+    if not inv.get("link"): raise HTTPException(502, "xRocket не создал счёт")
+    pid = run("INSERT INTO payments(user_id,method,stars,amount,currency,ext,status,created) VALUES(?,?,?,?,?,?,'pending',?)",
+              uid, "xrocket", stars, amount, cur, str(inv["id"]), int(time.time()))
+    return {"id": pid, "link": inv["link"], "amount": amount, "currency": cur}
+
+
+async def check_xrocket(only=None):
+    done = []
+    for p in q("SELECT * FROM payments WHERE method='xrocket' AND status='pending' AND created>?", int(time.time()) - 3 * 3600):
+        if only and p["id"] != only: continue
+        try: st = ((await xr("GET", f"/tg-invoices/{p['ext']}")).get("data") or {}).get("status")
+        except Exception: continue
+        if st == "paid":
+            r = deposit(p["user_id"], p["stars"], "xrocket", p["ext"])
+            if r: done.append((p["user_id"], *r))
+        elif st == "expired": run("UPDATE payments SET status='expired' WHERE id=? AND status='pending'", p["id"])
+    return done
+
+
+@app.post("/api/pay/{pid}/check")
+async def pay_check(pid: int, uid: int = Depends(auth)):
+    p = q1("SELECT * FROM payments WHERE id=? AND user_id=?", pid, uid)
+    if not p: raise HTTPException(404, "Нет такого платежа")
+    if p["status"] == "pending":
+        try:
+            for u, st, bo in (await asyncio.to_thread(check_ton) if p["method"] == "ton" else await check_xrocket(pid)):
+                if u != uid: await notify_deposit(u, st, bo, p["method"])
+        except Exception as e: print("pay check:", e)
+        p = q1("SELECT * FROM payments WHERE id=?", pid)
+    return {"status": p["status"], "stars": p["stars"], "bonus": p["bonus"]}
+
+
+async def pay_loop():  # фоновые проверки оплат + напоминание о подарке дня
+    while True:
+        try:
+            if setting("ton_wallet"):
+                for u, st, bo in await asyncio.to_thread(check_ton): await notify_deposit(u, st, bo, "GRAM")
+            if XROCKET_KEY:
+                for u, st, bo in await check_xrocket(): await notify_deposit(u, st, bo, "xRocket")
+            await free_notify()
+        except Exception as e: print("pay loop:", e)
+        await asyncio.sleep(30)
+
+
+async def free_notify():
+    """Пишем в бота, когда у пользователя снова доступен «Подарок дня» (один раз за каждое открытие)."""
+    if setting("free_notify") != "1": return
+    now = int(time.time())
+    us = q("SELECT u.id FROM users u JOIN bot_started b ON b.user_id=u.id WHERE u.last_free>0 AND u.last_free<=? AND u.free_notified<u.last_free LIMIT 30", now - FREE_COOLDOWN)
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎁 Открыть подарок дня", web_app=WebAppInfo(url=WEBAPP_URL + "?go=free"), style="success")]])
+    for u in us:
+        run("UPDATE users SET free_notified=last_free WHERE id=?", u["id"])
+        try: await bot.send_message(u["id"], "🎁 <b>Подарок дня снова доступен!</b>\n\nОткрой бесплатный кейс — внутри ⭐ и шанс на NFT 🎉", parse_mode="HTML", reply_markup=kb)
+        except Exception: pass
+        await asyncio.sleep(0.05)
+
+
+# подарки: бизнес-аккаунт с Telegram Premium подключается к боту (Настройки → Telegram для бизнеса → Чат-боты),
+# пользователь дарит NFT этому аккаунту - бот видит сообщение о подарке и зачисляет gift_rate% от оценки.
+@dp.business_connection()
+async def biz_conn(c):
+    if c.is_enabled:
+        run("INSERT OR REPLACE INTO meta(k,v) VALUES('biz_conn',?)", json.dumps({"id": c.id, "user": c.user.id, "username": c.user.username or ""}))
+        if not setting("gift_account") and c.user.username: run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:gift_account',?)", "@" + c.user.username)
+    else: run("DELETE FROM meta WHERE k='biz_conn'")
+    if ADMIN_CHAT_ID:
+        try: await bot.send_message(ADMIN_CHAT_ID, f"Бизнес-аккаунт @{c.user.username or c.user.id} {'подключён' if c.is_enabled else 'отключён'}: приём подарков {'включён' if c.is_enabled else 'выключен'}.")
+        except Exception: pass
+
+
+@dp.business_message(F.unique_gift | F.gift)
+async def biz_gift(m):
+    owner = json.loads((q1("SELECT v FROM meta WHERE k='biz_conn'") or {"v": "{}"})["v"]).get("user")
+    u = m.from_user
+    if not u or u.id == owner or u.is_bot: return
+    rate = int(setting("gift_rate") or 90)
+    if m.unique_gift:
+        g = m.unique_gift.gift; base, model = g.base_name, g.model.name
+        try: value = nft_value(base, model)
+        except HTTPException: value = floor_stars(base) if base in CATALOG else 0
+        name = f"{base} · {model}"
+    else:
+        value = m.gift.convert_star_count or m.gift.gift.star_count or 0; name = "подарок"
+    stars = value * rate // 100
+    if stars <= 0: return
+    run("INSERT OR IGNORE INTO users(id,username,name,created) VALUES(?,?,?,?)", u.id, u.username, u.first_name, int(time.time()))
+    r = deposit(u.id, stars, "gift", f"{m.chat.id}:{m.message_id}", value, name)
+    if r: await notify_deposit(u.id, r[0], r[1], f"подарок {name}")
+
+
+# ---------- промокоды (бонус к пополнению %) ----------
+@app.post("/api/promo")
+def promo(b: dict = Body(...), uid: int = Depends(auth)):
+    code = (b.get("code") or "").strip().upper()
+    p = q1("SELECT * FROM promos WHERE code=? AND active=1", code)
+    if not p or (p["expires"] and p["expires"] < time.time()): raise HTTPException(400, "Промокод не найден или истёк")
+    if q1("SELECT 1 FROM promo_use WHERE user_id=? AND code=?", uid, code): raise HTTPException(400, "Вы уже активировали этот промокод")
+    if p["max_uses"] and q1("SELECT COUNT(*) n FROM promo_use WHERE code=?", code)["n"] >= p["max_uses"]: raise HTTPException(400, "Промокод закончился")
+    cur = q1("SELECT code FROM promo_use WHERE user_id=? AND used_at=0", uid)
+    if cur: raise HTTPException(400, f"Сначала используйте промокод {cur['code']}: пополните баланс")
+    run("INSERT INTO promo_use(user_id,code,created) VALUES(?,?,?)", uid, code, int(time.time()))
+    return {"code": code, "percent": p["percent"]}
+
+
+def user_stats(uid):
+    r = q1("SELECT COUNT(*) games, COALESCE(SUM(amount),0) turnover, COALESCE(SUM(payout>amount AND payout>0),0) wins FROM bets WHERE user_id=? AND game!='free'", uid)
+    best = q1("SELECT gift,model,prize,value,kind FROM wins WHERE user_id=? ORDER BY value DESC LIMIT 1", uid)
+    fav = q1("SELECT game, COUNT(*) n FROM bets WHERE user_id=? AND game!='free' GROUP BY game ORDER BY n DESC LIMIT 1", uid)
+    fc = q1("SELECT c.id, c.title, COUNT(*) n FROM bets b JOIN cases c ON c.id=b.ref WHERE b.user_id=? AND b.game IN('case','free') GROUP BY c.id ORDER BY n DESC LIMIT 1", uid)
+    return {**r, "best": best, "fav_game": fav and fav["game"], "fav_case": fc,
+            "deposits": q1("SELECT COALESCE(SUM(stars),0) n FROM payments WHERE user_id=? AND status='paid'", uid)["n"]}
+
+
+@app.get("/api/me/stats")
+def me_stats(uid: int = Depends(auth)): return user_stats(uid)
 
 
 # ---------- мины ----------
@@ -737,7 +1013,7 @@ def mines_open(gid: int, cell: int, uid: int = Depends(auth)):
     if not 0 <= cell < CELLS or cell in opened: raise HTTPException(400, "Клетка уже открыта")
     opened.append(cell)
     if cell in json.loads(g["field"]):
-        run("UPDATE mines SET opened=?,status='lost' WHERE id=?", json.dumps(opened), gid)
+        if changed("UPDATE mines SET opened=?,status='lost' WHERE id=? AND status='live'", json.dumps(opened), gid): log_bet(uid, "mines", g["bet"], 0, gid)
     else:
         run("UPDATE mines SET opened=? WHERE id=?", json.dumps(opened), gid)
         if len(opened) == CELLS - g["bombs"] or g["bet"] * mines_mult(g["bombs"], len(opened)) >= MINES_MAX_WIN: return mines_cashout(gid, uid)
@@ -750,7 +1026,7 @@ def mines_cashout(gid: int, uid: int = Depends(auth)):
     k = len(json.loads(g["opened"]))
     if not k: raise HTTPException(400, "Откройте хотя бы одну клетку")
     payout = min(MINES_MAX_WIN, int(g["bet"] * mines_mult(g["bombs"], k)))
-    if changed("UPDATE mines SET status='won',payout=? WHERE id=? AND status='live'", payout, gid): credit(uid, payout)
+    if changed("UPDATE mines SET status='won',payout=? WHERE id=? AND status='live'", payout, gid): credit(uid, payout); log_bet(uid, "mines", g["bet"], payout, gid)
     return mines_view(q1("SELECT * FROM mines WHERE id=?", gid))
 
 
@@ -871,7 +1147,8 @@ def plinko(b: dict = Body(...), uid: int = Depends(auth)):
     path = [rnd.randrange(2) for _ in range(rows)]
     slot = sum(path); mult = PLINKO[rows][risk][slot]; payout = int(bet * mult)
     if payout: credit(uid, payout)
-    run("INSERT INTO plinko(user_id,bet,rows,risk,slot,mult,payout,created) VALUES(?,?,?,?,?,?,?,?)", uid, bet, rows, risk, slot, mult, payout, int(time.time()))
+    pid = run("INSERT INTO plinko(user_id,bet,rows,risk,slot,mult,payout,created) VALUES(?,?,?,?,?,?,?,?)", uid, bet, rows, risk, slot, mult, payout, int(time.time()))
+    log_bet(uid, "plinko", bet, payout, pid)
     return {"path": path, "slot": slot, "mult": mult, "payout": payout, "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
 
 
@@ -889,6 +1166,7 @@ def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
     else: charge(uid, src)
     r = secrets.SystemRandom().random()
     win = add_win(uid, nft_item(gift, model), "ready", "upgrade") if r < chance else None
+    log_bet(uid, "upgrade", src, target if win else 0)
     return {"ok": win is not None, "chance": chance, "roll": r, "win": win}
 
 
@@ -1112,6 +1390,9 @@ def a_settings(b: dict):
         v = str(v).strip()
         if k == "nick_rewards" and not re.fullmatch(r"\d+,\d+,\d+,\d+", v.replace(" ", "")): raise HTTPException(400, "Награды: 4 числа через запятую")
         if k == "free_channel" and v and not chat_ref(v)[0]: raise HTTPException(400, "Канал: https://t.me/имя или @имя, пусто - без условия")
+        if k == "gift_rate" and not (v.isdigit() and 1 <= int(v) <= 100): raise HTTPException(400, "Курс подарков: от 1 до 100%")
+        if k == "ton_wallet" and v and not re.fullmatch(r"[A-Za-z0-9_\-:]{48,67}", v): raise HTTPException(400, "Неверный адрес кошелька")
+        if k == "free_notify": v = "1" if v in ("1", "true", "True") else "0"
         run("INSERT OR REPLACE INTO meta(k,v) VALUES(?,?)", "set:" + k, v.replace(" ", "") if k == "nick_rewards" else v)
     return {k: setting(k) for k in SETTINGS_DEFAULT}
 
@@ -1123,6 +1404,144 @@ def a_stats():
             "sent": q1("SELECT COUNT(*) n FROM wins WHERE status='sent'")["n"],
             "mines": q1("SELECT COALESCE(SUM(bet),0)-COALESCE(SUM(payout),0) n FROM mines WHERE status!='live'")["n"],
             "plinko": q1("SELECT COALESCE(SUM(bet),0)-COALESCE(SUM(payout),0) n FROM plinko")["n"]}
+
+
+
+# ---------- админка: дашборд, пользователи, UTM, промокоды ----------
+def buckets(period):
+    """Интервалы графика: день - 24 часа, неделя/месяц - дни, год - 12 месяцев. [(начало, конец, подпись)]."""
+    now = time.time(); lt = time.localtime(now)
+    if period == "day":
+        h0 = int(now) - lt.tm_min * 60 - lt.tm_sec
+        return [(h0 - i * 3600, h0 - i * 3600 + 3600, time.strftime("%H:00", time.localtime(h0 - i * 3600))) for i in range(23, -1, -1)]
+    if period in ("week", "month"):
+        d0 = int(time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1)))
+        out = []
+        for i in range(6 if period == "week" else 29, -1, -1):
+            a = time.localtime(d0 - i * 86400 + 3600 * 3); a0 = int(time.mktime((a.tm_year, a.tm_mon, a.tm_mday, 0, 0, 0, 0, 0, -1)))
+            out.append((a0, a0 + 86400, time.strftime("%d.%m", a)))
+        return out
+    out, y, mo = [], lt.tm_year, lt.tm_mon
+    for i in range(11, -1, -1):
+        yy, mm = y + (mo - 1 - i) // 12, (mo - 1 - i) % 12 + 1
+        a0 = int(time.mktime((yy, mm, 1, 0, 0, 0, 0, 0, -1))); b0 = int(time.mktime((yy + mm // 12, mm % 12 + 1, 1, 0, 0, 0, 0, 0, -1)))
+        out.append((a0, b0, ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"][mm - 1]))
+    return out
+
+
+@app.get("/api/admin/dash", dependencies=[Depends(admin)])
+def a_dash(period: str = "week"):
+    if period not in ("day", "week", "month", "year"): period = "week"
+    bs = buckets(period); t0 = bs[0][0]
+    idx = lambda t: next((i for i, (a, b, _) in enumerate(bs) if a <= t < b), None)
+    series = {k: [0] * len(bs) for k in ("users", "deposits", "turnover", "ggr")}
+    for r in q("SELECT created FROM users WHERE created>=?", t0):
+        i = idx(r["created"])
+        if i is not None: series["users"][i] += 1
+    pays = q("SELECT method,stars,bonus,user_id,paid_at FROM payments WHERE status='paid' AND paid_at>=?", t0)
+    for r in pays:
+        i = idx(r["paid_at"])
+        if i is not None: series["deposits"][i] += r["stars"]
+    games = {}
+    for r in q("SELECT game,amount,payout,created FROM bets WHERE created>=?", t0):
+        i = idx(r["created"])
+        if i is not None: series["turnover"][i] += r["amount"]; series["ggr"][i] += r["amount"] - r["payout"]
+        g = games.setdefault(r["game"], {"n": 0, "turnover": 0, "ggr": 0}); g["n"] += 1; g["turnover"] += r["amount"]; g["ggr"] += r["amount"] - r["payout"]
+    methods = {}
+    for r in pays: m = methods.setdefault(r["method"], {"n": 0, "stars": 0}); m["n"] += 1; m["stars"] += r["stars"]
+    cases = q("SELECT c.title, COUNT(*) n, SUM(b.amount) turnover, SUM(b.amount-b.payout) ggr FROM bets b JOIN cases c ON c.id=b.ref "
+              "WHERE b.game IN('case','free') AND b.created>=? GROUP BY c.id ORDER BY n DESC LIMIT 8", t0)
+    return {"period": period, "labels": [b[2] for b in bs], "series": series, "games": games, "methods": methods, "top_cases": cases,
+            "totals": {"users": sum(series["users"]), "all_users": q1("SELECT COUNT(*) n FROM users")["n"],
+                       "active": q1("SELECT COUNT(*) n FROM users WHERE last_seen>=?", t0)["n"],
+                       "deposits": sum(series["deposits"]), "deposit_n": len(pays), "depositors": len({p["user_id"] for p in pays}),
+                       "bonus": sum(p["bonus"] for p in pays), "turnover": sum(series["turnover"]), "ggr": sum(series["ggr"]),
+                       "bets": sum(g["n"] for g in games.values()),
+                       "withdraw_n": q1("SELECT COUNT(*) n FROM wins WHERE status IN('requested','sent') AND created>=?", t0)["n"],
+                       "withdraw_value": q1("SELECT COALESCE(SUM(value),0) n FROM wins WHERE status IN('requested','sent') AND created>=?", t0)["n"],
+                       "requested": q1("SELECT COUNT(*) n FROM wins WHERE status='requested'")["n"]}}
+
+
+USER_COLS = ("SELECT u.id,u.username,u.name,u.balance,u.created,u.last_seen,u.utm,u.ref_by,"
+             "(SELECT COALESCE(SUM(stars),0) FROM payments p WHERE p.user_id=u.id AND p.status='paid') deposits,"
+             "(SELECT COALESCE(SUM(amount),0) FROM bets b WHERE b.user_id=u.id) turnover,"
+             "(SELECT COALESCE(SUM(amount-payout),0) FROM bets b WHERE b.user_id=u.id) ggr,"
+             "(SELECT COUNT(*) FROM bets b WHERE b.user_id=u.id AND b.game!='free') games FROM users u")
+
+
+@app.get("/api/admin/users", dependencies=[Depends(admin)])
+def a_users(search: str = "", sort: str = "recent", limit: int = 50):
+    order = {"deposits": "deposits", "turnover": "turnover", "balance": "balance", "ggr": "ggr", "recent": "last_seen"}.get(sort, "last_seen")
+    where, args = "", []
+    s = search.strip().lstrip("@")
+    if s: where = " WHERE CAST(u.id AS TEXT)=? OR u.username LIKE ? OR u.name LIKE ?"; args = [s, f"%{s}%", f"%{s}%"]
+    return {"users": q(f"SELECT * FROM ({USER_COLS}{where}) ORDER BY {order} DESC LIMIT ?", *args, max(1, min(200, limit)))}
+
+
+@app.get("/api/admin/user/{uid}", dependencies=[Depends(admin)])
+def a_user(uid: int):
+    u = q1(f"{USER_COLS} WHERE u.id=?", uid)
+    if not u: raise HTTPException(404, "Нет пользователя")
+    return {"user": u, "stats": user_stats(uid), "refs": q1("SELECT COUNT(*) n FROM users WHERE ref_by=?", uid)["n"],
+            "payments": q("SELECT method,stars,bonus,amount,currency,status,created FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 20", uid),
+            "bets": q("SELECT game,ref,amount,payout,created FROM bets WHERE user_id=? ORDER BY id DESC LIMIT 30", uid)}
+
+
+@app.get("/api/admin/utm", dependencies=[Depends(admin)])
+def a_utm():
+    rows = q("SELECT t.*, (SELECT COUNT(*) FROM utm_hits h WHERE h.code=t.code) starts,"
+             "(SELECT COUNT(*) FROM users u WHERE u.utm=t.code) users,"
+             "(SELECT COUNT(DISTINCT p.user_id) FROM payments p JOIN users u ON u.id=p.user_id WHERE u.utm=t.code AND p.status='paid') payers,"
+             "(SELECT COALESCE(SUM(p.stars),0) FROM payments p JOIN users u ON u.id=p.user_id WHERE u.utm=t.code AND p.status='paid') deposits,"
+             "(SELECT COALESCE(SUM(b.amount),0) FROM bets b JOIN users u ON u.id=b.user_id WHERE u.utm=t.code) turnover FROM utm t ORDER BY created DESC")
+    for r in rows: r["bot_link"] = f"https://t.me/{BOT_USERNAME}?start=u_{r['code']}"; r["app_link"] = f"https://t.me/{BOT_USERNAME}?startapp=u_{r['code']}"
+    return {"links": rows}
+
+
+@app.post("/api/admin/utm", dependencies=[Depends(admin)])
+def a_utm_add(b: dict):
+    name = (b.get("name") or "").strip()
+    if not name: raise HTTPException(400, "Введите название источника")
+    code = re.sub(r"[^a-z0-9_]", "", (b.get("code") or "").strip().lower()) or secrets.token_hex(3)
+    if not 2 <= len(code) <= 30: raise HTTPException(400, "Метка: 2-30 символов a-z, 0-9, _")
+    if q1("SELECT 1 FROM utm WHERE code=?", code): raise HTTPException(400, "Такая метка уже есть")
+    run("INSERT INTO utm(code,name,created) VALUES(?,?,?)", code, name[:60], int(time.time()))
+    return {"code": code}
+
+
+@app.delete("/api/admin/utm/{code}", dependencies=[Depends(admin)])
+def a_utm_del(code: str): run("DELETE FROM utm WHERE code=?", code); return {"ok": True}
+
+
+@app.get("/api/admin/promos", dependencies=[Depends(admin)])
+def a_promos():
+    return {"promos": q("SELECT p.*, (SELECT COUNT(*) FROM promo_use u WHERE u.code=p.code) activated,"
+                        "(SELECT COUNT(*) FROM promo_use u WHERE u.code=p.code AND u.used_at>0) used,"
+                        "(SELECT COALESCE(SUM(bonus),0) FROM promo_use u WHERE u.code=p.code) bonus FROM promos p ORDER BY created DESC")}
+
+
+@app.post("/api/admin/promo", dependencies=[Depends(admin)])
+def a_promo_add(b: dict):
+    code = re.sub(r"[^A-Z0-9_]", "", (b.get("code") or "").strip().upper())
+    if not 3 <= len(code) <= 24: raise HTTPException(400, "Код: 3-24 символа A-Z, 0-9, _")
+    pct = int(b.get("percent") or 0)
+    if not 1 <= pct <= 500: raise HTTPException(400, "Бонус от 1 до 500%")
+    if q1("SELECT 1 FROM promos WHERE code=?", code): raise HTTPException(400, "Такой промокод уже есть")
+    days = int(b.get("days") or 0)
+    run("INSERT INTO promos(code,percent,max_uses,expires,created) VALUES(?,?,?,?,?)", code, pct, max(0, int(b.get("max_uses") or 0)),
+        int(time.time()) + days * 86400 if days > 0 else 0, int(time.time()))
+    return {"code": code}
+
+
+@app.patch("/api/admin/promo/{code}", dependencies=[Depends(admin)])
+def a_promo_edit(code: str, b: dict):
+    if "active" in b: run("UPDATE promos SET active=? WHERE code=?", 1 if b["active"] else 0, code)
+    return {"ok": True}
+
+
+@app.delete("/api/admin/promo/{code}", dependencies=[Depends(admin)])
+def a_promo_del(code: str):
+    run("DELETE FROM promos WHERE code=?", code); run("DELETE FROM promo_use WHERE code=? AND used_at=0", code); return {"ok": True}
 
 
 @app.get("/img/{size}")

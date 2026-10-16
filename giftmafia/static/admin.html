@@ -22,8 +22,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .btn:disabled{opacity:.5}
 .glass{position:relative;display:flex;gap:2px;padding:5px;border-radius:999px;margin-top:6px;background:linear-gradient(180deg,#ffffff1f,#ffffff08 45%,#ffffff0d);background-color:#1a1b3a8c;
   -webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid #ffffff2b;box-shadow:inset 0 1px 0 #ffffff59,0 12px 40px #0006}
-.glass button{position:relative;z-index:1;flex:1;min-width:0;height:42px;border-radius:999px;color:var(--mut);font-weight:800;font-size:14px;transition:color .2s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:420px){.glass{gap:0;padding:4px}.glass .lens{top:4px;bottom:4px}.glass button{font-size:12px;letter-spacing:-.02em;padding:0 2px}}
+.glass{overflow-x:auto;scrollbar-width:none}.glass::-webkit-scrollbar{display:none}
+.glass button{position:relative;z-index:1;flex:1 0 auto;min-width:0;padding:0 14px;height:42px;border-radius:999px;color:var(--mut);font-weight:800;font-size:14px;transition:color .2s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:420px){.glass{gap:0;padding:4px}.glass .lens{top:4px;bottom:4px}.glass button{font-size:13px;padding:0 12px}}
 .set{display:grid;gap:10px}.set label{display:grid;gap:6px;font-size:13px;color:var(--mut)}.set .inp{color:#fff}
 .tk{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.tk .nm{flex:1;min-width:160px}.tk .nm b{display:block}.tk .nm small{color:var(--mut);word-break:break-all}
 .kind{font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;background:#ffffff14;color:#cfd2ff}
@@ -73,6 +74,22 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .login .inp{height:52px;font-size:16px;text-align:center}
 #toast{position:fixed;left:16px;right:16px;top:14px;max-width:480px;margin:auto;background:#2c2e52;border:1px solid #ffffff26;padding:13px 16px;border-radius:16px;display:none;z-index:20;font-weight:700;box-shadow:0 10px 30px #000a}
 @media(max-width:520px){.pz .nm{flex:1 1 calc(100% - 60px)}.pzc{width:100%;padding-left:58px}.pzc .inp{flex:1}.pc{width:52px}.req .acts{width:100%}.req .acts .btn{flex:1}}
+.stat em{display:block;font-style:normal;color:var(--mut);font-size:12px;margin-top:4px}
+.chart{position:relative;margin-top:6px}.chart svg{display:block;width:100%;overflow:visible}.chart .ax{fill:#9fa2cc;font:700 11px Manrope,system-ui}
+.chart .bar rect{transition:opacity .15s}.chart .bar.dim rect{opacity:.45}
+.tip{position:absolute;top:-6px;display:none;pointer-events:none;background:#2c2e52;border:1px solid #ffffff26;border-radius:12px;padding:6px 10px;box-shadow:0 8px 20px #0008;white-space:nowrap}
+.tip small{display:block;color:var(--mut);font-size:11px}.tip b{font-size:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:640px){.two{grid-template-columns:1fr}}
+.tbl{padding:4px 16px}.tr{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}.tr:last-child{border:0}
+.tr>span:first-child{flex:1;min-width:0;font-weight:800}.tr>span{color:var(--mut);white-space:nowrap}.tr b{white-space:nowrap}
+.pos{color:var(--ok)}.neg{color:var(--bad)}
+.urow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;text-align:left;width:100%}.uav{width:42px;height:42px;border-radius:50%;background:var(--card2);display:grid;place-items:center;font-weight:800;flex:none}
+.urow .who{flex:1;min-width:160px}.urow .who b{display:block}.urow .who b small,.urow .who>small{color:var(--mut);font-weight:600}
+.nums{display:flex;gap:14px}.nums span{display:flex;flex-direction:column;font-weight:800;font-size:14px;white-space:nowrap}.nums small{color:var(--mut);font-size:11px;font-weight:700}
+@media(max-width:520px){.nums{width:100%;justify-content:space-between}}
+.bk{margin-top:16px}
+.lnk{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}.lnk code{flex:1;min-width:0;font:12px ui-monospace,monospace;color:#c9cbe4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:10px 12px;border-radius:12px;background:#ffffff0a}
+.kp{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:12px}.kp span{border-radius:14px;background:#ffffff08;padding:8px 10px}.kp small{display:block;color:var(--mut);font-size:11px}.kp b{font-size:15px}
 </style></head><body>
 <div id="app"></div><div id="toast" role="status"></div>
 <script>
@@ -90,25 +107,20 @@ function renderLogin(){$('app').innerHTML=`<div class="login"><div class="logo">
   <input class="inp" id="tok" type="password" placeholder="Токен администратора" autocomplete="current-password"><button class="btn" id="go">Войти</button></div>`;
   const go=async()=>{T=$('tok').value.trim();if(!T)return;try{await api('stats');try{localStorage.adm=T}catch(e){}start()}catch(e){toast(e.message)}};
   $('go').onclick=go;$('tok').onkeydown=e=>{if(e.key=='Enter')go()};$('tok').focus()}
-function moveLens(){const bar=document.querySelector('.glass'),on=bar?.querySelector('button.on'),l=bar?.querySelector('.lens');if(on&&l){l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`}}
+function moveLens(){const bar=document.querySelector('.glass'),on=bar?.querySelector('button.on'),l=bar?.querySelector('.lens');if(on&&l){l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`;bar.scrollTo({left:on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2,behavior:'smooth'})}}
 addEventListener('resize',moveLens);
 function start(){$('app').innerHTML=`<header class="top"><span class="logo">Gift<b>Mafia</b></span><span class="tag">админка</span><span class="sp"></span><button class="btn ghost sm" id="out">Выйти</button></header>
-  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Обзор</button><button data-v="req">Заявки</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button><button data-v="tasks">Задания</button></nav><main id="main"></main>`;
+  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Дашборд</button><button data-v="users">Игроки</button><button data-v="req">Заявки</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button><button data-v="utm">UTM</button><button data-v="promo">Промокоды</button><button data-v="tasks">Настройки</button></nav><main id="main"></main>`;
   $('out').onclick=logout;$$('#nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
   fetch('/static/gifts.json').then(r=>r.json()).then(g=>CATALOG=g).catch(()=>{});
   load()}
 async function load(){try{const [s,r,p]=await Promise.all([api('stats'),api('requests'),api('prizes')]);D={s,r,p};render()}catch(e){toast(e.message)}}
 function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v==view));requestAnimationFrame(moveLens);
   const M=$('main');if(!D.s)return;
-  if(view=='stats'){const s=D.s,money=v=>`<b class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${num(v)} ⭐</b>`;
-    M.innerHTML=`<h2>Обзор</h2><div class="stats">
-      <div class="card stat"><small>Пользователи</small><b>${num(s.users)}</b></div>
-      <div class="card stat"><small>Выигрышей</small><b>${num(s.wins)}</b></div>
-      <div class="card stat"><small>Ждут отправки</small><b style="color:var(--gold)">${num(s.requested)}</b></div>
-      <div class="card stat"><small>Отправлено</small><b>${num(s.sent)}</b></div>
-      <div class="card stat"><small>Доход: мины</small>${money(s.mines||0)}</div>
-      <div class="card stat"><small>Доход: плинко</small>${money(s.plinko||0)}</div></div>
-      <p style="color:var(--mut);margin-top:14px">Доход игр = ставки минус выплаты. Кейсы и апгрейды считаются по заявкам на вывод.</p>`}
+  if(view=='stats'){renderDash()}
+  if(view=='users'){renderUsers()}
+  if(view=='utm'){M.innerHTML='<p class="empty">Загрузка…</p>';renderUtm()}
+  if(view=='promo'){M.innerHTML='<p class="empty">Загрузка…</p>';renderPromos()}
   if(view=='req'){const all=D.r,list=reqF=='all'?all:all.filter(w=>w.status==reqF);
     M.innerHTML=`<h2>Заявки на вывод<small>${all.filter(w=>w.status=='requested').length} ждут</small></h2>
       <div class="chips">${[['requested','Ждут'],['sent','Отправлены'],['rejected','Отклонены'],['all','Все']].map(([k,t])=>`<button class="chip ${reqF==k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
@@ -153,6 +165,99 @@ function renderPrices(){const L=$('plist');if(!L||!PR)return;
   const save=async(i,v)=>{const x=PR.items[i];try{const r=await api('model_price','POST',{gift:x.gift,model:x.model,stars:v});toast(v?`Цена: ${num(r.price)} ⭐`:'Цена сброшена на формулу');await loadPrices();D.p=await api('prizes')}catch(e){toast(e.message)}};
   $$('[data-mp]',L).forEach(inp=>inp.onchange=()=>save(+inp.dataset.mp,parseInt(inp.value)||0));
   $$('[data-mr]',L).forEach(b=>b.onclick=()=>save(+b.dataset.mr,0))}
+/* ---------- дашборд ---------- */
+let DP='week',DM='deposits',DD=null;
+const METRIC={users:['Новые пользователи',''],deposits:['Пополнения',' ⭐'],turnover:['Оборот ставок',' ⭐'],ggr:['Доход (ставки − выплаты)',' ⭐']};
+const METH={stars:'Звёзды',ton:'GRAM (TON Connect)',xrocket:'xRocket',gift:'Подарки'};
+const GAME={case:'Кейсы',free:'Подарок дня',mines:'Мины',plinko:'Плинко',upgrade:'Апгрейд'};
+async function renderDash(){const M=$('main');
+  M.innerHTML=`<h2>Дашборд<small id="dper"></small></h2><div class="chips">${[['day','День'],['week','Неделя'],['month','Месяц'],['year','Год']].map(([k,t])=>`<button class="chip ${DP==k?'on':''}" data-p="${k}">${t}</button>`).join('')}</div><div id="dash"><p class="empty">Загрузка…</p></div>`;
+  $$('[data-p]',M).forEach(b=>b.onclick=()=>{DP=b.dataset.p;renderDash()});
+  try{DD=await api('dash?period='+DP)}catch(e){return toast(e.message)}drawDash()}
+const sgn=v=>`<b class="${v>=0?'pos':'neg'}">${v>=0?'+':''}${num(v)} ⭐</b>`;
+function drawDash(){const d=DD,t=d.totals,el=$('dash');if(!el)return;
+  el.innerHTML=`<div class="stats">
+    <div class="card stat"><small>Новых пользователей</small><b>${num(t.users)}</b><em>всего ${num(t.all_users)}</em></div>
+    <div class="card stat"><small>Активных</small><b>${num(t.active)}</b><em>заходили за период</em></div>
+    <div class="card stat"><small>Пополнения</small><b>${num(t.deposits)} ⭐</b><em>${num(t.deposit_n)} платежей · ${num(t.depositors)} чел.</em></div>
+    <div class="card stat"><small>Оборот ставок</small><b>${num(t.turnover)} ⭐</b><em>${num(t.bets)} ставок</em></div>
+    <div class="card stat"><small>Доход</small>${sgn(t.ggr)}<em>ставки − выплаты</em></div>
+    <div class="card stat"><small>Вывод NFT</small><b>${num(t.withdraw_n)}</b><em>≈ ${num(t.withdraw_value)} ⭐ · ждут ${num(t.requested)}</em></div></div>
+  <div class="card" style="margin-top:12px"><div class="chips" style="margin-bottom:6px">${Object.entries(METRIC).map(([k,[n]])=>`<button class="chip ${DM==k?'on':''}" data-m="${k}">${n}</button>`).join('')}</div>
+    <div class="chart" id="chart"></div></div>
+  <div class="two"><div><h2>Способы оплаты</h2><div class="card tbl">${Object.entries(d.methods).map(([k,v])=>`<div class="tr"><span>${METH[k]||k}</span><span>${num(v.n)}</span><b>${num(v.stars)} ⭐</b></div>`).join('')||'<p class="empty">Пополнений нет</p>'}
+      ${t.bonus?`<div class="tr"><span>Бонусы по промокодам</span><span></span><b>${num(t.bonus)} ⭐</b></div>`:''}</div></div>
+    <div><h2>Игры</h2><div class="card tbl">${Object.entries(d.games).sort((a,b)=>b[1].turnover-a[1].turnover).map(([k,v])=>`<div class="tr"><span>${GAME[k]||k}</span><span>${num(v.n)}</span><span>${num(v.turnover)} ⭐</span>${sgn(v.ggr)}</div>`).join('')||'<p class="empty">Ставок нет</p>'}</div></div></div>
+  <h2>Популярные кейсы</h2><div class="card tbl">${d.top_cases.map(c=>`<div class="tr"><span>${esc(c.title)}</span><span>${num(c.n)} откр.</span><span>${num(c.turnover)} ⭐</span>${sgn(c.ggr)}</div>`).join('')||'<p class="empty">Кейсы не открывали</p>'}</div>`;
+  $$('[data-m]',el).forEach(b=>b.onclick=()=>{DM=b.dataset.m;drawDash()});
+  $('dper').textContent={day:'последние 24 часа',week:'7 дней',month:'30 дней',year:'12 месяцев'}[d.period];
+  drawChart()}
+function drawChart(){const el=$('chart'),d=DD,v=d.series[DM],L=d.labels,u=METRIC[DM][1];if(!el)return;
+  const W=el.clientWidth||600,H=220,pl=46,pb=24,pt=10,n=v.length,mx=Math.max(1,...v),mn=Math.min(0,...v),bw=(W-pl)/n;
+  const step=(()=>{const r=(mx-mn)/4,p=10**Math.floor(Math.log10(r||1)),k=[1,2,2.5,5,10].find(k=>k*p>=r);return k*p})();
+  const y=val=>pt+(H-pt-pb)*(1-(val-mn)/((Math.ceil(mx/step)*step-mn)||1)),top=Math.ceil(mx/step)*step,grid=[];
+  for(let g=Math.floor(mn/step)*step;g<=top+1e-9;g+=step)grid.push(g);
+  const every=Math.ceil(n/(W<500?6:12));
+  el.innerHTML=`<svg width="${W}" height="${H}" role="img" aria-label="${METRIC[DM][0]}">
+   ${grid.map(g=>`<line x1="${pl}" x2="${W}" y1="${y(g)}" y2="${y(g)}" stroke="#ffffff${g==0?'40':'12'}"/><text x="${pl-8}" y="${y(g)+4}" text-anchor="end" class="ax">${short(g)}</text>`).join('')}
+   ${v.map((val,i)=>{const x=pl+i*bw+Math.max(1,bw*.14),w=Math.max(2,bw*.72),y0=y(0),y1=y(val),h=Math.abs(y1-y0);
+     return `<g class="bar" data-i="${i}"><rect x="${pl+i*bw}" y="${pt}" width="${bw}" height="${H-pt-pb}" fill="transparent"/>${h>0.5?`<rect x="${x}" y="${Math.min(y0,y1)}" width="${w}" height="${h}" rx="${Math.min(4,w/2)}" fill="${val<0?'#ff5a6e':'#7d6cff'}"/>`:''}</g>`}).join('')}
+   ${L.map((l,i)=>i%every==0?`<text x="${pl+i*bw+bw/2}" y="${H-6}" text-anchor="middle" class="ax">${l}</text>`:'').join('')}</svg><div class="tip" id="tip"></div>`;
+  const tip=$('tip');
+  $$('.bar',el).forEach(g=>{g.onmouseenter=g.ontouchstart=()=>{const i=+g.dataset.i;$$('.bar',el).forEach(x=>x.classList.toggle('dim',x!=g));
+      tip.innerHTML=`<small>${L[i]}</small><b>${num(v[i])}${u}</b>`;tip.style.display='block';const x=pl+i*bw+bw/2;tip.style.left=Math.min(W-tip.offsetWidth,Math.max(0,x-tip.offsetWidth/2))+'px'};
+    g.onmouseleave=()=>{tip.style.display='none';$$('.bar',el).forEach(x=>x.classList.remove('dim'))}})}
+const short=n=>Math.abs(n)>=1e6?(n/1e6).toFixed(1).replace('.0','')+'M':Math.abs(n)>=1e3?(n/1e3).toFixed(1).replace('.0','')+'K':String(Math.round(n));
+addEventListener('resize',()=>{if(view=='stats'&&DD)drawChart()});
+/* ---------- пользователи ---------- */
+let US='recent',UQ='',UU=null;
+async function renderUsers(){const M=$('main');
+  M.innerHTML=`<h2>Пользователи<small id="ucnt"></small></h2><div class="price"><input class="inp" id="uq" style="flex:1;min-width:180px" placeholder="Поиск: id, @username или имя" value="${esc(UQ)}"></div>
+   <div class="chips">${[['recent','Недавние'],['deposits','Пополнения'],['turnover','Оборот'],['ggr','Доход'],['balance','Баланс']].map(([k,t])=>`<button class="chip ${US==k?'on':''}" data-s="${k}">${t}</button>`).join('')}</div><div class="list" id="ulist"><p class="empty">Загрузка…</p></div>`;
+  let tm;$('uq').oninput=e=>{clearTimeout(tm);tm=setTimeout(()=>{UQ=e.target.value;loadUsers()},300)};
+  $$('[data-s]',M).forEach(b=>b.onclick=()=>{US=b.dataset.s;$$('[data-s]',M).forEach(x=>x.classList.toggle('on',x==b));loadUsers()});loadUsers()}
+const ago=t=>{if(!t)return 'никогда';const s=Date.now()/1000-t;return s<120?'сейчас':s<3600?Math.round(s/60)+' мин назад':s<86400?Math.round(s/3600)+' ч назад':Math.round(s/86400)+' дн назад'};
+async function loadUsers(){try{UU=(await api(`users?search=${encodeURIComponent(UQ)}&sort=${US}`)).users}catch(e){return toast(e.message)}
+  const L=$('ulist');if(!L)return;$('ucnt').textContent=UU.length+(UU.length>=50?'+':'');
+  L.innerHTML=UU.map(u=>`<button class="card urow" data-u="${u.id}"><span class="uav">${esc((u.name||'?')[0])}</span><div class="who"><b>${esc(u.name||'—')} ${u.username?`<small>@${esc(u.username)}</small>`:''}</b><small>id ${u.id} · ${ago(u.last_seen)}${u.utm?' · utm '+esc(u.utm):''}</small></div>
+    <div class="nums"><span><small>Баланс</small>${num(u.balance)} ⭐</span><span><small>Пополнил</small>${num(u.deposits)} ⭐</span><span><small>Оборот</small>${num(u.turnover)} ⭐</span></div></button>`).join('')||'<p class="empty">Никого не нашлось.</p>';
+  $$('[data-u]',L).forEach(b=>b.onclick=()=>userCard(+b.dataset.u))}
+async function userCard(id){let d;try{d=await api('user/'+id)}catch(e){return toast(e.message)}const u=d.user,s=d.stats;
+  $('main').innerHTML=`<div class="bk"><button class="btn ghost sm" id="ub">← Назад</button></div><h2>${esc(u.name||'—')}<small>${u.username?'@'+esc(u.username)+' · ':''}id ${u.id}</small></h2>
+   <div class="stats">
+    <div class="card stat"><small>Баланс</small><b>${num(u.balance)} ⭐</b></div><div class="card stat"><small>Пополнил</small><b>${num(u.deposits)} ⭐</b></div>
+    <div class="card stat"><small>Оборот</small><b>${num(s.turnover)} ⭐</b></div><div class="card stat"><small>Доход с игрока</small>${sgn(u.ggr)}</div>
+    <div class="card stat"><small>Игр / выигрышей</small><b>${num(s.games)} / ${num(s.wins)}</b></div><div class="card stat"><small>Любимая игра</small><b>${GAME[s.fav_game]||'—'}</b></div>
+    <div class="card stat"><small>Любимый кейс</small><b style="font-size:18px">${esc(s.fav_case?.title||'—')}</b></div><div class="card stat"><small>Лучший выигрыш</small><b style="font-size:18px">${s.best?num(s.best.value)+' ⭐':'—'}</b><em>${esc(s.best?.prize||'')}</em></div>
+    <div class="card stat"><small>Друзей</small><b>${num(d.refs)}</b></div><div class="card stat"><small>Регистрация</small><b style="font-size:16px">${new Date(u.created*1000).toLocaleDateString('ru-RU')}</b><em>${u.utm?'UTM '+esc(u.utm):'без метки'}</em></div></div>
+   <h2>Пополнения</h2><div class="card tbl">${d.payments.map(p=>`<div class="tr"><span>${METH[p.method]||p.method}</span><span>${p.amount?(+p.amount).toLocaleString('ru-RU')+' '+esc(p.currency):''}</span><span>${new Date(p.created*1000).toLocaleString('ru-RU')}</span><b class="${p.status=='paid'?'pos':''}">${num(p.stars)} ⭐${p.bonus?' +'+num(p.bonus):''}${p.status!='paid'?' · '+p.status:''}</b></div>`).join('')||'<p class="empty">Нет</p>'}</div>
+   <h2>Последние ставки</h2><div class="card tbl">${d.bets.map(b=>`<div class="tr"><span>${GAME[b.game]||b.game}</span><span>${new Date(b.created*1000).toLocaleString('ru-RU')}</span><span>${num(b.amount)} ⭐</span><b class="${b.payout>b.amount?'pos':'neg'}">${num(b.payout)} ⭐</b></div>`).join('')||'<p class="empty">Нет</p>'}</div>`;
+  $('ub').onclick=renderUsers;scrollTo(0,0)}
+/* ---------- UTM ---------- */
+async function renderUtm(){const M=$('main');let d;try{d=await api('utm')}catch(e){return toast(e.message)}
+  M.innerHTML=`<h2>UTM-ссылки<small>${d.links.length}</small></h2>
+   <div class="card set"><label>Источник (для себя)<input class="inp" id="uN" placeholder="Канал @example, реклама 16.10"></label>
+    <label>Метка (необязательно, латиница)<input class="inp" id="uC" placeholder="example_ads"></label><button class="btn" id="uAdd">Создать ссылку</button>
+    <p style="color:var(--mut);font-size:13px">Пользователь, пришедший по ссылке, навсегда закрепляется за меткой: видно переходы, регистрации, пополнения и оборот.</p></div>
+   <div class="list" style="margin-top:12px">${d.links.map(l=>`<div class="card"><div class="tk"><div class="nm"><b>${esc(l.name)}</b><small>метка ${esc(l.code)} · создана ${new Date(l.created*1000).toLocaleDateString('ru-RU')}</small></div><button class="x" data-ud="${esc(l.code)}" aria-label="Удалить">×</button></div>
+     <div class="lnk"><code>${esc(l.app_link)}</code><button class="btn ghost sm" data-cp="${esc(l.app_link)}">Мини-апп</button><button class="btn ghost sm" data-cp="${esc(l.bot_link)}">Бот</button></div>
+     <div class="kp"><span><small>Переходы</small><b>${num(l.starts)}</b></span><span><small>Регистрации</small><b>${num(l.users)}</b></span><span><small>Платящих</small><b>${num(l.payers)}</b></span><span><small>Пополнения</small><b>${num(l.deposits)} ⭐</b></span><span><small>Оборот</small><b>${num(l.turnover)} ⭐</b></span><span><small>Конверсия</small><b>${l.users?Math.round(l.payers/l.users*100):0}%</b></span></div></div>`).join('')||'<p class="empty">Ссылок пока нет.</p>'}</div>`;
+  $('uAdd').onclick=()=>act(api('utm','POST',{name:$('uN').value,code:$('uC').value}),'Ссылка создана',renderUtm);
+  $$('[data-cp]',M).forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);toast('Ссылка скопирована')}catch(e){prompt('Скопируйте ссылку',b.dataset.cp)}});
+  $$('[data-ud]',M).forEach(b=>b.onclick=()=>{if(confirm('Удалить ссылку? Статистика по ней пропадёт из списка.'))act(api('utm/'+b.dataset.ud,'DELETE'),'Ссылка удалена',renderUtm)})}
+/* ---------- промокоды ---------- */
+async function renderPromos(){const M=$('main');let d;try{d=await api('promos')}catch(e){return toast(e.message)}
+  M.innerHTML=`<h2>Промокоды<small>${d.promos.filter(p=>p.active).length} активных</small></h2>
+   <div class="card set"><label>Код<input class="inp" id="pC" placeholder="WELCOME20" style="text-transform:uppercase"></label>
+    <label>Бонус к пополнению, %<input class="inp" id="pP" type="number" min="1" max="500" value="20"></label>
+    <label>Сколько активаций (0 — без ограничения)<input class="inp" id="pU" type="number" min="0" value="100"></label>
+    <label>Действует дней (0 — бессрочно)<input class="inp" id="pD" type="number" min="0" value="7"></label>
+    <button class="btn" id="pAdd">Создать промокод</button><p style="color:var(--mut);font-size:13px">Пользователь вводит код в профиле → «Промокод», бонус начисляется к его следующему пополнению (звёзды, GRAM, xRocket или подарок).</p></div>
+   <div class="list" style="margin-top:12px">${d.promos.map(p=>`<div class="card tk"><span class="kind">+${p.percent}%</span><div class="nm"><b>${esc(p.code)}</b><small>активаций ${num(p.activated)}${p.max_uses?' / '+num(p.max_uses):''} · использовано ${num(p.used)} · бонусов ${num(p.bonus)} ⭐${p.expires?' · до '+new Date(p.expires*1000).toLocaleDateString('ru-RU'):''}</small></div>
+     <button class="sw ${p.active?'on':''}" data-pa="${esc(p.code)}" aria-label="Включён"></button><button class="x" data-pd="${esc(p.code)}" aria-label="Удалить">×</button></div>`).join('')||'<p class="empty">Промокодов нет.</p>'}</div>`;
+  $('pAdd').onclick=()=>act(api('promo','POST',{code:$('pC').value,percent:$('pP').value,max_uses:$('pU').value,days:$('pD').value}),'Промокод создан',renderPromos);
+  $$('[data-pa]',M).forEach(b=>b.onclick=()=>act(api('promo/'+b.dataset.pa,'PATCH',{active:!b.classList.contains('on')}),b.classList.contains('on')?'Промокод выключен':'Промокод включён',renderPromos));
+  $$('[data-pd]',M).forEach(b=>b.onclick=()=>{if(confirm('Удалить промокод?'))act(api('promo/'+b.dataset.pd,'DELETE'),'Промокод удалён',renderPromos)})}
 const KIND={channel:'Подписка на канал',bot:'Запустить бота',story:'Сторис',link:'Перейти по ссылке'};
 async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks')}catch(e){return toast(e.message)}const st=d.settings;
   M.innerHTML=`<h2>Настройки</h2><div class="card set">
@@ -160,6 +265,10 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     <label>Что поставить в имя (программа «Поставь в ник»)<input class="inp" id="sTag" value="${esc(st.nick_tag)}"></label>
     <label>Что поставить в описание (должно содержать то же имя)<input class="inp" id="sBio" value="${esc(st.nick_bio)}"></label>
     <label>Награда ⭐ в день для уровней Telegram 0 / 1–4 / 5–9 / 10+<input class="inp" id="sRw" value="${esc(st.nick_rewards)}" placeholder="10,20,60,120"></label>
+    <label>Кошелёк для оплаты GRAM через TON Connect (пусто — способ выключен)<input class="inp" id="sTon" value="${esc(st.ton_wallet)}" placeholder="UQ..."></label>
+    <label>Аккаунт для пополнения подарками (бизнес-аккаунт, подключённый к боту)<input class="inp" id="sGa" value="${esc(st.gift_account)}" placeholder="@account"></label>
+    <label>Сколько % от оценки NFT зачислять за подарок<input class="inp" id="sGr" type="number" min="1" max="100" value="${esc(st.gift_rate)}"></label>
+    <label style="display:flex;align-items:center;gap:10px;color:#fff"><button class="sw ${st.free_notify=='1'?'on':''}" id="sFn" type="button" aria-label="Напоминание"></button>Писать в бота, когда снова доступен «Подарок дня»</label>
     <button class="btn" id="sSave">Сохранить</button>
     <p style="color:var(--mut);font-size:13px">Чтобы бот мог проверять подписку, добавьте его администратором в канал.</p></div>
   <h2>Задания<small>${d.tasks.filter(t=>t.active).length} активных</small></h2>
@@ -173,7 +282,9 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     <label>Награда ⭐<input class="inp" id="nR" type="number" min="1" value="3"></label>
     <button class="btn" id="nAdd">Добавить задание</button></div>`;
   const kind=()=>{$('nTgL').style.display=['channel','link'].includes($('nK').value)?'':'none'};$('nK').onchange=kind;kind();
-  $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value}),'Настройки сохранены',renderTasksAdmin);
+  $('sFn').onclick=()=>$('sFn').classList.toggle('on');
+  $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value,
+    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0'}),'Настройки сохранены',renderTasksAdmin);
   $('nAdd').onclick=()=>act(api('task','POST',{kind:$('nK').value,title:$('nT').value,target:$('nTg').value,reward:$('nR').value}),'Задание добавлено',renderTasksAdmin);
   $$('[data-trw]').forEach(i=>i.onchange=()=>act(api(`task/${i.dataset.trw}`,'PATCH',{reward:i.value}),'Награда сохранена',renderTasksAdmin));
   $$('[data-ton]').forEach(b=>b.onclick=()=>act(api(`task/${b.dataset.ton}`,'PATCH',{active:!b.classList.contains('on')}),b.classList.contains('on')?'Задание выключено':'Задание включено',renderTasksAdmin));
