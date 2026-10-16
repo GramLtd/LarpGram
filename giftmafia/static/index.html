@@ -387,8 +387,8 @@ h2{animation:rise .45s ease both}
 </main>
 
 <main id="v-earn" hidden>
-  <div class="gsw glass" id="esw"><i class="lens" aria-hidden="true"></i><button class="on" data-e="nick">Ник</button><button data-e="cm">Комменты</button><button data-e="ref">Друзья</button></div>
-  <div id="nickBox"></div><div id="cmBox" hidden></div>
+  <div class="gsw glass" id="esw"><i class="lens" aria-hidden="true"></i><button class="on" data-e="cm">Комменты</button><button data-e="ref">Друзья</button><button data-e="nick">Ник</button></div>
+  <div id="nickBox" hidden></div><div id="cmBox"></div>
   <div id="refBox" hidden>
   <div class="card cmh rfh"><div class="cmi"><svg viewBox="0 0 96 96"><defs><linearGradient id="rfA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b9dff"/><stop offset="1" stop-color="#5a3fd8"/></linearGradient><linearGradient id="rfB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fd0ff"/><stop offset="1" stop-color="#2a7be0"/></linearGradient></defs>
     <circle cx="62" cy="30" r="13" fill="url(#rfB)"/><path d="M40 78c0-14 10-24 22-24s22 10 22 24z" fill="url(#rfB)"/><circle cx="36" cy="34" r="15" fill="url(#rfA)" stroke="#121329" stroke-width="3"/><path d="M8 84c0-16 12-28 28-28s28 12 28 28z" fill="url(#rfA)" stroke="#121329" stroke-width="3"/><circle cx="76" cy="74" r="13" fill="url(#tgS)" stroke="#fff6c2" stroke-width="2"/><path d="M76 68v12M70 74h12" stroke="#7a4a00" stroke-width="3" stroke-linecap="round"/></svg></div>
@@ -627,7 +627,7 @@ async function taskAct(t,b){if(!t)return;
   catch(e){toast(e.message);hap('err');b.disabled=false}}
 
 /* ---------- заработок: комментарии ---------- */
-let esec='nick';
+let esec='cm';
 const CMI='<svg viewBox="0 0 96 96"><defs><linearGradient id="cmB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b86"/><stop offset="1" stop-color="#e0294f"/></linearGradient></defs><path d="M18 16h60a12 12 0 0 1 12 12v32a12 12 0 0 1-12 12H44L26 86V72h-8A12 12 0 0 1 6 60V28a12 12 0 0 1 12-12z" fill="url(#cmB)" stroke="#7af0ff" stroke-width="3" stroke-linejoin="round"/><path d="M20 22h56" stroke="#ffffff55" stroke-width="4" stroke-linecap="round"/><circle cx="30" cy="44" r="6" fill="#fff"/><circle cx="48" cy="44" r="6" fill="#fff"/><circle cx="66" cy="44" r="6" fill="#fff"/><circle cx="76" cy="72" r="13" fill="url(#tgS)" stroke="#fff6c2" stroke-width="2"/></svg>';
 function renderEarn(){$('nickBox').hidden=esec!='nick';$('cmBox').hidden=esec!='cm';$('refBox').hidden=esec!='ref';moveLens($('esw'));if(esec=='nick')renderNick();else if(esec=='cm')renderCm()}
 $$('#esw button').forEach(b=>b.onclick=()=>{esec=b.dataset.e;$$('#esw button').forEach(x=>x.classList.toggle('on',x==b));hap();renderEarn()});
