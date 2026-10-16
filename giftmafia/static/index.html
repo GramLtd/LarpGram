@@ -10,7 +10,7 @@
 --grad:linear-gradient(90deg,var(--acc1),var(--acc2));--ok:#3ee08f;--bad:#ff5a6e;--gold:#ffc83d;
 --hd:800 26px/1.1 "Unbounded",system-ui,sans-serif}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
-html{background:var(--bg);-webkit-text-size-adjust:100%;touch-action:manipulation}
+html{background:var(--bg);overscroll-behavior:none;-webkit-text-size-adjust:100%;touch-action:manipulation}
 button,a,input,label,.cell{touch-action:manipulation}
 body{background:radial-gradient(700px 360px at 50% -140px,#5b46d455,transparent 70%) no-repeat,var(--bg);color:var(--txt);font:600 15px/1.35 "Manrope",-apple-system,system-ui,sans-serif;padding:0 16px 120px;max-width:520px;margin:auto;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
@@ -18,7 +18,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--acc1);outline-o
 img{-webkit-user-drag:none;user-select:none}
 .st{width:1em;height:1em;vertical-align:-.12em;flex:none}
 /* шапка */
-.top{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:8px;padding:12px 0 10px;background:#121329d9;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);margin:0 -16px;padding-left:16px;padding-right:16px}
+.top{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:8px;padding:12px 0 10px;background:var(--bg);box-shadow:0 10px 14px -6px var(--bg);margin:0 -16px;padding-left:16px;padding-right:16px}
 .logo{font:800 23px/1 "Unbounded",system-ui,sans-serif;letter-spacing:-.03em;margin-right:auto;white-space:nowrap}.logo b{background:linear-gradient(180deg,#ffe07a,#f3a514);-webkit-background-clip:text;background-clip:text;color:transparent}
 .bal{display:flex;align-items:center;gap:8px;height:46px;padding:0 12px 0 6px;border-radius:999px;background:#13142299;border:1px solid var(--line);font-weight:800;font-size:17px}
 .bal .ic{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#3a3d63,#22233a);display:grid;place-items:center;font-size:20px}
