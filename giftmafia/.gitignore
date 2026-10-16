@@ -1,0 +1,6 @@
+giftmafia*.db
+.env
+static/cache/
+static/banner.jpg
+static/story.jpg
+__pycache__/

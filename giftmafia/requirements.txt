@@ -1,0 +1,5 @@
+aiogram>=3.20
+fastapi
+uvicorn[standard]
+python-dotenv
+pillow

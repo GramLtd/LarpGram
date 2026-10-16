@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GiftMafia — админка</title>
+<style>
+body{font:15px/1.4 system-ui,sans-serif;background:#14090b;color:#efe6d6;max-width:900px;margin:auto;padding:16px}
+h2{margin:24px 0 8px;color:#c9a24b}
+table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #3b0d14;text-align:left}
+button,input,select{font:inherit;padding:6px 10px;border-radius:4px;border:1px solid #c9a24b;background:#2a1014;color:#efe6d6}
+button{cursor:pointer;background:#c9a24b;color:#14090b;border:0}button.x{background:#7a2a2a;color:#fff}
+.stats{display:flex;gap:12px;flex-wrap:wrap}.stats div{background:#3b0d14;padding:12px 16px;border-radius:4px}
+.scroll{overflow-x:auto}a{color:#c9a24b}
+</style></head><body>
+<h1>GiftMafia — админка</h1>
+<div class="stats" id="stats"></div>
+<h2>Заявки на вывод</h2><div class="scroll"><table id="req"></table></div>
+<h2>Призы и шансы</h2>
+<p style="color:#9a8a84">Шанс = вес / сумма весов призов в кейсе. NFT выбирается из каталога всех подарков Telegram (static/gifts.json), оценка в ⭐ считается из FLOORS в main.py.</p>
+<div class="scroll"><table id="prizes"></table></div>
+<p><select id="pc"></select> <select id="pk" onchange="kind()"><option value="nft">NFT</option><option value="stars">⭐ на баланс</option></select>
+ <span id="pnft"><input id="pg" list="gl" placeholder="Коллекция (Plush Pepe)" oninput="models()"> <input id="pm" list="ml" placeholder="Модель"></span>
+ <input id="ps" type="number" placeholder="⭐" style="width:80px;display:none"> вес <input id="pw" type="number" value="1" step="any" style="width:80px"> <button onclick="addPrize()">Добавить приз</button></p>
+<datalist id="gl"></datalist><datalist id="ml"></datalist>
+<h2>Цены кейсов (Stars)</h2><div id="cases"></div>
+<script>
+let T=localStorage.adm||prompt('Admin token');localStorage.adm=T;
+const api=async(p,m='GET',b)=>{const r=await fetch('/api/admin/'+p,{method:m,headers:{'X-Admin':T,'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+ if(r.status==401){localStorage.removeItem('adm');alert('Неверный токен');location.reload()}return r.json()};
+async function load(){
+ const s=await api('stats');$('stats').innerHTML=Object.entries({Пользователи:s.users,Выигрышей:s.wins,'Ждут отправки':s.requested,Отправлено:s.sent,'Мины, доход ⭐':s.mines}).map(([k,v])=>`<div>${k}<br><b style="font-size:22px">${v}</b></div>`).join('');
+ const r=await api('requests');
+ $('req').innerHTML='<tr><th>#</th><th>Пользователь</th><th>Подарок</th><th>Статус</th><th></th></tr>'+r.map(w=>`<tr><td>${w.id}</td><td>${w.username?`<a href="https://t.me/${w.username}" target="_blank">@${w.username}</a>`:`<a href="tg://user?id=${w.user_id}">${w.name||w.user_id}</a>`}</td><td>${w.img?`<img src="${w.img}" style="width:28px;height:28px;vertical-align:middle;object-fit:contain"> `:''}${w.prize} <small>(≈${w.value} ⭐)</small></td><td>${w.status}</td><td>${w.status=='requested'?`<button onclick="win(${w.id},'sent')">Отправлен</button> <button class="x" onclick="win(${w.id},'rejected')">Отклонить</button>`:''}</td></tr>`).join('');
+ const p=await api('prizes');
+ const tot={};p.prizes.forEach(x=>tot[x.case_id]=(tot[x.case_id]||0)+x.weight);
+ const cn=Object.fromEntries(p.cases.map(c=>[c.id,c.title]));
+ $('pc').innerHTML=p.cases.map(c=>`<option value="${c.id}">${c.title}</option>`).join('');
+ $('prizes').innerHTML='<tr><th>Кейс</th><th>Приз</th><th>≈ ⭐</th><th>Вес</th><th>Шанс</th><th></th></tr>'+p.prizes.map(x=>`<tr><td>${cn[x.case_id]}</td><td>${x.img?`<img src="${x.img}" style="width:28px;height:28px;vertical-align:middle;object-fit:contain"> `:'⭐ '}${x.name}</td><td>${x.stars||''}</td><td><input type="number" value="${x.weight}" style="width:70px" onchange="api('prize/${x.id}','PATCH',{weight:this.value}).then(load)"></td><td>${(x.weight/tot[x.case_id]*100).toFixed(x.weight/tot[x.case_id]<0.01?3:1)}%</td><td><button class="x" onclick="api('prize/${x.id}','DELETE').then(load)">Удалить</button></td></tr>`).join('');
+ $('cases').innerHTML=p.cases.filter(c=>c.id!=1).map(c=>`<p>${c.title}: <input type="number" value="${c.price}" style="width:90px" onchange="api('case/${c.id}','PATCH',{price:this.value}).then(load)"> ⭐</p>`).join('');
+}
+const $=id=>document.getElementById(id);
+const win=(id,a)=>api(`win/${id}/${a}`,'POST').then(load);
+const addPrize=()=>api('prize','POST',{case_id:$('pc').value,kind:$('pk').value,gift:$('pg').value,model:$('pm').value,stars:$('ps').value,weight:$('pw').value}).then(load);
+let CAT=[];fetch('/static/gifts.json').then(r=>r.json()).then(g=>{CAT=g;$('gl').innerHTML=g.map(x=>`<option value="${x.name}">`).join('')});
+const models=()=>{const g=CAT.find(x=>x.name==$('pg').value);$('ml').innerHTML=g?g.models.map(([m,p])=>`<option value="${m}">${p/10}%</option>`).join(''):''};
+const kind=()=>{const n=$('pk').value=='nft';$('pnft').style.display=n?'':'none';$('ps').style.display=n?'none':''};
+load();
+</script></body></html>
