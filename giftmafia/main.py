@@ -1178,6 +1178,45 @@ async def cm_report(m, photos):
                    f"{f' · повторы не засчитаны: {dup}' if dup else ''}{f' · сверх дневного лимита: {over}' if over else ''}.\nПосле проверки ⭐ придут на баланс.")
 
 
+# ---------- ID премиум-эмодзи прямо в боте ----------
+# Админ присылает боту премиум-эмодзи - бот отвечает ID каждого. Если перед премиум-эмодзи стоит обычный
+# («🚀 + премиум, 🎉 + премиум»), бот сразу привязывает: в текстах бота этот обычный эмодзи станет премиумом.
+_EB = r"[\U0001F000-\U0001FAFF\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u3030\u303D\u3297\u3299][\ufe0f\U0001F3FB-\U0001F3FF]*"
+EMOJI_RE = re.compile(_EB + r"(?:\u200d" + _EB + r")*")  # один эмодзи (с модификаторами и ZWJ-склейками)
+
+
+def is_bot_admin(u):
+    allow = {x.strip().lstrip("@").lower() for x in (setting("maint_allow") + "," + setting("stats_exclude")).replace(";", ",").split(",") if x.strip()}
+    return u.id == ADMIN_CHAT_ID or str(u.id) in allow or (u.username or "").lower() in allow
+
+
+def _u16(text, a, b):
+    """Срез текста по смещениям Telegram (UTF-16)."""
+    return text.encode("utf-16-le")[a * 2:b * 2].decode("utf-16-le")
+
+
+@dp.message(F.text, F.entities, F.chat.type == "private")
+async def emoji_ids(m):
+    ents = [e for e in m.entities if e.type == "custom_emoji"]
+    if not ents or not is_bot_admin(m.from_user): return
+    al, lines, prev, bound = emoji_alias(), [], 0, 0
+    for e in ents:
+        own = _u16(m.text, e.offset, e.offset + e.length)              # обычный эмодзи-аналог самого премиум-эмодзи
+        before = EMOJI_RE.findall(_u16(m.text, prev, e.offset))         # обычный эмодзи, который стоит перед ним
+        target = _bare(before[-1]) if before else ""
+        if target and is_emoji(target):
+            al[target] = e.custom_emoji_id; bound += 1
+            lines.append(f'{target} → <tg-emoji emoji-id="{e.custom_emoji_id}">{own}</tg-emoji>  <code>{e.custom_emoji_id}</code> ✅')
+        else:
+            lines.append(f'<tg-emoji emoji-id="{e.custom_emoji_id}">{own}</tg-emoji>  <code>{e.custom_emoji_id}</code>')
+        prev = e.offset + e.length
+    if bound:
+        run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:emoji_alias',?)", json.dumps(al, ensure_ascii=False)); await load_emoji()
+    await m.answer(("✅ Привязано: %d\n\n" % bound if bound else "🆔 ID премиум-эмодзи:\n\n") + "\n".join(lines) +
+                   ("" if bound else "\n\nЧтобы привязать, пришлите обычный эмодзи и сразу за ним премиум: «🚀 + премиум-эмодзи». Можно несколько пар в одном сообщении."),
+                   parse_mode="HTML")
+
+
 @dp.message(F.photo, F.chat.type == "private")
 async def cm_photo(m):
     ph = (m.photo[-1].file_id, m.photo[-1].file_unique_id)
@@ -1827,11 +1866,14 @@ async def a_emoji(reload: int = 0):
             "used": [{"emoji": e, "id": CE.get(e), "manual": e in al} for e in used + sorted(set(al) - set(used))]}
 
 
+def is_emoji(e):
+    return bool(e) and len(e) <= 8 and bool(re.search(r"[\U0001F000-\U0001FAFF\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u3030\u303D\u3297\u3299]", e)) and not re.search(r"[\w\s]", e)
+
+
 @app.post("/api/admin/emoji_alias", dependencies=[Depends(admin)])
 async def a_emoji_alias(b: dict):
     al = emoji_alias(); e = _bare(b.get("emoji", ""))
-    if not e or len(e) > 8 or not re.search(r"[\U0001F000-\U0001FAFF\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u3030\u303D\u3297\u3299]", e) or re.search(r"[\w\s]", e):
-        raise HTTPException(400, "Укажите один обычный эмодзи, например 🎁")
+    if not is_emoji(e): raise HTTPException(400, "Укажите один обычный эмодзи, например 🎁")
     cid = re.sub(r"\D", "", str(b.get("id") or ""))
     if cid:
         if cid not in {p["id"] for p in PACK} and cid not in EXTRA:  # ID не из набора - проверяем, что такой премиум-эмодзи существует
