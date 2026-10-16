@@ -416,7 +416,9 @@ tg.ready();tg.expand();try{tg.setHeaderColor('#171828');tg.setBackgroundColor('#
 const $=id=>document.getElementById(id),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const STAR='<svg class="st" viewBox="0 0 24 24"><polygon points="12.00,2.90 14.88,8.94 21.51,9.81 16.66,14.41 17.88,20.99 12.00,17.80 6.12,20.99 7.34,14.41 2.49,9.81 9.12,8.94" fill="url(#tgS)" stroke="url(#tgS)" stroke-width="2.2" stroke-linejoin="round"/><polygon points="12.00,7.20 13.47,10.38 16.95,10.79 14.38,13.17 15.06,16.61 12.00,14.90 8.94,16.61 9.62,13.17 7.05,10.79 10.53,10.38" fill="#fff6c2" opacity=".55" stroke="#fff6c2" stroke-width="1" stroke-linejoin="round"/></svg>';
 const GRAM='<svg class="st" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#0098ea"/><path d="M7.7 7.6h8.6c.9 0 1.4.9 1 1.7l-4.4 7.7a1 1 0 0 1-1.8 0L6.7 9.3c-.4-.8.1-1.7 1-1.7z" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 7.7v9.8" stroke="#fff" stroke-width="1.7"/></svg>';
-const COIN='<svg class="coin" viewBox="0 0 64 64"><circle cx="32" cy="33" r="30" fill="url(#tgG)"/><polygon points="32.00,10.00 38.94,24.45 54.83,26.58 43.22,37.65 46.11,53.42 32.00,45.80 17.89,53.42 20.78,37.65 9.17,26.58 25.06,24.45" fill="url(#tgS)" stroke="url(#tgS)" stroke-width="5" stroke-linejoin="round"/><polygon points="32.00,20.30 35.53,27.95 43.89,28.94 37.71,34.65 39.35,42.91 32.00,38.80 24.65,42.91 26.29,34.65 20.11,28.94 28.47,27.95" fill="#fff6c2" opacity=".5" stroke="#fff6c2" stroke-width="2" stroke-linejoin="round"/></svg>';
+const GCOIN='<svg class="coin" viewBox="0 0 64 64"><defs><radialGradient id="gcG"><stop offset="0" stop-color="#2aa8ff" stop-opacity=".45"/><stop offset="1" stop-color="#2aa8ff" stop-opacity="0"/></radialGradient><linearGradient id="gcF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3cb6ff"/><stop offset="1" stop-color="#0077d4"/></linearGradient></defs><circle cx="32" cy="33" r="30" fill="url(#gcG)"/><circle cx="32" cy="32" r="21" fill="url(#gcF)" stroke="#9fdcff" stroke-width="2"/><path d="M23.5 24h17c1.6 0 2.6 1.7 1.8 3.1l-8.5 14.6a2 2 0 0 1-3.5 0l-8.6-14.6c-.8-1.4.2-3.1 1.8-3.1z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><path d="M32 24.2v19" stroke="#fff" stroke-width="3"/></svg>';
+Object.defineProperty(window,'COIN',{get:()=>typeof CUR!='undefined'&&CUR=='gram'?GCOIN:COIN_S}); // монетка призов «на баланс» в текущей валюте
+const COIN_S='<svg class="coin" viewBox="0 0 64 64"><circle cx="32" cy="33" r="30" fill="url(#tgG)"/><polygon points="32.00,10.00 38.94,24.45 54.83,26.58 43.22,37.65 46.11,53.42 32.00,45.80 17.89,53.42 20.78,37.65 9.17,26.58 25.06,24.45" fill="url(#tgS)" stroke="url(#tgS)" stroke-width="5" stroke-linejoin="round"/><polygon points="32.00,20.30 35.53,27.95 43.89,28.94 37.71,34.65 39.35,42.91 32.00,38.80 24.65,42.91 26.29,34.65 20.11,28.94 28.47,27.95" fill="#fff6c2" opacity=".5" stroke="#fff6c2" stroke-width="2" stroke-linejoin="round"/></svg>';
 const GEM='<svg viewBox="0 0 24 24"><path d="M7 3h10l4 6-9 12L3 9z" fill="#5ff2c3"/><path d="M3 9h18M7 3l5 6 5-6M12 9v12" stroke="#1d8f6f" stroke-width="1.2" fill="none" stroke-linejoin="round"/><path d="M7 3 3 9h4.5z" fill="#b8ffe9" opacity=".7"/></svg>';
 const BOMB='<svg viewBox="0 0 24 24"><circle cx="11" cy="14" r="7" fill="#2b2d45" stroke="#ff5a6e" stroke-width="1.6"/><circle cx="8.6" cy="11.6" r="1.6" fill="#ffffff55"/><path d="M15.5 9.5 17.5 7.5" stroke="#c9cbe4" stroke-width="2" stroke-linecap="round"/><path d="M19 4.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" fill="#ffc83d"/></svg>';
 const IC={x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
@@ -450,7 +452,10 @@ const tierP=pm=>pm<=5?3:pm<=10?2:pm<=20?1:0;
 const pct=(p,c)=>{const t=c.prizes.reduce((a,x)=>a+x.weight,0),v=p.weight/t*100;return (v<0.01?'<0.01':v<1?v.toFixed(2):v<10?v.toFixed(1):Math.round(v))+'%'};
 let CUR='stars';try{CUR=localStorage.gmCur=='gram'?'gram':'stars'}catch(e){}
 const fmtG=g=>g>=1000?num(g):g.toLocaleString('ru-RU',{maximumFractionDigits:g>=100?1:2,minimumFractionDigits:g<10?2:0});
-const price=v=>CUR=='gram'?`${fmtG(v/(TS||1))} ${GRAM}`:`${num(v)} ${STAR}`; // цены подарков и кейсов: ⭐ или GRAM
+const CI=()=>CUR=='gram'?GRAM:STAR; // иконка текущей валюты
+const inCur=v=>CUR=='gram'?Math.round(v/(TS||1)*100)/100:Math.round(v); // ⭐ -> число в поле ввода
+const fromCur=t=>{const x=parseFloat(String(t).replace(',','.').replace(/[^\d.]/g,''))||0;return CUR=='gram'?Math.round(x*(TS||1)):Math.round(x)};
+const price=v=>CUR=='gram'?`${fmtG(v/(TS||1))} ${GRAM}`:`${price(v)}`; // цены подарков и кейсов: ⭐ или GRAM
 const nftVal=(g,m)=>VAL[g]?.[m]??0; // цены моделей приходят с сервера (/api/catalog)
 const isFree=c=>c.price==0;
 /* звук */
@@ -469,7 +474,7 @@ function moveLens(bar){const on=bar&&bar.querySelector('button.on'),l=bar&&bar.q
 addEventListener('resize',()=>$$('.glass').forEach(moveLens));
 function setCur(c){CUR=c;try{localStorage.gmCur=c}catch(e){}hap();if(S)setBal(S.balance);
   $('chips').innerHTML='';renderChips();renderCases();if(CV&&!CV.spinning){const sc=$('ovCase').scrollTop;CV.render();$('ovCase').scrollTop=sc}
-  if(BV&&!BV.spinning)BV.render();if(!U.busy)renderUpgrade();if(!M.busy)renderMines();$('profIn')._h='';renderProfile();loadLive();if(catOn())renderCat()}
+  if(BV&&!BV.spinning)BV.render();if(!U.busy)renderUpgrade();if(!M.busy)renderMines();$('profIn')._h='';renderProfile();loadLive();if(catOn())renderCat();if(!plBusy()&&!$('g-plinko').hidden)renderPlinko();$('nickBox')._h='';renderNick();$('taskList')._h='';renderTasks();load()}
 function setTab(t){tab=t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));moveLens($$('.tabs')[0]);if(t=='games')requestAnimationFrame(()=>moveLens($('v-games').querySelector('.gsw')));
   ['games','cases','earn','bonus'].forEach(k=>$('v-'+k).hidden=k!=t);scrollTo(0,0);if(t=='bonus')renderBonus();if(t=='earn')renderNick()}
 $$('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
@@ -502,7 +507,7 @@ function cover(c){if(c.cat=='fifty'&&c.price)return fiftyCover(c);const n=[...c.
   const cls=['m','a','b','c','d'];return `<div class="cov" style="--gl:${gl}"><i class="cg"></i>${ps.map((p,i)=>`<img class="${cls[i]}" src="${esc(imgOf(p,i?128:256))}" alt="" loading="lazy" decoding="async">`).join('')}</div>`}
 let balShown=0;
 const balTxt=v=>CUR=='gram'?fmtG(v/(TS||1)):num(v);
-function setBal(v){const el=$('balv'),from=balShown;balShown=v;const big=balTxt(v).length>5,t=$('top');$('bal').querySelector('.ic').innerHTML=CUR=='gram'?GRAM:STAR;
+function setBal(v){const el=$('balv'),from=balShown;balShown=v;const big=balTxt(v).length>=5,t=$('top');$('bal').querySelector('.ic').innerHTML=CUR=='gram'?GRAM:STAR;
   if(t.classList.contains('plus')!==big){t.classList.toggle('plus',big);t.innerHTML=big?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>':'Пополнить';t.setAttribute('aria-label','Пополнить')}if(from===v){el.textContent=balTxt(v);return}
   const b=$('bal');b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump');const t0=performance.now(),d=600;
   (function f(t){if(balShown!==v)return;const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=balTxt(from+(v-from)*e);if(k<1)requestAnimationFrame(f)})(t0)}
@@ -530,7 +535,7 @@ CaseView.prototype.render=function(){const c=this.c,me=this;
     <button class="rb ${fast?'on':''}" data-fast aria-label="Быстрое открытие">${IC.bolt}</button><button class="rb" data-fair aria-label="Честная игра">${IC.shield}</button><button class="rb" data-snd aria-label="Звук">${sound?IC.snd:IC.mute}</button></div>
   ${isFree(c)?'<p class="maxw" style="justify-content:center">Подарок дня можно открыть раз в 24 часа</p>':''}</div>
   <h2>Что может выпасть<small>${c.prizes.length}</small></h2>
-  <div class="grid3">${c.prizes.map(p=>`<div class="pc ${p.kind=='stars'?'ts':'t'+tierV(p.stars,c.price||5)}"><span class="ch">${pct(p,c)}</span><div class="pi">${pic(p)}</div><b>${title(p)}</b><em>${p.kind=='stars'?num(p.stars)+' '+STAR:price(p.stars)}</em></div>`).join('')}</div>`;
+  <div class="grid3">${c.prizes.map(p=>`<div class="pc ${p.kind=='stars'?'ts':'t'+tierV(p.stars,c.price||5)}"><span class="ch">${pct(p,c)}</span><div class="pi">${pic(p)}</div><b>${title(p)}</b><em>${p.kind=='stars'?price(p.stars):price(p.stars)}</em></div>`).join('')}</div>`;
   const x=this.q('[data-x]');if(x)x.onclick=closeCase;
   this.q('[data-go]').onclick=()=>this.go();
   $$('[data-n]',this.root).forEach(b=>b.onclick=()=>{if(me.spinning)return;me.mult=+b.dataset.n;$$('[data-n]',me.root).forEach(z=>z.classList.toggle('on',z==b));me.build(me.mult);me.refresh()});
@@ -539,7 +544,7 @@ CaseView.prototype.render=function(){const c=this.c,me=this;
   this.q('[data-fair]').onclick=fairInfo;
   this.build(1);this.refresh();preload(c.prizes.filter(p=>p.kind=='nft').map(p=>imgOf(p)))};
 function inline_bar(inline,c){return inline?'':`<div class="bar"><button class="x" data-x aria-label="Закрыть">${IC.x}</button><h3>${esc(c.title)}</h3></div>`}
-CaseView.prototype.card=function(p){return `<div class="it ${p.kind=='stars'?'ts':'t'+tierV(valOf(p),this.c.price||5)}">${pic(p)}<span>${p.kind=='stars'?num(valOf(p))+' '+STAR:esc(p.gift||p.name)}</span></div>`};
+CaseView.prototype.card=function(p){return `<div class="it ${p.kind=='stars'?'ts':'t'+tierV(valOf(p),this.c.price||5)}">${pic(p)}<span>${p.kind=='stars'?price(valOf(p)):esc(p.gift||p.name)}</span></div>`};
 CaseView.prototype.build=function(n,items){const el=this.q('[data-r]');el.className='reels'+(n>1?' m':'');const pool=this.c.prizes;
   const base=items||[...Array(24)].map((_,i)=>pool[i%pool.length]);
   el.innerHTML=[...Array(n)].map(()=>`<div class="reel"><div class="strip">${base.map(p=>this.card(p)).join('')}</div></div>`).join('');
@@ -592,7 +597,7 @@ function renderTasks(){const ts=S?.tasks||[],left=ts.filter(t=>!t.done).length;$
   if(bsec!='tasks')return;
   if(!setHTML($('taskList'),`<p class="mut" style="margin:12px 2px 0">Выполняйте задания и получайте звёзды на баланс.</p>`+(ts.map(t=>`<div class="card task ${t.done?'done':''}">
     <span class="ti" style="background:${TBG[t.kind]||TBG.link}">${TICO[t.kind]||TICO.link}</span>
-    <div class="tt"><b>${esc(t.title)}</b><small>+${t.reward} ${STAR}</small></div>
+    <div class="tt"><b>${esc(t.title)}</b><small>+${price(t.reward)}</small></div>
     ${t.done?'<button class="btn ghost" disabled>Готово ✓</button>':`<button class="btn ${tPressed.has(t.id)?'':'ghost'}" data-task="${t.id}">${tPressed.has(t.id)?'Проверить':{channel:'Подписаться',bot:'Запустить',story:'Выложить',link:'Перейти'}[t.kind]||'Выполнить'}</button>`}</div>`).join('')||'<p class="empty">Заданий пока нет.</p>')))return;
   $$('[data-task]').forEach(b=>b.onclick=()=>taskAct(S.tasks.find(t=>t.id==+b.dataset.task),b))}
 async function taskAct(t,b){if(!t)return;
@@ -601,7 +606,7 @@ async function taskAct(t,b){if(!t)return;
     else if(t.kind=='bot')tg.openTelegramLink(`https://t.me/${S.bot}?start=task`);
     else if(t.kind=='story'){try{tg.shareToStory(`${location.origin}/static/banner.jpg`,{text:'Кейсы с NFT-подарками Telegram — GiftMafia',widget_link:{url:`https://t.me/${S.bot}`,name:'GiftMafia'}})}catch(e){}}
     renderTasks();return}
-  b.disabled=true;try{const r=await api(`task/${t.id}/check`,'POST');toast(`+${r.reward} ${STAR} на баланс`);sfx.win();hap('ok');tPressed.delete(t.id);await load()}
+  b.disabled=true;try{const r=await api(`task/${t.id}/check`,'POST');toast(`+${price(r.reward)} на баланс`);sfx.win();hap('ok');tPressed.delete(t.id);await load()}
   catch(e){toast(e.message);hap('err');b.disabled=false}}
 
 /* ---------- ник ---------- */
@@ -610,9 +615,9 @@ let nickEnd=0;
 function renderNick(){const n=S?.nick;if(!n)return;const r=n.rewards,mx=Math.max(...r),st=!!n.started,ready=st&&!n.ready_in;
   if(st)nickEnd=Date.now()+(n.ready_in||0)*1000;
   const s1=st?'Выполнено':'Текущий',s2=!st?'Ждёт':ready?'Готово':'Идёт',s3=ready?'Текущий':'Ждёт';
-  setHTML($('nickBox'),`<div class="card nk"><div class="nkh"><span class="tgi">${TGI}</span><div><b>Поставь в ник<em>${esc(n.tag)}</em></b><small>3 этапа · на баланс</small><span class="upto">до ${mx} ${STAR} в день</span></div></div>
+  setHTML($('nickBox'),`<div class="card nk"><div class="nkh"><span class="tgi">${TGI}</span><div><b>Поставь в ник<em>${esc(n.tag)}</em></b><small>3 этапа · на баланс</small><span class="upto">до ${price(mx)} в день</span></div></div>
     <p class="mut">Награда в день зависит от уровня в Telegram</p>
-    <div class="lv">${[['0',r[0]],['1–4',r[1]],['5–9',r[2]],['10+',r[3]]].map(([l,v])=>`<div><b>${v}${STAR}</b><span class="sh">${l}</span></div>`).join('')}</div></div>
+    <div class="lv">${[['0',r[0]],['1–4',r[1]],['5–9',r[2]],['10+',r[3]]].map(([l,v])=>`<div><b>${price(v)}</b><span class="sh">${l}</span></div>`).join('')}</div></div>
   <h2>Этапы</h2>
   <div class="card stage ${!st?'cur':''}"><div class="sth"><img src="${esc(giftIco('Star Notepad'))}" alt=""><div><b>Добавьте ${esc(n.tag)} в имя и описание</b><small>Этап 1 · ${s1}</small></div></div>
     <div class="cp2"><button data-cp="${esc(n.tag)}"><span><small>В имя или фамилию</small><b>${esc(n.tag)}</b></span><i>Копировать</i></button><button data-cp="${esc(n.bio)}"><span><small>В описание (био)</small><b>${esc(n.bio)}</b></span><i>Копировать</i></button></div>
@@ -620,12 +625,12 @@ function renderNick(){const n=S?.nick;if(!n)return;const r=n.rewards,mx=Math.max
   <div class="card stage ${st&&!ready?'cur':''}"><div class="sth"><img src="${esc(giftIco('Desk Calendar'))}" alt=""><div><b>Держите 24 часа</b><small>Этап 2 · ${s2}</small></div></div>
     <div class="timer" id="nkT">${st?fmt(n.ready_in||0):'24:00:00'}</div><button class="btn ghost" id="nkChk" ${st&&!ready?'':'disabled'}>Проверить</button></div>
   <div class="card stage ${ready?'cur':''}"><div class="sth"><img src="${esc(giftIco('Money Pot'))}" alt=""><div><b>Заберите награду</b><small>Этап 3 · ${s3}</small></div></div>
-    <div class="timer">до ${mx} ${STAR}</div><p class="mut" style="margin:-6px 0 12px">После 24 часов на сбор есть 10 часов${n.claims?` · получено ${num(n.earned)} ⭐ за ${n.claims} дн.`:''}</p>
+    <div class="timer">до ${price(mx)}</div><p class="mut" style="margin:-6px 0 12px">После 24 часов на сбор есть 10 часов${n.claims?` · получено ${price(n.earned)} за ${n.claims} дн.`:''}</p>
     <button class="btn" id="nkClaim" ${ready?'':'disabled'}>Забрать</button></div>`);
   $$('#nickBox [data-cp]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);toast('Скопировано')}catch(e){toast(b.dataset.cp)}});
   $('nkGo').onclick=async()=>{try{await api('nick/start','POST');toast('Отлично! Держите ник 24 часа');hap('ok');await load()}catch(e){toast(e.message);hap('err')}};
   $('nkChk').onclick=async()=>{try{await api('nick/start','POST');toast('Ник и описание на месте, ждём')}catch(e){toast(e.message)}};
-  $('nkClaim').onclick=async()=>{const b=$('nkClaim');b.disabled=true;try{const r=await api('nick/claim','POST');toast(`+${r.reward} ⭐ за уровень ${r.level}. Следующая награда через 24 часа`);sfx.win();hap('ok');await load()}catch(e){toast(e.message);b.disabled=false;await load()}}}
+  $('nkClaim').onclick=async()=>{const b=$('nkClaim');b.disabled=true;try{const r=await api('nick/claim','POST');toast(`+${price(r.reward)} за уровень ${r.level}. Следующая награда через 24 часа`);sfx.win();hap('ok');await load()}catch(e){toast(e.message);b.disabled=false;await load()}}}
 setInterval(()=>{const t=$('nkT');if(t&&S?.nick?.started&&nickEnd){const l=Math.max(0,Math.round((nickEnd-Date.now())/1000));t.textContent=fmt(l);if(!l&&S.nick.ready_in){S.nick.ready_in=0;renderNick()}}},1000);
 
 const WC=['#4f9dff','#8b6cff','#e05ce2','#ff5a6e'];
@@ -633,8 +638,8 @@ const RAR=['Обычная','Редкая','Эпическая','Легенда�
 const permOf=(g,m)=>{const c=CAT.find(x=>x.name==g);const r=c&&c.models.find(x=>x[0]==m);return r?r[1]:null};
 function showWins(wins){const nft=wins.filter(w=>w.kind=='nft'),sum=wins.filter(w=>w.kind=='stars').reduce((a,w)=>a+w.value,0);
   if(nft.length)return winFx(nft,sum);
-  sheet(`<h4>${wins.length>1?'Ваши призы':'Ваш приз'}</h4><div class="wins">${wins.map(w=>`<div class="pc ts"><div class="pi">${pic(w)}</div><b>${title(w)}</b><em>${num(w.value)} ${STAR}</em></div>`).join('')}</div>
-  <p>${num(sum)} ${STAR} уже на балансе.</p><button class="btn" id="okW">Отлично</button>`);
+  sheet(`<h4>${wins.length>1?'Ваши призы':'Ваш приз'}</h4><div class="wins">${wins.map(w=>`<div class="pc ts"><div class="pi">${pic(w)}</div><b>${title(w)}</b><em>${price(w.value)}</em></div>`).join('')}</div>
+  <p>${price(sum)} уже на балансе.</p><button class="btn" id="okW">Отлично</button>`);
   $('okW').onclick=closeSheet}
 function winFx(nft,sum){const best=[...nft].sort((a,b)=>b.value-a.value)[0],rest=nft.filter(w=>w!==best),ready=nft.filter(w=>w.status=='ready');
   const pm=permOf(best.gift,best.model),tier=pm!=null?tierP(pm):tierV(best.value,300),fx=$('winfx');
@@ -645,17 +650,17 @@ function winFx(nft,sum){const best=[...nft].sort((a,b)=>b.value-a.value)[0],rest
   <div class="wf-n">${esc(best.gift)}</div>
   <div class="wf-m">${esc(best.model)}${pm!=null?`<span class="wf-r">${RAR[tier]} · ${(pm/10).toLocaleString('ru-RU')}%</span>`:''}</div>
   <div class="wf-v">${price(best.value)}</div>
-  ${rest.length||sum?`<div class="wf-more">${rest.map(w=>`<div>${pic(w,128)}${esc(w.gift)} · ${price(w.value)}</div>`).join('')}${sum?`<div>${COIN}+${num(sum)} ${STAR} на баланс</div>`:''}</div>`:''}
+  ${rest.length||sum?`<div class="wf-more">${rest.map(w=>`<div>${pic(w,128)}${esc(w.gift)} · ${price(w.value)}</div>`).join('')}${sum?`<div>${COIN}+${price(sum)} на баланс</div>`:''}</div>`:''}
   ${nft.some(w=>w.status=='locked')?'<p class="wf-note">Чтобы вывести подарок дня, выполните задания в профиле.</p>':''}
   <div class="wf-b">${nft.some(w=>w.status=='locked')?'<button class="btn" id="wfTask">К заданиям</button>':'<button class="btn" id="wfOk">Забрать в инвентарь</button>'}
    ${best.story_url?`<button class="btn ghost" id="wfStory"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg>Выложить в историю</button>`:''}
-   ${ready.length?`<button class="btn ghost" id="wfSell">Продать за ${num(ready.reduce((a,w)=>a+Math.floor(w.value*S.sell_rate),0))} ${STAR}</button>`:''}</div>`;
+   ${ready.length?`<button class="btn ghost" id="wfSell">Продать за ${price(ready.reduce((a,w)=>a+Math.floor(w.value*S.sell_rate),0))}</button>`:''}</div>`;
   fx.classList.add('on');sfx.big();hap('ok');confetti(WC[tier]);
   const close=()=>{fx.classList.remove('on');confetti.stop&&confetti.stop()};
   const ok=$('wfOk'),tk=$('wfTask'),sl=$('wfSell'),sr=$('wfStory');
   if(sr)sr.onclick=()=>{try{tg.shareToStory(best.story_url,{text:`Я выиграл ${best.gift} · ${best.model} в GiftMafia 🎁`,widget_link:{url:`https://t.me/${S.bot}`,name:'GiftMafia'}});api(`win/${best.id}/story`,'POST').catch(()=>{})}catch(e){toast('Обновите Telegram, чтобы выкладывать истории')}};
   if(ok)ok.onclick=close;if(tk)tk.onclick=()=>{close();closeCase();openProfile()};
-  if(sl)sl.onclick=async()=>{sl.disabled=true;try{let t=0;for(const w of ready)t+=(await api(`win/${w.id}/sell`,'POST')).amount;toast(`+${num(t)} ${STAR} на баланс`);close();await load()}catch(e){toast(e.message);sl.disabled=false}}}
+  if(sl)sl.onclick=async()=>{sl.disabled=true;try{let t=0;for(const w of ready)t+=(await api(`win/${w.id}/sell`,'POST')).amount;toast(`+${price(t)} на баланс`);close();await load()}catch(e){toast(e.message);sl.disabled=false}}}
 function confetti(main){confetti.stop&&confetti.stop();if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const cv=$('cfx'),dpr=Math.min(2,devicePixelRatio||1),W=cv.clientWidth,H=cv.clientHeight,x=cv.getContext('2d');cv.width=W*dpr;cv.height=H*dpr;x.scale(dpr,dpr);
   const cols=[main,'#ffc83d','#ffffff','#5a6cff','#3ee08f'],P=[...Array(150)].map(()=>{const a=-Math.PI/2+(Math.random()-.5)*2.2,v=7+Math.random()*9;
@@ -669,7 +674,7 @@ function confetti(main){confetti.stop&&confetti.stop();if(matchMedia('(prefers-r
 /* ---------- live ---------- */
 const AV=['#7a5af0','#4f9dff','#e05ce2','#3ee08f','#ff8a3d'];
 async function loadLive(){try{const l=await api('live');
-  setHTML($('live'),l.length?`<div class="ltag"><span>LIVE</span><i></i></div>`+l.map((x,i)=>`<div class="lc t${x.kind=='stars'?0:tierV(x.value,300)}">${x.kind=='stars'?COIN:`<img src="${esc(imgOf(x,128))}" alt="" loading="lazy">`}<div><small><i style="background:${AV[i%5]}">${esc((x.who||'?')[0])}</i>${esc(x.who||'Игрок')}</small><b>${x.kind=='stars'?num(x.value)+' '+STAR:price(x.value)}</b></div></div>`).join(''):'')}catch(e){}}
+  setHTML($('live'),l.length?`<div class="ltag"><span>LIVE</span><i></i></div>`+l.map((x,i)=>`<div class="lc t${x.kind=='stars'?0:tierV(x.value,300)}">${x.kind=='stars'?COIN:`<img src="${esc(imgOf(x,128))}" alt="" loading="lazy">`}<div><small><i style="background:${AV[i%5]}">${esc((x.who||'?')[0])}</i>${esc(x.who||'Игрок')}</small><b>${x.kind=='stars'?price(x.value):price(x.value)}</b></div></div>`).join(''):'')}catch(e){}}
 
 /* ---------- мины ---------- */
 const M={mode:'bal',bet:10,bombs:3,auto:false,sel:new Set(),gift:null,g:null,busy:false};
@@ -678,12 +683,12 @@ const fmtM=m=>'×'+m.toFixed(2).replace('.',',');
 function renderMines(){M.prev=M.shown||new Set();M.shown=new Set();const el=$('g-mines'),g=M.g,live=g&&g.status=='live',k=g?g.opened.length:0,b=g?g.bombs:M.bombs;
   const steps=[...Array(25-b)].map((_,i)=>i+1),cur=live?k:0,bet=g?g.bet:betVal();
   el.innerHTML=`<div class="gbar"><button class="ib ${sound?'':'off'}" id="mSnd" aria-label="Звук">${sound?IC.snd:IC.mute}</button><button class="ib ${fast?'on':''}" id="mFast" aria-label="Быстрый режим">${IC.bolt}</button>
-   <div class="mults" id="mults">${steps.map(s=>`<div class="mu ${s==cur+1?'on':''} ${s<=cur?'done':''}">${fmtM(mMult(b,s))}${s==cur+1?`<small>${profit(bet,b,s)}${STAR}</small>`:''}</div>`).join('')}</div>
+   <div class="mults" id="mults">${steps.map(s=>`<div class="mu ${s==cur+1?'on':''} ${s<=cur?'done':''}">${fmtM(mMult(b,s))}${s==cur+1?`<small>${profit(bet,b,s)}${CI()}</small>`:''}</div>`).join('')}</div>
    <button class="ib" id="mFair" aria-label="Честная игра">${IC.shield}</button><button class="ib" id="mHelp" aria-label="Правила">${IC.help}</button></div>
-  <p class="maxw">Максимум за раунд: ${num(S?.mines_max||181818)} ${STAR}</p>
+  <p class="maxw">Максимум за раунд: ${price(S?.mines_max||181818)}</p>
   <div class="field" id="field">${[...Array(25)].map((_,i)=>cellHtml(i)).join('')}</div>
   <div class="box seg"><button data-m="bal" class="${M.mode=='bal'?'on':''}">Балансом</button><button data-m="gift" class="${M.mode=='gift'?'on':''}">Подарком</button></div>
-  ${M.mode=='bal'?`<div class="box"><div class="bet">${STAR}<input id="mBet" inputmode="numeric" value="${live?g.bet:M.bet}" ${live?'disabled':''} aria-label="Ставка"></div><button class="sb" data-b="h">½</button><button class="sb" data-b="d">2×</button><button class="sb" data-b="max" style="color:#fff">МАКС</button></div>`
+  ${M.mode=='bal'?`<div class="box"><div class="bet">${CI()}<input id="mBet" inputmode="decimal" value="${inCur(live?g.bet:M.bet)}" ${live?'disabled':''} aria-label="Ставка"></div><button class="sb" data-b="h">½</button><button class="sb" data-b="d">2×</button><button class="sb" data-b="max" style="color:#fff">МАКС</button></div>`
    :`<div class="box"><button class="gsel" id="mGift">${M.gift?`<img src="${esc(imgOf(M.gift,128))}" alt=""><span style="min-width:0"><b>${title(M.gift)}</b><small>${price(M.gift.value)}</small></span>`:'<span style="color:var(--mut);padding:12px 6px">Выберите подарок из инвентаря</span>'}</button></div>`}
   <div class="row2"><div class="box"><button class="sb" data-bm="-1" aria-label="Меньше мин">−</button><span class="cnt">${BOMB}${b}</span><button class="sb" data-bm="1" aria-label="Больше мин">+</button></div>
    <div class="box seg"><button data-a="0" class="${M.auto?'':'on'}">Ручная</button><button data-a="1" class="${M.auto?'on':''}">Авто</button></div></div>
@@ -691,21 +696,21 @@ function renderMines(){M.prev=M.shown||new Set();M.shown=new Set();const el=$('g
   ${M.auto&&!live?`<p class="maxw" style="justify-content:center">Выберите клетки на поле: ${M.sel.size}</p>`:''}`;
   const lk=live||M.busy;
   $('mSnd').onclick=()=>{sound=!sound;save();renderMines()};$('mFast').onclick=()=>{fast=!fast;save();renderMines()};
-  $('mFair').onclick=fairInfo;$('mHelp').onclick=()=>sheet(`<h4>Мины</h4><p>Выберите ставку и количество мин, затем открывайте клетки. Каждая безопасная клетка увеличивает множитель. Заберите выигрыш в любой момент — или потеряете ставку, если откроете мину.</p><p>В режиме «Авто» отметьте клетки заранее: они откроются по очереди, и выигрыш заберётся сам.</p><p>Ставка «Подарком» — NFT из инвентаря по его оценке, выигрыш приходит в ${STAR}.</p><button class="btn" onclick="closeSheet()">Понятно</button>`);
+  $('mFair').onclick=fairInfo;$('mHelp').onclick=()=>sheet(`<h4>Мины</h4><p>Выберите ставку и количество мин, затем открывайте клетки. Каждая безопасная клетка увеличивает множитель. Заберите выигрыш в любой момент — или потеряете ставку, если откроете мину.</p><p>В режиме «Авто» отметьте клетки заранее: они откроются по очереди, и выигрыш заберётся сам.</p><p>Ставка «Подарком» — NFT из инвентаря по его оценке, выигрыш приходит на баланс.</p><button class="btn" onclick="closeSheet()">Понятно</button>`);
   $$('[data-m]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.mode=x.dataset.m;renderMines()});
   $$('[data-a]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.auto=x.dataset.a=='1';M.sel.clear();renderMines()});
   $$('[data-bm]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.bombs=Math.min(24,Math.max(1,M.bombs+ +x.dataset.bm));[...M.sel].forEach(i=>M.sel.size>25-M.bombs&&M.sel.delete(i));renderMines()});
   $$('[data-b]',el).forEach(x=>x.onclick=()=>{if(lk)return;const v=betVal();M.bet=x.dataset.b=='h'?Math.max(1,v/2|0):x.dataset.b=='d'?v*2:Math.max(1,S.balance);
     M.bet=Math.min(M.bet,Math.max(1,S.balance));renderMines()});
-  const bi=$('mBet');if(bi)bi.oninput=()=>{M.bet=Math.max(0,parseInt(bi.value.replace(/\D/g,''))||0);updMults()};
+  const bi=$('mBet');if(bi)bi.oninput=()=>{M.bet=Math.max(0,fromCur(bi.value));updMults()};
   const gs=$('mGift');if(gs)gs.onclick=()=>{if(!lk)pickInv(w=>{M.gift=w;renderMines()})};
   $$('#field .cell').forEach(c=>c.onclick=()=>cellClick(+c.dataset.i));
   const go=$('mGo');
-  if(live){go.className='btn green';go.innerHTML=k?`Забрать ${num(Math.floor(g.bet*mMult(g.bombs,k)))} ${STAR}`:'Откройте клетку';go.disabled=!k||M.busy;go.onclick=cashout}
+  if(live){go.className='btn green';go.innerHTML=k?`Забрать ${price(Math.floor(g.bet*mMult(g.bombs,k)))}`:'Откройте клетку';go.disabled=!k||M.busy;go.onclick=cashout}
   else{go.className='btn';go.innerHTML=M.auto?`Начать авто-игру`:'Начать игру';go.disabled=M.busy||(M.auto&&!M.sel.size);go.onclick=startMines}
   const ml=$('mults'),on=ml.querySelector('.mu.on');ml.scrollLeft=on?on.offsetLeft-ml.offsetLeft-ml.clientWidth/2+on.clientWidth/2:0}
-function updMults(){const on=$('mults')?.querySelector('.mu.on small');if(on)on.innerHTML=profit(betVal(),M.bombs,1)+STAR}
-const profit=(bet,b,s)=>{const v=Math.floor(bet*mMult(b,s))-bet;return v<1?'&lt;1':num(v)};
+function updMults(){const on=$('mults')?.querySelector('.mu.on small');if(on)on.innerHTML=profit(betVal(),M.bombs,1)+CI()}
+const profit=(bet,b,s)=>{const v=Math.floor(bet*mMult(b,s))-bet;return v<1?'&lt;'+(CUR=='gram'?'0,01':'1'):CUR=='gram'?fmtG(v/(TS||1)):num(v)};
 const betVal=()=>Math.max(1,M.bet|0);
 function cellHtml(i){const g=M.g;let cls='cell',inner='';
   if(g){const op=g.opened.includes(i),f=g.field;
@@ -730,17 +735,17 @@ async function startMines(){if(M.busy)return;
 async function openCell(i,auto){if(!auto&&M.busy)return;if(M.g.opened.includes(i))return;M.busy=!auto?true:M.busy;
   try{const g=await api(`mines/${M.g.id}/open/${i}`,'POST');M.g=g;
     if(g.status=='lost'){sfx.lose();hap('err');toast('Мина! Ставка сгорела')}
-    else if(g.status=='won'){sfx.win();hap('ok');toast(`Выигрыш: ${num(g.payout)} ${STAR}`)}
+    else if(g.status=='won'){sfx.win();hap('ok');toast(`Выигрыш: ${price(g.payout)}`)}
     else{sfx.pop(g.opened.length-1);hap()}}
   catch(e){toast(e.message)}if(!auto)M.busy=false;renderMines();if(M.g.status!='live')load()}
-async function cashout(){if(!M.g)return;M.busy=true;try{M.g=await api(`mines/${M.g.id}/cashout`,'POST');sfx.win();hap('ok');toast(`Выигрыш: ${num(M.g.payout)} ${STAR}`)}catch(e){toast(e.message)}
+async function cashout(){if(!M.g)return;M.busy=true;try{M.g=await api(`mines/${M.g.id}/cashout`,'POST');sfx.win();hap('ok');toast(`Выигрыш: ${price(M.g.payout)}`)}catch(e){toast(e.message)}
   M.busy=false;renderMines();load()}
 
 /* ---------- апгрейд ---------- */
 const U={src:{kind:'stars',value:100},target:null,busy:false,res:null,rot:0};
 function upChance(){if(!U.target)return 0;const s=U.src.value;return s>=U.target.value?0:Math.min(S?.upgrade_max||.8,s/U.target.value*(S?.upgrade_edge||.9))}
 function slotHtml(p,empty){if(!p||(p.kind=='gift'&&!p.id))return `<div class="slot">${p?'<b style="font-size:28px">+</b><small>Выбрать подарок</small>':empty}</div>`;
-  return `<div class="slot full ${p.kind=='stars'?'ts':'t'+(p.pm!=null?tierP(p.pm):tierV(p.value,300))}">${pic(p)}<b>${p.kind=='stars'?'Звёзды':esc(p.gift)}</b>${p.model?`<small>${esc(p.model)}</small>`:''}<em>${p.kind=='stars'?num(p.value)+' '+STAR:price(p.value)}</em></div>`}
+  return `<div class="slot full ${p.kind=='stars'?'ts':'t'+(p.pm!=null?tierP(p.pm):tierV(p.value,300))}">${pic(p)}<b>${p.kind=='stars'?'Звёзды':esc(p.gift)}</b>${p.model?`<small>${esc(p.model)}</small>`:''}<em>${p.kind=='stars'?price(p.value):price(p.value)}</em></div>`}
 function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
   el.innerHTML=`<h2>Апгрейд<small>до ${Math.round((S?.upgrade_max||.8)*100)}%</small></h2>
   <div class="upw"><button id="uSrc" style="min-width:0">${slotHtml(U.src,'Что улучшаем')}</button>
@@ -750,7 +755,7 @@ function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
     <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2">${(ch*100).toFixed(ch<.1?2:1).replace('.',',')}%<small>шанс</small></div></div>
    <button id="uTgt" style="min-width:0">${slotHtml(U.target,'<b style="font-size:28px">+</b><small>Выбрать NFT</small>')}</button></div>
   <div class="box seg" style="margin-top:14px"><button data-us="stars" class="${U.src.kind=='stars'?'on':''}">Звёздами</button><button data-us="gift" class="${U.src.kind!='stars'?'on':''}">Подарком</button></div>
-  ${U.src.kind=='stars'?`<div class="box"><div class="bet">${STAR}<input id="uBet" inputmode="numeric" value="${U.src.value}" aria-label="Сумма"></div><button class="sb" data-ub="h">½</button><button class="sb" data-ub="d">2×</button><button class="sb" data-ub="max" style="color:#fff">МАКС</button></div>`:''}
+  ${U.src.kind=='stars'?`<div class="box"><div class="bet">${CI()}<input id="uBet" inputmode="decimal" value="${inCur(U.src.value)}" aria-label="Сумма"></div><button class="sb" data-ub="h">½</button><button class="sb" data-ub="d">2×</button><button class="sb" data-ub="max" style="color:#fff">МАКС</button></div>`:''}
   <div class="ks">${[1.5,2,3,5,10].map(k=>`<button data-k="${k}">x${k}</button>`).join('')}</div>
   <button class="btn" id="uGo" style="margin-top:12px" ${!U.target||!ch||U.busy?'disabled':''}>${U.src.kind=='gift'&&!U.src.id?'Выберите подарок':U.target?(ch?'Улучшить':'Цель дешевле ставки'):'Выберите цель'}</button>
   <p class="maxw" style="justify-content:center">Шанс = ставка / цена цели × ${S?.upgrade_edge||.9}</p>`;
@@ -758,7 +763,7 @@ function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
   $('uTgt').onclick=()=>{if(!U.busy)openCatalog(p=>{U.target=p;U.res=null;renderUpgrade()})};
   $$('[data-us]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;U.res=null;if(b.dataset.us=='stars')U.src={kind:'stars',value:Math.max(1,Math.min(100,S.balance||100))};else{U.src={kind:'gift',value:0};pickInv(w=>{U.src={...w,kind:'nft'};renderUpgrade()})}renderUpgrade()});
   $$('[data-ub]',el).forEach(b=>b.onclick=()=>{const v=U.src.value;U.src.value=Math.max(1,b.dataset.ub=='h'?v/2|0:b.dataset.ub=='d'?v*2:S.balance);U.res=null;renderUpgrade()});
-  const bi=$('uBet');if(bi)bi.onchange=()=>{U.src.value=Math.max(1,parseInt(bi.value.replace(/\D/g,''))||1);U.res=null;renderUpgrade()};
+  const bi=$('uBet');if(bi)bi.onchange=()=>{U.src.value=Math.max(1,fromCur(bi.value));U.res=null;renderUpgrade()};
   $$('[data-k]',el).forEach(b=>b.onclick=()=>{if(!U.src.value)return toast('Сначала выберите, что улучшаем');U.target=nearest(U.src.value*+b.dataset.k);U.res=null;renderUpgrade()});
   $('uGo').onclick=doUpgrade}
 function allModels(){if(allModels.c)return allModels.c;return allModels.c=CAT.flatMap(g=>g.models.map(([m,pm])=>({kind:'nft',gift:g.name,model:m,pm,img:mimg(g.name,m),value:nftVal(g.name,m)})))}
@@ -793,14 +798,14 @@ const fmtS=m=>(m>=10?Math.round(m):+m).toString().replace('.',',');
 function renderPlinko(){const el=$('g-plinko');if(!el||!S||plBusy())return;const t=plTable();
   el.innerHTML=`<div class="plb"><canvas id="plc" aria-label="Поле плинко"></canvas></div>
   <div class="plh" id="plh">${P.hist.map(h=>`<span style="--sc:${mCol(h.m)[1]};color:${mCol(h.m)[2]}">${fmtX(h.m)}</span>`).join('')}</div>
-  <div class="box"><div class="bet">${STAR}<input id="pBet" inputmode="numeric" value="${P.bet}" aria-label="Ставка"></div><button class="sb" data-pb="h">½</button><button class="sb" data-pb="d">2×</button><button class="sb" data-pb="max" style="color:#fff">МАКС</button></div>
+  <div class="box"><div class="bet">${CI()}<input id="pBet" inputmode="decimal" value="${inCur(P.bet)}" aria-label="Ставка"></div><button class="sb" data-pb="h">½</button><button class="sb" data-pb="d">2×</button><button class="sb" data-pb="max" style="color:#fff">МАКС</button></div>
   <div class="box seg">${RISK.map(([k,t])=>`<button data-pr="${k}" class="${P.risk==k?'on':''}">${t}</button>`).join('')}</div>
   <div class="box seg">${[8,12,16].map(r=>`<button data-pn="${r}" class="${P.rows==r?'on':''}">${r} рядов</button>`).join('')}</div>
   <button class="btn" id="pGo" style="margin-top:12px">Бросить шар</button>
   <p class="maxw" style="justify-content:center">Шар падает случайно, выигрыш = ставка × множитель ячейки</p>`;
-  const bi=$('pBet');bi.oninput=()=>{P.bet=Math.max(0,parseInt(bi.value.replace(/\D/g,''))||0)};
+  const bi=$('pBet');bi.oninput=()=>{P.bet=Math.max(0,fromCur(bi.value))};
   $$('[data-pb]',el).forEach(b=>b.onclick=()=>{const v=Math.max(1,P.bet);P.bet=b.dataset.pb=='h'?Math.max(1,v/2|0):b.dataset.pb=='d'?v*2:Math.max(1,S.balance);
-    P.bet=Math.min(P.bet,S.plinko_max||10000);bi.value=P.bet});
+    P.bet=Math.min(P.bet,S.plinko_max||10000);bi.value=inCur(P.bet)});
   $$('[data-pr]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.risk=b.dataset.pr;renderPlinko()});
   $$('[data-pn]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.rows=+b.dataset.pn;renderPlinko()});
   $('pGo').onclick=drop;plLayout()}
@@ -878,11 +883,11 @@ const GICO={case:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-widt
 function statsHtml(){if(!ST)return '<p class="empty">Загрузка…</p>';const b=ST.best,fc=ST.fav_case&&S.cases.find(c=>c.id==ST.fav_case.id);
   const wr=ST.games?Math.round(ST.wins/ST.games*100):0,fimg=fc&&fc.prizes.filter(p=>p.kind=='nft').sort((a,b)=>b.stars-a.stars)[0];
   return `<div class="stg">
-  <div class="stt sbest">${b?(b.kind=='stars'?COIN:`<img src="${esc(imgOf(b,256))}" alt="">`):COIN}<div><small>Лучший выигрыш</small>${b?`<b>${b.kind=='stars'?num(b.value)+' '+STAR:price(b.value)}</b><span class="nm">${b.kind=='stars'?'Звёзды на баланс':esc(b.gift)+' · '+esc(b.model)}</span>`:'<b>—</b><span class="nm" style="color:var(--mut)">Сыграйте, чтобы увидеть</span>'}</div></div>
-  <div class="stt"><small>Оборот</small><b>${num(ST.turnover)} ${STAR}</b><em>сумма всех ставок</em></div>
+  <div class="stt sbest">${b?(b.kind=='stars'?COIN:`<img src="${esc(imgOf(b,256))}" alt="">`):COIN}<div><small>Лучший выигрыш</small>${b?`<b>${b.kind=='stars'?price(b.value):price(b.value)}</b><span class="nm">${b.kind=='stars'?'Звёзды на баланс':esc(b.gift)+' · '+esc(b.model)}</span>`:'<b>—</b><span class="nm" style="color:var(--mut)">Сыграйте, чтобы увидеть</span>'}</div></div>
+  <div class="stt"><small>Оборот</small><b>${price(ST.turnover)}</b><em>сумма всех ставок</em></div>
   <div class="stt"><small>Игр сыграно</small><b>${num(ST.games)}</b><em>кейсы и игры</em></div>
   <div class="stt"><small>Выигрышей</small><b>${num(ST.wins)}</b><em>${wr}% игр в плюс</em></div>
-  <div class="stt"><small>Пополнено</small><b>${num(ST.deposits)} ${STAR}</b><em>за всё время</em></div>
+  <div class="stt"><small>Пополнено</small><b>${price(ST.deposits)}</b><em>за всё время</em></div>
   <div class="stt"><small>Любимая игра</small>${ST.fav_game?`<b><span class="gi">${GICO[ST.fav_game]||''}</span>${GNAME[ST.fav_game]||ST.fav_game}</b>`:'<b>—</b>'}</div>
   <div class="stt"><small>Любимый кейс</small>${ST.fav_case?`<b>${fimg?`<img class="cimg" src="${esc(imgOf(fimg,128))}" alt="">`:''}${esc(ST.fav_case.title)}</b><em>открыт ${num(ST.fav_case.n)} ${plural(ST.fav_case.n,'раз','раза','раз')}</em>`:'<b>—</b>'}</div></div>`}
 function promoHtml(){const p=S?.promo;
@@ -914,7 +919,7 @@ function invCard(w){const st={sent:'Отправлен',requested:'⏳ Выво�
     <button class="btn ghost" data-a="story" data-w="${w.id}">${s?'Сторис ещё раз':'В сторис'}</button>
     <button class="btn ghost" data-a="friend" data-w="${w.id}" ${fr>=S.need?'disabled':''}>Другу</button>
     <button class="btn" data-a="withdraw" data-w="${w.id}" ${s&&fr>=S.need?'':'disabled'}>Вывести</button>`}
-  else if(w.status=='ready')body=`<button class="btn" data-a="withdraw" data-w="${w.id}">Вывести</button><button class="btn ghost" data-a="sell" data-w="${w.id}">Продать ${num(Math.floor(w.value*S.sell_rate))} ${STAR}</button>`;
+  else if(w.status=='ready')body=`<button class="btn" data-a="withdraw" data-w="${w.id}">Вывести</button><button class="btn ghost" data-a="sell" data-w="${w.id}">Продать ${price(Math.floor(w.value*S.sell_rate))}</button>`;
   else body=`<span class="${w.status=='requested'?'tagw':'tag'}">${st||''}</span>`;
   return `<div class="iv t${tierV(w.value,300)}"><div class="pi"><img src="${esc(imgOf(w))}" alt="" loading="lazy"></div><b>${esc(w.gift)}</b><span class="tag">${esc(w.model)}</span><em>${price(w.value)}</em>${body}</div>`}
 async function act_(a,id,b){try{b.disabled=true;
@@ -923,7 +928,7 @@ async function act_(a,id,b){try{b.disabled=true;
   if(a=='friend'){if(!tg.isVersionAtLeast('8.0')){b.disabled=false;return toast('Обновите Telegram')}
     const {id:mid}=await api(`win/${id}/prepare`,'POST');tg.shareMessage(mid,async ok=>{if(ok){await api(`win/${id}/shared`,'POST');await load()}})}
   if(a=='withdraw'){await api(`win/${id}/withdraw`,'POST');toast('Заявка принята. Вывод подарка в течение 24 ч.');hap('ok')}
-  if(a=='sell'){const r=await api(`win/${id}/sell`,'POST');toast(`+${num(r.amount)} ${STAR} на баланс`);hap('ok')}
+  if(a=='sell'){const r=await api(`win/${id}/sell`,'POST');toast(`+${price(r.amount)} на баланс`);hap('ok')}
   await load()}catch(e){toast(e.message);b.disabled=false}}
 function pickInv(cb){const inv=(S?.inventory||[]).filter(w=>w.status=='ready');
   if(!inv.length){toast('В инвентаре нет подарков — откройте кейс');return}
@@ -940,7 +945,7 @@ const GIFTI='<svg viewBox="0 0 24 24" fill="none" stroke="#ffc83d" stroke-width=
 function openTop(need){closeSheet();if(need)PM='stars';
   $('ovTop').classList.add('on');$('ovTop').scrollTop=0;document.body.style.overflow='hidden';try{tg.BackButton.show()}catch(e){}
   renderTop(need);api('pay/options').then(o=>{PO=o;if($('ovTop').classList.contains('on'))renderTop(need)}).catch(()=>{})}
-function renderTop(need){const mn=PM=='stars'?(S?.topup_min||50):(PO?.crypto_min||50),mx=S?.topup_max||10000,pre=[50,100,250,500,1000,2500],ts=PO?.ton_stars||TS;
+function renderTop(need){const GU=PM!='stars'&&CUR=='gram',mn=PM=='stars'?(S?.topup_min||50):(PO?.crypto_min||50),mx=S?.topup_max||10000,pre=[50,100,250,500,1000,2500],ts=PO?.ton_stars||TS;
   const M=[['stars',STAR,'Звёзды'],['gram',GRAM,'GRAM'],['xr',XRI,'xRocket'],['gift',GIFTI,'Подарки']];
   const promo=PO?.promo||S?.promo;
   let body='';
@@ -951,26 +956,26 @@ function renderTop(need){const mn=PM=='stars'?(S?.topup_min||50):(PO?.crypto_min
     :`<div class="card soon">${GIFTI.replace('<svg','<svg width="48" height="48"')}<p style="margin-top:10px">Пополнение подарками скоро будет доступно</p></div>`}
   else if((PM=='gram'&&PO&&!PO.ton)||(PM=='xr'&&PO&&!PO.xrocket.length))body=`<div class="card soon"><p>Этот способ оплаты скоро будет доступен</p></div>`;
   else body=`${PM=='xr'?`<div class="box seg">${(PO?.xrocket||['GRAM','USDT']).map(c=>`<button data-xc="${c}" class="${XC==c?'on':''}">${c}</button>`).join('')}</div>`:''}
-  <label class="amt">${STAR}<input id="tAmt" inputmode="numeric" pattern="[0-9]*" placeholder="Сумма" value="${need?Math.max(mn,Math.ceil(need)):''}" aria-label="Сумма пополнения" enterkeyhint="done"></label>
-  <p class="maxw">От ${num(mn)} ${PM=='stars'?'до '+num(mx)+' ':''}${STAR}</p><div class="conv" id="tConv"></div>
-  <div class="presets">${pre.map(a=>`<button data-p="${a}">${STAR} ${num(a)}</button>`).join('')}</div>
+  <label class="amt">${GU?GRAM:STAR}<input id="tAmt" inputmode="${GU?'decimal':'numeric'}" placeholder="Сумма" value="${need?(GU?Math.ceil(Math.max(mn,need)/ts*100)/100:Math.max(mn,Math.ceil(need))):''}" aria-label="Сумма пополнения" enterkeyhint="done"></label>
+  <p class="maxw">От ${GU?fmtG(mn/ts)+' '+GRAM:num(mn)+' '+(PM=='stars'?'до '+num(mx)+' ':'')+STAR}</p><div class="conv" id="tConv"></div>
+  <div class="presets">${(GU?[1,2,5,10,25,50]:pre).map(a=>`<button data-p="${a}">${GU?GRAM:STAR} ${num(a)}</button>`).join('')}</div>
   <button class="btn" id="tGo" style="margin-top:18px"></button>
   <p class="maxw" style="justify-content:center;text-align:center">${PM=='stars'?'Оплата через Telegram Stars, звёзды приходят на баланс сразу':PM=='gram'?'Оплата GRAM (бывший Toncoin) с вашего кошелька через TON Connect':'Счёт откроется в @xRocket, баланс пополнится автоматически'}</p>`;
   $('topIn').innerHTML=`<div class="bar"><button class="x" id="tX" aria-label="Закрыть">${IC.x}</button><h3>Пополнить баланс</h3></div>
-  <div class="card" style="margin-top:4px"><p style="color:var(--mut)">Сейчас на балансе</p><div class="big">${num(S?.balance||0)} ${STAR}</div>
-   ${need?`<p style="color:var(--gold);margin-top:6px">Не хватает ${num(need)} ${STAR}</p>`:''}</div>
+  <div class="card" style="margin-top:4px"><p style="color:var(--mut)">Сейчас на балансе</p><div class="big">${price(S?.balance||0)}</div>
+   ${need?`<p style="color:var(--gold);margin-top:6px">Не хватает ${price(need)}</p>`:''}</div>
   ${promo?`<div class="pact"><span style="font-size:22px">🎁</span><span>Промокод <b>${esc(promo.code)}</b>: +${promo.percent}% к этому пополнению</span></div>`:''}
   <div class="paym" style="margin-top:14px">${M.map(([k,i,t])=>`<button data-pm="${k}" class="${PM==k?'on':''}">${i}${t}</button>`).join('')}</div>${body}`;
   $('tX').onclick=closeTop;
   $$('#topIn [data-pm]').forEach(b=>b.onclick=()=>{PM=b.dataset.pm;hap();renderTop(need)});
   $$('#topIn [data-xc]').forEach(b=>b.onclick=()=>{XC=b.dataset.xc;$$('#topIn [data-xc]').forEach(x=>x.classList.toggle('on',x==b));upd&&upd()});
   if($('gGo'))$('gGo').onclick=()=>tg.openTelegramLink('https://t.me/'+PO.gift_account.replace('@',''));
-  const inp=$('tAmt'),go=$('tGo');if(!inp)return;const val=()=>parseInt(inp.value.replace(/\D/g,''))||0;
-  var upd=()=>{const v=val(),pr=promo?Math.floor(v*promo.percent/100):0;inp.value=v?String(v):'';$$('#topIn [data-p]').forEach(b=>b.classList.toggle('on',+b.dataset.p==v));
+  const inp=$('tAmt'),go=$('tGo');if(!inp)return;const val=()=>GU?Math.round((parseFloat(inp.value.replace(',','.'))||0)*ts):parseInt(inp.value.replace(/\D/g,''))||0;
+  var upd=()=>{const v=val(),pr=promo?Math.floor(v*promo.percent/100):0;if(!GU)inp.value=v?String(v):'';$$('#topIn [data-p]').forEach(b=>b.classList.toggle('on',GU?+b.dataset.p==parseFloat(inp.value.replace(',','.')):+b.dataset.p==v));
     const g=Math.ceil(v/ts*10000)/10000,usd=Math.ceil(v*(PO?.star_usd||.015)*100)/100;
-    $('tConv').innerHTML=v?(PM=='stars'?(pr?`Получите <b>${num(v+pr)} ${STAR}</b>`:''):`К оплате <b>${PM=='xr'&&XC=='USDT'?usd.toLocaleString('ru-RU')+' USDT':fmtG(g)+' '+GRAM}</b>${pr?` · получите <b>${num(v+pr)} ${STAR}</b>`:''}`):'';
+    $('tConv').innerHTML=v?(PM=='stars'?(pr?`Получите <b>${price(v+pr)}</b>`:''):`${GU&&!(PM=='xr'&&XC=='USDT')?'Получите <b>'+num(v)+' '+STAR+'</b>':`К оплате <b>${PM=='xr'&&XC=='USDT'?usd.toLocaleString('ru-RU')+' USDT':fmtG(g)+' '+GRAM}</b>`}${pr?` · получите <b>${price(v+pr)}</b>`:''}`):'';
     go.disabled=v<mn||(PM=='stars'&&v>mx);
-    go.innerHTML=PM=='stars'&&v>mx?`Максимум ${num(mx)} ${STAR}`:!v?'Введите сумму':v<mn?`Минимум ${num(mn)} ${STAR}`:PM=='stars'?`Пополнить на ${num(v)} ${STAR}`:PM=='gram'?`Оплатить ${fmtG(g)} ${GRAM}`:`Оплатить в xRocket`};
+    go.innerHTML=PM=='stars'&&v>mx?`Максимум ${num(mx)} ${STAR}`:!v?'Введите сумму':v<mn?`Минимум ${GU?fmtG(mn/ts)+' '+GRAM:num(mn)+' '+STAR}`:PM=='stars'?`Пополнить на ${num(v)} ${STAR}`:PM=='gram'?`Оплатить ${fmtG(g)} ${GRAM}`:`Оплатить в xRocket`};
   inp.oninput=upd;inp.onkeydown=e=>{if(e.key=='Enter'){inp.blur();go.click()}};
   $$('#topIn [data-p]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.p;upd();hap()});
   go.onclick=async()=>{const v=val();if(go.disabled)return;go.disabled=true;
@@ -988,7 +993,7 @@ async function payTon(v){const ui=await tonUI();
   await ui.sendTransaction({validUntil:Math.floor(Date.now()/1000)+600,messages:[{address:p.address,amount:p.nano,payload:p.payload}]});
   toast('Платёж отправлен — ждём подтверждения сети');watchPay(p.id)}
 async function watchPay(id){for(let i=0;i<60;i++){await new Promise(r=>setTimeout(r,i<10?3000:6000));
-  try{const r=await api(`pay/${id}/check`,'POST');if(r.status=='paid'){toast(`Баланс пополнен на ${num(r.stars+r.bonus)} ${STAR}`);sfx.win();hap('ok');closeTop();load();return}if(r.status=='expired')return}catch(e){}}}
+  try{const r=await api(`pay/${id}/check`,'POST');if(r.status=='paid'){toast(`Баланс пополнен на ${price(r.stars+r.bonus)}`);sfx.win();hap('ok');closeTop();load();return}if(r.status=='expired')return}catch(e){}}}
 function closeTop(){$('ovTop').classList.remove('on');afterClose()}
 function fairInfo(){const g=M.g;sheet(`<h4>Честная игра</h4><p>Исход определяется на сервере криптостойким генератором до вашего хода. В минах сервер заранее показывает SHA-256 от поля и секрета, а после игры раскрывает их — можно проверить, что поле не менялось.</p>
   ${g?`<p>Игра #${g.id}: хеш <code>${g.hash}</code></p>${g.seed?`<p>Секрет <code>${esc(g.seed)}</code>, мины <code>${JSON.stringify(g.field)}</code><br>Проверка: sha256("${esc(g.seed)}:${JSON.stringify(g.field).replace(/,/g,', ')}")</p>`:''}`:''}
@@ -1013,7 +1018,7 @@ async function load(){S=await api('state');left=S.free_in;freeBadge();if(S.ton_s
   if(!$('chips').children.length)renderChips();
   renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();if(!$('g-plinko').hidden)renderPlinko();renderProfile();
   if(tab=='bonus'&&!(BV&&BV.spinning))renderBonus();else renderTasks();renderNick();
-  $('rb').innerHTML='+'+S.ref_bonus+' '+STAR;$('rp').textContent=S.ref_percent+'%';$('rn').textContent=S.refs;$('re').textContent=num(S.ref_earned);
+  $('rb').innerHTML='+'+price(S.ref_bonus);$('rp').textContent=S.ref_percent+'%';$('rn').textContent=S.refs;$('re').parentElement.innerHTML=`<span id="re">${price(S.ref_earned)}</span>`;
   if(CV){CV.c=S.cases.find(c=>c.id==CV.c.id)||CV.c;CV.refresh()}
   return loadLive()}
 setInterval(()=>{if(left>0){left--;if(left==0){freeBadge();renderCases();renderBonus()}else $$('[data-fp]').forEach(e=>e.textContent=fmt(left));CV&&CV.refresh();BV&&BV.refresh()}},1000);
