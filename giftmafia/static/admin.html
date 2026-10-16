@@ -22,7 +22,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .btn:disabled{opacity:.5}
 .glass{position:relative;display:flex;gap:2px;padding:5px;border-radius:999px;margin-top:6px;background:linear-gradient(180deg,#ffffff1f,#ffffff08 45%,#ffffff0d);background-color:#1a1b3a8c;
   -webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid #ffffff2b;box-shadow:inset 0 1px 0 #ffffff59,0 12px 40px #0006}
-.glass button{position:relative;z-index:1;flex:1;height:42px;border-radius:999px;color:var(--mut);font-weight:800;transition:color .2s}
+.glass button{position:relative;z-index:1;flex:1;min-width:0;height:42px;border-radius:999px;color:var(--mut);font-weight:800;font-size:14px;transition:color .2s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:420px){.glass{gap:0;padding:4px}.glass .lens{top:4px;bottom:4px}.glass button{font-size:12px;letter-spacing:-.02em;padding:0 2px}}
+.set{display:grid;gap:10px}.set label{display:grid;gap:6px;font-size:13px;color:var(--mut)}.set .inp{color:#fff}
+.tk{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.tk .nm{flex:1;min-width:160px}.tk .nm b{display:block}.tk .nm small{color:var(--mut);word-break:break-all}
+.kind{font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;background:#ffffff14;color:#cfd2ff}
+.sw{width:46px;height:28px;border-radius:999px;background:#ffffff1f;position:relative;flex:none;transition:background .2s}.sw:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw.on{background:var(--ok)}.sw.on:after{transform:translateX(18px)}
 .glass button.on{color:#fff}
 .lens{position:absolute;top:5px;bottom:5px;left:0;border-radius:999px;background:linear-gradient(180deg,#ffffff2e,#ffffff0f);border:1px solid #ffffff38;
   box-shadow:inset 0 1px 0 #ffffff80,0 6px 18px -6px #6c63ffaa;transition:transform .45s cubic-bezier(.3,1.35,.4,1),width .45s cubic-bezier(.3,1.35,.4,1)}
@@ -87,7 +93,7 @@ function renderLogin(){$('app').innerHTML=`<div class="login"><div class="logo">
 function moveLens(){const bar=document.querySelector('.glass'),on=bar?.querySelector('button.on'),l=bar?.querySelector('.lens');if(on&&l){l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`}}
 addEventListener('resize',moveLens);
 function start(){$('app').innerHTML=`<header class="top"><span class="logo">Gift<b>Mafia</b></span><span class="tag">админка</span><span class="sp"></span><button class="btn ghost sm" id="out">Выйти</button></header>
-  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Обзор</button><button data-v="req">Заявки</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button></nav><main id="main"></main>`;
+  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Обзор</button><button data-v="req">Заявки</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button><button data-v="tasks">Задания</button></nav><main id="main"></main>`;
   $('out').onclick=logout;$$('#nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
   fetch('/static/gifts.json').then(r=>r.json()).then(g=>CATALOG=g).catch(()=>{});
   load()}
@@ -112,6 +118,7 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
         ${w.status=='requested'?`<div class="acts"><button class="btn ok sm" data-w="${w.id}" data-a="sent">Отправлен</button><button class="btn bad sm" data-w="${w.id}" data-a="rejected">Отклонить</button></div>`:''}</div>`).join('')||'<p class="empty">Заявок нет.</p>'}</div>`;
     $$('[data-f]',M).forEach(b=>b.onclick=()=>{reqF=b.dataset.f;render()});
     $$('[data-a]',M).forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api(`win/${b.dataset.w}/${b.dataset.a}`,'POST');toast(b.dataset.a=='sent'?'Отмечено как отправленное':'Заявка отклонена');await load()}catch(e){toast(e.message);b.disabled=false}})}
+  if(view=='tasks'){M.innerHTML='<p class="empty">Загрузка…</p>';renderTasksAdmin()}
   if(view=='prices'){M.innerHTML=`<h2>Цены моделей<small id="pinfo"></small></h2>
       <p style="color:var(--mut);margin-bottom:12px">У каждой модели своя цена. Без своей цены работает формула: флор коллекции × редкость модели × наценка за «дорогое» название (Gold, Midas, Black…). Своя цена сразу применяется в кейсах, продаже и апгрейде. После правок нажмите «Подогнать шансы» у нужных кейсов.</p>
       <div class="price"><input class="inp" id="pq" style="flex:1;min-width:180px" placeholder="Поиск: коллекция или модель" value="${esc(PQ)}"><button class="chip ${POWN?'on':''}" id="pown">Только свои</button></div>
@@ -143,7 +150,32 @@ function renderPrices(){const L=$('plist');if(!L||!PR)return;
   const save=async(i,v)=>{const x=PR.items[i];try{const r=await api('model_price','POST',{gift:x.gift,model:x.model,stars:v});toast(v?`Цена: ${num(r.price)} ⭐`:'Цена сброшена на формулу');await loadPrices();D.p=await api('prizes')}catch(e){toast(e.message)}};
   $$('[data-mp]',L).forEach(inp=>inp.onchange=()=>save(+inp.dataset.mp,parseInt(inp.value)||0));
   $$('[data-mr]',L).forEach(b=>b.onclick=()=>save(+b.dataset.mr,0))}
-async function act(p,msg){try{await p;toast(msg);await load()}catch(e){toast(e.message)}}
+const KIND={channel:'Подписка на канал',bot:'Запустить бота',story:'Сторис',link:'Перейти по ссылке'};
+async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks')}catch(e){return toast(e.message)}const st=d.settings;
+  M.innerHTML=`<h2>Настройки</h2><div class="card set">
+    <label>Канал для «Подарка дня» (подписка обязательна; пусто — без условия)<input class="inp" id="sCh" value="${esc(st.free_channel)}" placeholder="https://t.me/канал или @канал"></label>
+    <label>Что поставить в имя (программа «Поставь в ник»)<input class="inp" id="sTag" value="${esc(st.nick_tag)}"></label>
+    <label>Что поставить в описание (должно содержать то же имя)<input class="inp" id="sBio" value="${esc(st.nick_bio)}"></label>
+    <label>Награда ⭐ в день для уровней Telegram 0 / 1–4 / 5–9 / 10+<input class="inp" id="sRw" value="${esc(st.nick_rewards)}" placeholder="10,20,60,120"></label>
+    <button class="btn" id="sSave">Сохранить</button>
+    <p style="color:var(--mut);font-size:13px">Чтобы бот мог проверять подписку, добавьте его администратором в канал.</p></div>
+  <h2>Задания<small>${d.tasks.filter(t=>t.active).length} активных</small></h2>
+  <div class="list">${d.tasks.map(t=>`<div class="card tk"><span class="kind">${KIND[t.kind]||t.kind}</span><div class="nm"><b>${esc(t.title)}</b><small>${esc(t.target||'—')} · выполнили ${num(t.done)}</small></div>
+    <input class="inp n" type="number" min="1" value="${t.reward}" data-trw="${t.id}" aria-label="Награда" style="width:70px"> ⭐
+    <button class="sw ${t.active?'on':''}" data-ton="${t.id}" aria-label="Включено"></button><button class="x" data-tdel="${t.id}" aria-label="Удалить">×</button></div>`).join('')||'<p class="empty">Заданий нет.</p>'}</div>
+  <h2>Новое задание</h2><div class="card set">
+    <label>Тип<select class="inp" id="nK"><option value="channel">Подписка на канал (проверяется)</option><option value="bot">Запустить этого бота (проверяется)</option><option value="story">Выложить сторис (без проверки)</option><option value="link">Перейти по ссылке (без проверки)</option></select></label>
+    <label>Название<input class="inp" id="nT" placeholder="Подпишитесь на канал"></label>
+    <label id="nTgL">Канал или ссылка<input class="inp" id="nTg" placeholder="https://t.me/GiftMafiaNFT"></label>
+    <label>Награда ⭐<input class="inp" id="nR" type="number" min="1" value="3"></label>
+    <button class="btn" id="nAdd">Добавить задание</button></div>`;
+  const kind=()=>{$('nTgL').style.display=['channel','link'].includes($('nK').value)?'':'none'};$('nK').onchange=kind;kind();
+  $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value}),'Настройки сохранены',renderTasksAdmin);
+  $('nAdd').onclick=()=>act(api('task','POST',{kind:$('nK').value,title:$('nT').value,target:$('nTg').value,reward:$('nR').value}),'Задание добавлено',renderTasksAdmin);
+  $$('[data-trw]').forEach(i=>i.onchange=()=>act(api(`task/${i.dataset.trw}`,'PATCH',{reward:i.value}),'Награда сохранена',renderTasksAdmin));
+  $$('[data-ton]').forEach(b=>b.onclick=()=>act(api(`task/${b.dataset.ton}`,'PATCH',{active:!b.classList.contains('on')}),b.classList.contains('on')?'Задание выключено':'Задание включено',renderTasksAdmin));
+  $$('[data-tdel]').forEach(b=>b.onclick=()=>{if(confirm('Удалить задание?'))act(api(`task/${b.dataset.tdel}`,'DELETE'),'Задание удалено',renderTasksAdmin)})}
+async function act(p,msg,after){try{await p;toast(msg);after?await after():await load()}catch(e){toast(e.message)}}
 function caseHtml(c,ps){const W=ps.reduce((a,p)=>a+p.weight,0)||1,ev=ps.reduce((a,p)=>a+p.stars*p.weight,0)/W,rtp=c.price?ev/c.price*100:0;
   return `<div class="card case ${open.has(c.id)?'open':''}"><button class="ch" data-c="${c.id}"><div class="t"><b>${esc(c.title)}</b><small>${CAT[c.cat]||c.cat} · ${c.price?num(c.price)+' ⭐':'бесплатно'} · ${ps.length} призов</small></div>
     ${c.price?`<span class="rtp ${rtp>100?'hi':rtp<70?'lo':''}">возврат ${rtp.toFixed(0)}%</span>`:''}<span class="arrow">›</span></button>

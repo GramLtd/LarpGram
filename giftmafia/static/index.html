@@ -49,8 +49,8 @@ img{-webkit-user-drag:none;user-select:none}
 h2{font:var(--hd);margin:26px 0 14px;display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 /* карточки кейсов */
-.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-.cc{display:block;width:100%;min-width:0;text-align:left;border-radius:26px;padding:8px;background:linear-gradient(180deg,#25274e,#1c1d3c);border:1px solid var(--line);transition:transform .12s}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:stretch}
+.cc{display:flex;flex-direction:column;width:100%;min-width:0;text-align:left;border-radius:26px;padding:8px;background:linear-gradient(180deg,#25274e,#1c1d3c);border:1px solid var(--line);transition:transform .12s}
 .cc:active{transform:scale(.97)}
 .cov{position:relative;aspect-ratio:1;border-radius:20px;overflow:hidden;background:radial-gradient(circle at 50% 50%,var(--gl,#6c63ff66),transparent 62%),linear-gradient(160deg,#2a2c48,#14152a)}
 .cov:after{content:"";position:absolute;inset:-35%;animation:spin 40s linear infinite;background:conic-gradient(from 0deg,transparent 0 10%,#ffffff0c 12% 14%,transparent 16% 35%,#ffffff0a 37% 40%,transparent 42% 60%,#ffffff0c 62% 65%,transparent 67% 85%,#ffffff08 87% 90%,transparent 92%)}
@@ -63,8 +63,8 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .cov .a{width:30%;height:30%;left:4%;top:5%;transform:rotate(-14deg)}.cov .b{width:28%;height:28%;right:5%;top:4%;transform:rotate(12deg)}
 .cov .c{width:28%;height:28%;left:5%;bottom:4%;transform:rotate(10deg)}.cov .d{width:30%;height:30%;right:4%;bottom:5%;transform:rotate(-10deg)}
 .cov .coin{position:absolute;width:56%;height:56%;left:22%;top:22%;z-index:2}
-.cf{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;padding:12px 6px 4px}
-.cf b{flex:1 1 auto;font-weight:800;font-size:16px;line-height:1.15;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px 6px 4px;margin-top:auto}
+.cf b{width:100%;font-weight:800;font-size:16px;line-height:1.15;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pr{flex:none;display:inline-flex;align-items:center;gap:4px;height:38px;padding:0 13px;border-radius:999px;background:var(--grad);font-weight:800;font-size:16px;white-space:nowrap;box-shadow:0 6px 16px -8px #6c63ff}
 .pr.free{background:linear-gradient(90deg,#20b56b,#3ee08f)}.pr.wait{background:var(--card2);color:var(--mut);box-shadow:none;font-variant-numeric:tabular-nums}
 /* экран кейса */
@@ -164,6 +164,31 @@ body.kb .tabs{transform:translateY(140%);opacity:0;pointer-events:none}
 .plb canvas{display:block;width:100%}
 .plh{display:flex;gap:6px;min-height:30px;margin-top:10px;overflow:hidden}
 .plh span{flex:none;padding:6px 10px;border-radius:10px;font-weight:800;font-size:13px;color:#2a1600;background:var(--sc);box-shadow:inset 0 1px 0 #ffffff40}.plh span:first-child{animation:popin .45s cubic-bezier(.2,1.5,.4,1)}
+/* заработок: ник */
+.nk{margin-top:8px;background:radial-gradient(120% 90% at 0 0,#2b6fd640,transparent 60%),linear-gradient(180deg,#24264d,#1b1c3a);border-color:#4f9dff40}
+.nkh{display:flex;align-items:center;gap:12px}.nkh>div{flex:1;min-width:0}.nkh b{display:block;font:800 17px/1.25 "Unbounded",system-ui}.nkh b em{display:block;font-style:normal;font-size:15px;color:#8cc8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nkh small{color:var(--mut)}
+.tgi{width:52px;height:52px;flex:none;border-radius:50%;background:linear-gradient(180deg,#37aee2,#1e96c8);display:grid;place-items:center;box-shadow:0 6px 18px -6px #2aa3dd}.tgi svg{width:28px;height:28px}
+.upto{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:6px 11px;border-radius:14px;background:#4f9dff1f;border:1px solid #4f9dff55;color:#8cc8ff;font-weight:800;font-size:13px;text-align:center;line-height:1.15}
+.lv{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.lv div{border-radius:16px;background:#ffffff08;border:1px solid var(--line);padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.lv b{font:800 17px "Unbounded",system-ui;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.sh{display:grid;place-items:center;width:36px;height:40px;font-weight:800;font-size:12px;color:#fff;background:linear-gradient(180deg,#5aa9ff,#2f7be0);clip-path:path("M18 0 L36 6 L36 20 C36 30 27 37 18 40 C9 37 0 30 0 20 L0 6 Z")}
+.stage{margin-top:12px}.stage.cur{border-color:#8b6cff88;box-shadow:0 0 0 1px #8b6cff55,0 10px 30px -14px #6c63ff}
+.sth{display:flex;align-items:center;gap:14px;margin-bottom:12px}.sth img{width:62px;height:62px;object-fit:contain;flex:none;filter:drop-shadow(0 6px 10px #0008)}
+.sth b{display:block;font:800 16px/1.3 "Unbounded",system-ui;overflow-wrap:anywhere}.sth small{color:var(--mut)}
+.cp2{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px}
+.cp2 button{text-align:left;border-radius:16px;background:#ffffff0a;border:1px solid #4f9dff40;padding:12px;min-width:0}.cp2 button{display:flex;align-items:center;gap:10px}.cp2 span{flex:1;min-width:0}.cp2 small{display:block;color:var(--mut);font-size:12px}.cp2 b{display:block;margin-top:3px;overflow-wrap:anywhere}.cp2 i{font-style:normal;font-size:12px;font-weight:800;color:#8cc8ff;flex:none}
+.timer{font:800 38px/1 "Unbounded",system-ui;margin:4px 0 14px;font-variant-numeric:tabular-nums}
+.mut{color:var(--mut);font-size:14px;margin-top:8px}
+/* бонусы: задания */
+.tb{margin-left:6px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--gold);color:#3a2600;font-size:11px;display:inline-grid;place-items:center}.tb:empty{display:none}
+.task{display:flex;align-items:center;gap:12px;margin-top:10px;padding:14px}
+.task .ti{width:48px;height:48px;flex:none;border-radius:16px;display:grid;place-items:center;background:#ffffff0d}.task .ti svg{width:26px;height:26px}
+.task .tt{flex:1;min-width:0}.task .tt b{display:block;font-size:15px;line-height:1.25}.task .tt small{display:flex;align-items:center;gap:3px;color:var(--gold);font-weight:800}
+.task .btn{width:auto;height:40px;padding:0 16px;font-size:14px;flex:none}
+.task.done{opacity:.6}
+.cond{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px}.cond .tt{flex:1;min-width:0;font-size:14px}.cond .tt b{display:block}.cond .tt small{color:var(--mut)}
+.cond .btn{width:auto;height:40px;padding:0 16px;font-size:14px}
 /* каталог */
 .coll{position:relative;min-width:0;border-radius:20px;padding:8px 8px 10px;background:linear-gradient(180deg,#2a2c55,#1d1e3d);border:1px solid var(--line);text-align:left}
 .coll .pi{aspect-ratio:1;display:grid;place-items:center}.coll img{width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 6px 8px #0008)}
@@ -296,8 +321,9 @@ h2{animation:rise .45s ease both}
 </main>
 
 <main id="v-earn" hidden>
-  <h2>Заработок</h2>
-  <div class="card"><h3>Приглашайте друзей</h3>
+  <div id="nickBox"></div>
+  <h2>Приглашайте друзей</h2>
+  <div class="card">
     <p style="color:var(--mut);font-weight:600">Получайте бонус за каждого друга и процент с его кейсов — навсегда.</p>
     <div class="line"><span>Друг зашёл по ссылке</span><b id="rb"></b></div>
     <div class="line"><span>С каждого кейса друга</span><b id="rp"></b></div>
@@ -307,7 +333,11 @@ h2{animation:rise .45s ease both}
     <button class="btn ghost" id="copy" style="margin-top:10px">Скопировать ссылку</button></div>
 </main>
 
-<main id="v-bonus" hidden><div id="bonusCase"></div></main>
+<main id="v-bonus" hidden>
+  <div class="gsw glass" id="bsw"><i class="lens" aria-hidden="true"></i><button class="on" data-b="free">Подарок дня</button><button data-b="tasks">Задания<span class="tb" id="tcnt"></span></button></div>
+  <section id="b-free"><div id="freeCond"></div><div id="bonusCase"></div></section>
+  <section id="b-tasks" hidden><div id="taskList"></div></section>
+</main>
 
 <nav class="tabs glass"><i class="lens" aria-hidden="true"></i><button data-t="games"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M7 10v4M5 12h4"/><circle cx="15.5" cy="13" r=".6" fill="currentColor"/><circle cx="18" cy="10.8" r=".6" fill="currentColor"/></svg>Игры</button><button data-t="cases" class="on"><span class="fb">FREE</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>Кейсы</button><button data-t="earn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Заработок</button><button data-t="bonus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>Бонусы</button></nav>
 
@@ -382,7 +412,7 @@ function moveLens(bar){const on=bar&&bar.querySelector('button.on'),l=bar&&bar.q
   l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`}
 addEventListener('resize',()=>$$('.glass').forEach(moveLens));
 function setTab(t){tab=t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));moveLens($$('.tabs')[0]);if(t=='games')requestAnimationFrame(()=>moveLens($('v-games').querySelector('.gsw')));
-  ['games','cases','earn','bonus'].forEach(k=>$('v-'+k).hidden=k!=t);scrollTo(0,0);if(t=='bonus')renderBonus()}
+  ['games','cases','earn','bonus'].forEach(k=>$('v-'+k).hidden=k!=t);scrollTo(0,0);if(t=='bonus')renderBonus();if(t=='earn')renderNick()}
 $$('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
 
 /* ---------- кейсы ---------- */
@@ -472,8 +502,60 @@ function openCase(id){const c=S.cases.find(x=>x.id==id);if(!c)return;
   $('ovCase').classList.add('on');$('ovCase').scrollTop=0;document.body.style.overflow='hidden';
   CV=new CaseView($('caseIn'),c,false);try{tg.BackButton.show()}catch(e){}}
 function closeCase(){if(CV&&CV.spinning)return;$('ovCase').classList.remove('on');CV=null;afterClose()}
-function renderBonus(){if(!S)return;const c=S.cases.find(x=>isFree(x));if(!c){$('bonusCase').innerHTML='<p class="empty">Бонусов пока нет.</p>';return}
+let bsec='free';
+function renderBonus(){if(!S)return;renderTasks();moveLens($('bsw'));if(bsec!='free')return;
+  const [ch,url]=S.free_channel||[];
+  setHTML($('freeCond'),ch?`<div class="card cond"><span class="tgi" style="width:42px;height:42px">${TGI}</span><div class="tt"><b>Условие: подписка на ${esc(ch)}</b><small>Без подписки подарок дня не откроется</small></div><button class="btn ghost" id="fcGo">Подписаться</button></div>`:'');
+  if($('fcGo'))$('fcGo').onclick=()=>tg.openTelegramLink(url);
+  const c=S.cases.find(x=>isFree(x));if(!c){$('bonusCase').innerHTML='<p class="empty">Бонусов пока нет.</p>';return}
   if(BV&&BV.spinning)return;BV=new CaseView($('bonusCase'),c,true)}
+$$('#bsw button').forEach(b=>b.onclick=()=>{bsec=b.dataset.b;$$('#bsw button').forEach(x=>x.classList.toggle('on',x==b));moveLens($('bsw'));
+  $('b-free').hidden=bsec!='free';$('b-tasks').hidden=bsec!='tasks';renderBonus()});
+const TGI='<svg viewBox="0 0 24 24" fill="#fff"><path d="M20.7 4.3 2.9 11.2c-1.2.5-1.2 1.2-.2 1.5l4.6 1.4 1.7 5.3c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.2-2.1 4.6 3.4c.8.5 1.4.2 1.6-.8l3-14.2c.3-1.2-.5-1.8-1.3-1.4zM8.9 13.8l9.4-5.9c.5-.3.9-.1.5.2l-8 7.2-.3 3.3z"/></svg>';
+const TICO={channel:TGI,bot:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="4" y="8" width="16" height="12" rx="4"/><path d="M12 4v4M9 13h.01M15 13h.01M9.5 17h5"/></svg>',
+  story:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.5"/><circle cx="12" cy="12" r="4"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'};
+const TBG={channel:'linear-gradient(180deg,#37aee2,#1e96c8)',bot:'linear-gradient(180deg,#7a5af0,#5a3fd0)',story:'linear-gradient(135deg,#ff5a8a,#ffb03d)',link:'linear-gradient(180deg,#3ee08f,#18a865)'};
+const tPressed=new Set();
+function renderTasks(){const ts=S?.tasks||[],left=ts.filter(t=>!t.done).length;$('tcnt').textContent=left||'';
+  if(bsec!='tasks')return;
+  if(!setHTML($('taskList'),`<p class="mut" style="margin:12px 2px 0">Выполняйте задания и получайте звёзды на баланс.</p>`+(ts.map(t=>`<div class="card task ${t.done?'done':''}">
+    <span class="ti" style="background:${TBG[t.kind]||TBG.link}">${TICO[t.kind]||TICO.link}</span>
+    <div class="tt"><b>${esc(t.title)}</b><small>+${t.reward} ${STAR}</small></div>
+    ${t.done?'<button class="btn ghost" disabled>Готово ✓</button>':`<button class="btn ${tPressed.has(t.id)?'':'ghost'}" data-task="${t.id}">${tPressed.has(t.id)?'Проверить':{channel:'Подписаться',bot:'Запустить',story:'Выложить',link:'Перейти'}[t.kind]||'Выполнить'}</button>`}</div>`).join('')||'<p class="empty">Заданий пока нет.</p>')))return;
+  $$('[data-task]').forEach(b=>b.onclick=()=>taskAct(S.tasks.find(t=>t.id==+b.dataset.task),b))}
+async function taskAct(t,b){if(!t)return;
+  if(!tPressed.has(t.id)){tPressed.add(t.id);
+    if(t.kind=='channel'||t.kind=='link')(t.url.startsWith('https://t.me/')?tg.openTelegramLink(t.url):tg.openLink?tg.openLink(t.url):open(t.url));
+    else if(t.kind=='bot')tg.openTelegramLink(`https://t.me/${S.bot}?start=task`);
+    else if(t.kind=='story'){try{tg.shareToStory(`${location.origin}/static/banner.jpg`,{text:'Кейсы с NFT-подарками Telegram — GiftMafia',widget_link:{url:`https://t.me/${S.bot}`,name:'GiftMafia'}})}catch(e){}}
+    renderTasks();return}
+  b.disabled=true;try{const r=await api(`task/${t.id}/check`,'POST');toast(`+${r.reward} ${STAR} на баланс`);sfx.win();hap('ok');tPressed.delete(t.id);await load()}
+  catch(e){toast(e.message);hap('err');b.disabled=false}}
+
+/* ---------- ник ---------- */
+const giftIco=g=>{const c=CAT.find(x=>x.name==g);return c?th(g,c.models[c.models.length-1][0]):''};
+let nickEnd=0;
+function renderNick(){const n=S?.nick;if(!n)return;const r=n.rewards,mx=Math.max(...r),st=!!n.started,ready=st&&!n.ready_in;
+  if(st)nickEnd=Date.now()+(n.ready_in||0)*1000;
+  const s1=st?'Выполнено':'Текущий',s2=!st?'Ждёт':ready?'Готово':'Идёт',s3=ready?'Текущий':'Ждёт';
+  setHTML($('nickBox'),`<div class="card nk"><div class="nkh"><span class="tgi">${TGI}</span><div><b>Поставь в ник<em>${esc(n.tag)}</em></b><small>3 этапа · на баланс</small><span class="upto">до ${mx} ${STAR} в день</span></div></div>
+    <p class="mut">Награда в день зависит от уровня в Telegram</p>
+    <div class="lv">${[['0',r[0]],['1–4',r[1]],['5–9',r[2]],['10+',r[3]]].map(([l,v])=>`<div><b>${v}${STAR}</b><span class="sh">${l}</span></div>`).join('')}</div></div>
+  <h2>Этапы</h2>
+  <div class="card stage ${!st?'cur':''}"><div class="sth"><img src="${esc(giftIco('Star Notepad'))}" alt=""><div><b>Добавьте ${esc(n.tag)} в имя и описание</b><small>Этап 1 · ${s1}</small></div></div>
+    <div class="cp2"><button data-cp="${esc(n.tag)}"><span><small>В имя или фамилию</small><b>${esc(n.tag)}</b></span><i>Копировать</i></button><button data-cp="${esc(n.bio)}"><span><small>В описание (био)</small><b>${esc(n.bio)}</b></span><i>Копировать</i></button></div>
+    <button class="btn" id="nkGo" ${st?'disabled':''}>${st?'Выполнено ✓':'Готово'}</button></div>
+  <div class="card stage ${st&&!ready?'cur':''}"><div class="sth"><img src="${esc(giftIco('Desk Calendar'))}" alt=""><div><b>Держите 24 часа</b><small>Этап 2 · ${s2}</small></div></div>
+    <div class="timer" id="nkT">${st?fmt(n.ready_in||0):'24:00:00'}</div><button class="btn ghost" id="nkChk" ${st&&!ready?'':'disabled'}>Проверить</button></div>
+  <div class="card stage ${ready?'cur':''}"><div class="sth"><img src="${esc(giftIco('Money Pot'))}" alt=""><div><b>Заберите награду</b><small>Этап 3 · ${s3}</small></div></div>
+    <div class="timer">до ${mx} ${STAR}</div><p class="mut" style="margin:-6px 0 12px">После 24 часов на сбор есть 10 часов${n.claims?` · получено ${num(n.earned)} ⭐ за ${n.claims} дн.`:''}</p>
+    <button class="btn" id="nkClaim" ${ready?'':'disabled'}>Забрать</button></div>`);
+  $$('#nickBox [data-cp]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);toast('Скопировано')}catch(e){toast(b.dataset.cp)}});
+  $('nkGo').onclick=async()=>{try{await api('nick/start','POST');toast('Отлично! Держите ник 24 часа');hap('ok');await load()}catch(e){toast(e.message);hap('err')}};
+  $('nkChk').onclick=async()=>{try{await api('nick/start','POST');toast('Ник и описание на месте, ждём')}catch(e){toast(e.message)}};
+  $('nkClaim').onclick=async()=>{const b=$('nkClaim');b.disabled=true;try{const r=await api('nick/claim','POST');toast(`+${r.reward} ⭐ за уровень ${r.level}. Следующая награда через 24 часа`);sfx.win();hap('ok');await load()}catch(e){toast(e.message);b.disabled=false;await load()}}}
+setInterval(()=>{const t=$('nkT');if(t&&S?.nick?.started&&nickEnd){const l=Math.max(0,Math.round((nickEnd-Date.now())/1000));t.textContent=fmt(l);if(!l&&S.nick.ready_in){S.nick.ready_in=0;renderNick()}}},1000);
 
 const WC=['#4f9dff','#8b6cff','#e05ce2','#ff5a6e'];
 const RAR=['Обычная','Редкая','Эпическая','Легендарная'];
@@ -620,7 +702,7 @@ async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
     U.busy=false;renderUpgrade();await load();
     if(r.ok)showWins([r.win]);else toast('Не повезло — попробуйте ещё')}
   catch(e){U.busy=false;toast(e.message);renderUpgrade()}}
-$$('.gsw button').forEach(b=>b.onclick=()=>{$$('.gsw button').forEach(x=>x.classList.toggle('on',x==b));moveLens($('v-games').querySelector('.gsw'));
+$$('#v-games .gsw button').forEach(b=>b.onclick=()=>{$$('#v-games .gsw button').forEach(x=>x.classList.toggle('on',x==b));moveLens($('v-games').querySelector('.gsw'));
   ['mines','upgrade','plinko'].forEach(g=>$('g-'+g).hidden=b.dataset.g!=g);if(b.dataset.g=='plinko')renderPlinko()});
 
 /* ---------- плинко ---------- */
@@ -784,7 +866,7 @@ async function load(){S=await api('state');left=S.free_in;
   if(M.g==null&&S.mines)M.g=S.mines;
   if(!$('chips').children.length)renderChips();
   renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();if(!$('g-plinko').hidden)renderPlinko();renderProfile();
-  if(tab=='bonus'&&!(BV&&BV.spinning))renderBonus();
+  if(tab=='bonus'&&!(BV&&BV.spinning))renderBonus();else renderTasks();renderNick();
   $('rb').innerHTML='+'+S.ref_bonus+' '+STAR;$('rp').textContent=S.ref_percent+'%';$('rn').textContent=S.refs;$('re').textContent=num(S.ref_earned);
   if(CV){CV.c=S.cases.find(c=>c.id==CV.c.id)||CV.c;CV.refresh()}
   return loadLive()}

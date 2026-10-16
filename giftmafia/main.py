@@ -112,6 +112,10 @@ CREATE TABLE IF NOT EXISTS wins(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id IN
   gift TEXT DEFAULT '', model TEXT DEFAULT '', img TEXT DEFAULT '', value INT DEFAULT 0, source TEXT DEFAULT 'case',
   status TEXT, story_at INT DEFAULT 0, shares INT DEFAULT 0, last_share INT DEFAULT 0, created INT);
 CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
+CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, title TEXT, target TEXT DEFAULT '', reward INT DEFAULT 3, active INT DEFAULT 1, created INT);
+CREATE TABLE IF NOT EXISTS task_done(user_id INT, task_id INT, created INT, PRIMARY KEY(user_id, task_id));
+CREATE TABLE IF NOT EXISTS bot_started(user_id INTEGER PRIMARY KEY, created INT);
+CREATE TABLE IF NOT EXISTS nick(user_id INTEGER PRIMARY KEY, started INT DEFAULT 0, claims INT DEFAULT 0, earned INT DEFAULT 0);
 CREATE TABLE IF NOT EXISTS model_prices(gift TEXT, model TEXT, stars INT, PRIMARY KEY(gift, model));
 CREATE TABLE IF NOT EXISTS plinko(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, rows INT, risk TEXT, slot INT, mult REAL, payout INT, created INT);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
@@ -130,6 +134,34 @@ def changed(sql, *a):  # сколько строк обновлено (атом�
 
 
 OVR.update({(r["gift"], r["model"]): r["stars"] for r in db.execute("SELECT * FROM model_prices")})
+
+# ---------- настройки (правятся в админке) ----------
+SETTINGS_DEFAULT = {
+    "free_channel": "@GiftMafiaNFT",           # условие «Подарка дня»: подписка на канал (пусто = без условия)
+    "nick_tag": "@GiftMafiaRobot",             # что поставить в имя/фамилию
+    "nick_bio": "под защитой @GiftMafiaRobot",  # что поставить в описание (проверяется наличие nick_tag)
+    "nick_rewards": "10,20,60,120",            # ⭐ в день для уровней Telegram 0 / 1-4 / 5-9 / 10+
+}
+NICK_HOLD, NICK_WINDOW = 24 * 3600, 10 * 3600  # держать 24 ч, потом 10 ч на сбор награды
+
+
+def setting(k):
+    r = q1("SELECT v FROM meta WHERE k=?", "set:" + k)
+    return r["v"] if r else SETTINGS_DEFAULT[k]
+
+
+def chat_ref(s):
+    """'https://t.me/x', 't.me/x', '@x' -> ('@x', 'https://t.me/x')."""
+    s = (s or "").strip()
+    m = re.search(r"(?:t\.me/|@)([A-Za-z0-9_]{4,})", s) or re.fullmatch(r"([A-Za-z0-9_]{4,})", s)
+    return (f"@{m.group(1)}", f"https://t.me/{m.group(1)}") if m else ("", "")
+
+
+if not q1("SELECT 1 FROM meta WHERE k='tasks_seeded'"):  # задания для примера
+    for kind, title, target in [("channel", "Подпишитесь на канал GiftMafia", "https://t.me/GiftMafiaNFT"),
+                                ("bot", "Запустите бота", ""), ("story", "Выложите сторис с ботом", "")]:
+        run("INSERT INTO tasks(kind,title,target,reward,created) VALUES(?,?,?,?,?)", kind, title, target, 3, int(time.time()))
+    run("INSERT OR REPLACE INTO meta(k,v) VALUES('tasks_seeded','1')")
 
 
 # ---------- кейсы ----------
@@ -414,6 +446,7 @@ def own_win(wid, uid):
 # ---------- bot ----------
 @dp.message(CommandStart())
 async def start(m):
+    run("INSERT OR IGNORE INTO bot_started(user_id,created) VALUES(?,?)", m.from_user.id, int(time.time()))
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎁 Открыть GiftMafia", web_app=WebAppInfo(url=WEBAPP_URL), style="primary")],
         [InlineKeyboardButton(text="🎉 Подарок дня бесплатно", web_app=WebAppInfo(url=WEBAPP_URL), style="success")]])
@@ -468,7 +501,8 @@ def state(uid: int = Depends(auth)):
             "refs": q1("SELECT COUNT(*) n FROM users WHERE ref_by=?", uid)["n"], "ref_earned": u["ref_earned"],
             "ref_bonus": REF_BONUS, "ref_percent": REF_PERCENT, "uid": uid, "need": FRIENDS_REQUIRED, "bot": BOT_USERNAME,
             "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX,
-            "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "upgrade_max": UPGRADE_MAX_CHANCE}
+            "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET,
+            "free_channel": chat_ref(setting("free_channel")), "tasks": user_tasks(uid), "nick": nick_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
 
 
 CATALOG_CACHE = {}
@@ -483,8 +517,19 @@ def catalog():
     return CATALOG_CACHE
 
 
+async def is_member(chat, uid):
+    """True/False, или None если бот не может проверить (не админ канала)."""
+    try:
+        m = await bot.get_chat_member(chat, uid)
+        return m.status in ("member", "administrator", "creator") or getattr(m, "is_member", False)
+    except Exception:
+        return None
+
+
 @app.post("/api/free")
-def free(uid: int = Depends(auth)):
+async def free(uid: int = Depends(auth)):
+    ch, url = chat_ref(setting("free_channel"))
+    if ch and await is_member(ch, uid) is False: raise HTTPException(400, f"Подпишитесь на канал {ch}, чтобы открыть подарок дня")
     if changed("UPDATE users SET last_free=? WHERE id=? AND last_free<=?", int(time.time()), uid, int(time.time()) - FREE_COOLDOWN) == 0: raise HTTPException(400, "Кейс ещё не готов")
     return open_one(uid, 1, "locked")
 
@@ -641,6 +686,87 @@ def mines_cashout(gid: int, uid: int = Depends(auth)):
     return mines_view(q1("SELECT * FROM mines WHERE id=?", gid))
 
 
+# ---------- задания ----------
+def user_tasks(uid):
+    done = {r["task_id"] for r in q("SELECT task_id FROM task_done WHERE user_id=?", uid)}
+    out = []
+    for t in q("SELECT * FROM tasks WHERE active=1 ORDER BY id"):
+        ch, url = chat_ref(t["target"]) if t["kind"] == "channel" else ("", t["target"])
+        out.append({"id": t["id"], "kind": t["kind"], "title": t["title"], "reward": t["reward"], "url": url, "chat": ch, "done": t["id"] in done})
+    return out
+
+
+@app.post("/api/task/{tid}/check")
+async def task_check(tid: int, uid: int = Depends(auth)):
+    t = q1("SELECT * FROM tasks WHERE id=? AND active=1", tid)
+    if not t: raise HTTPException(404, "Задание не найдено")
+    if q1("SELECT 1 FROM task_done WHERE user_id=? AND task_id=?", uid, tid): raise HTTPException(400, "Задание уже выполнено")
+    if t["kind"] == "channel":
+        ok = await is_member(chat_ref(t["target"])[0], uid)
+        if ok is None: raise HTTPException(400, "Проверка недоступна: бот должен быть админом канала")
+        if not ok: raise HTTPException(400, "Вы ещё не подписались на канал")
+    elif t["kind"] == "bot":
+        if not q1("SELECT 1 FROM bot_started WHERE user_id=?", uid): raise HTTPException(400, "Откройте бота и нажмите «Старт»")
+    # story / link Telegram проверить не даёт: засчитываем после нажатия
+    if changed("INSERT OR IGNORE INTO task_done(user_id,task_id,created) VALUES(?,?,?)", uid, tid, int(time.time())):
+        credit(uid, t["reward"])
+    return {"reward": t["reward"]}
+
+
+# ---------- ник и описание ----------
+def nick_rewards(): return [int(x) for x in setting("nick_rewards").split(",")][:4]
+
+
+def nick_state(uid):
+    n = q1("SELECT * FROM nick WHERE user_id=?", uid) or {"started": 0, "claims": 0, "earned": 0}
+    now, st = int(time.time()), n["started"]
+    if st and now > st + NICK_HOLD + NICK_WINDOW: st = 0  # не успел забрать - начинаем заново
+    return {"tag": setting("nick_tag"), "bio": setting("nick_bio"), "rewards": nick_rewards(), "started": st,
+            "ready_in": max(0, st + NICK_HOLD - now) if st else None, "window": NICK_WINDOW, "claims": n["claims"], "earned": n["earned"]}
+
+
+async def nick_check(uid):
+    """(ок, уровень, текст ошибки) - стоит ли тег в имени и описании."""
+    tag = setting("nick_tag").lower().lstrip("@")
+    try: c = await bot.get_chat(uid)
+    except Exception: return False, 0, "Сначала запустите бота (/start), чтобы он мог проверить профиль"
+    name = f"{c.first_name or ''} {c.last_name or ''}".lower()
+    level = getattr(getattr(c, "rating", None), "level", 0) or 0
+    if tag not in name: return False, level, f"Добавьте {setting('nick_tag')} в имя или фамилию"
+    if tag not in (c.bio or "").lower(): return False, level, f"Добавьте «{setting('nick_bio')}» в описание профиля"
+    return True, level, ""
+
+
+def level_reward(level):
+    r = nick_rewards()
+    return r[0] if level <= 0 else r[1] if level <= 4 else r[2] if level <= 9 else r[3]
+
+
+@app.post("/api/nick/start")
+async def nick_start(uid: int = Depends(auth)):
+    ok, level, err = await nick_check(uid)
+    if not ok: raise HTTPException(400, err)
+    st = nick_state(uid)
+    if not st["started"]:
+        run("INSERT INTO nick(user_id,started) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET started=excluded.started", uid, int(time.time()))
+    return nick_state(uid)
+
+
+@app.post("/api/nick/claim")
+async def nick_claim(uid: int = Depends(auth)):
+    st = nick_state(uid)
+    if not st["started"]: raise HTTPException(400, "Сначала выполните этап 1")
+    if st["ready_in"]: raise HTTPException(400, "Награда ещё не готова")
+    ok, level, err = await nick_check(uid)
+    if not ok:
+        run("UPDATE nick SET started=0 WHERE user_id=?", uid)
+        raise HTTPException(400, err + ". Отсчёт начнётся заново")
+    reward = level_reward(level)
+    if changed("UPDATE nick SET started=?, claims=claims+1, earned=earned+? WHERE user_id=? AND started=?", int(time.time()), reward, uid, st["started"]):
+        credit(uid, reward)  # новый суточный круг начинается сразу
+    return {"reward": reward, "level": level, "nick": nick_state(uid)}
+
+
 # ---------- плинко ----------
 # Базовые таблицы множителей (ряды -> риск -> ячейки слева направо), затем масштабируются до PLINKO_RTP.
 PLINKO_BASE = {
@@ -782,6 +908,48 @@ def a_rebalance(cid: int):
         raise HTTPException(400, "Нельзя подогнать: нужны призы дешевле и дороже цены кейса")
     for p, w in zip(ps, solve_weights(vals, c["price"] * CASE_RTP)): run("UPDATE prizes SET weight=? WHERE id=?", w, p["id"])
     return {"ok": True}
+
+
+@app.get("/api/admin/tasks", dependencies=[Depends(admin)])
+def a_tasks():
+    ts = q("SELECT t.*, (SELECT COUNT(*) FROM task_done d WHERE d.task_id=t.id) done FROM tasks t ORDER BY id")
+    return {"tasks": ts, "settings": {k: setting(k) for k in SETTINGS_DEFAULT}}
+
+
+@app.post("/api/admin/task", dependencies=[Depends(admin)])
+def a_task_add(b: dict):
+    kind = b.get("kind", "link")
+    if kind not in ("channel", "bot", "story", "link"): raise HTTPException(400, "Неверный тип")
+    title = (b.get("title") or "").strip()
+    if not title: raise HTTPException(400, "Введите название")
+    target = (b.get("target") or "").strip()
+    if kind == "channel" and not chat_ref(target)[0]: raise HTTPException(400, "Укажите канал: https://t.me/имя или @имя")
+    if kind == "link" and not target.startswith(("https://", "tg://")): raise HTTPException(400, "Укажите ссылку https://...")
+    run("INSERT INTO tasks(kind,title,target,reward,created) VALUES(?,?,?,?,?)", kind, title, target, max(1, int(b.get("reward") or 3)), int(time.time()))
+    return {"ok": True}
+
+
+@app.patch("/api/admin/task/{tid}", dependencies=[Depends(admin)])
+def a_task_edit(tid: int, b: dict):
+    if "active" in b: run("UPDATE tasks SET active=? WHERE id=?", 1 if b["active"] else 0, tid)
+    if "reward" in b: run("UPDATE tasks SET reward=? WHERE id=?", max(1, int(b["reward"])), tid)
+    return {"ok": True}
+
+
+@app.delete("/api/admin/task/{tid}", dependencies=[Depends(admin)])
+def a_task_del(tid: int):
+    run("DELETE FROM tasks WHERE id=?", tid); return {"ok": True}
+
+
+@app.post("/api/admin/settings", dependencies=[Depends(admin)])
+def a_settings(b: dict):
+    for k, v in b.items():
+        if k not in SETTINGS_DEFAULT: continue
+        v = str(v).strip()
+        if k == "nick_rewards" and not re.fullmatch(r"\d+,\d+,\d+,\d+", v.replace(" ", "")): raise HTTPException(400, "Награды: 4 числа через запятую")
+        if k == "free_channel" and v and not chat_ref(v)[0]: raise HTTPException(400, "Канал: https://t.me/имя или @имя, пусто - без условия")
+        run("INSERT OR REPLACE INTO meta(k,v) VALUES(?,?)", "set:" + k, v.replace(" ", "") if k == "nick_rewards" else v)
+    return {k: setting(k) for k in SETTINGS_DEFAULT}
 
 
 @app.get("/api/admin/stats", dependencies=[Depends(admin)])
