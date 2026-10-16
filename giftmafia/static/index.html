@@ -455,7 +455,7 @@ const fmtG=g=>g>=1000?num(g):g.toLocaleString('ru-RU',{maximumFractionDigits:g>=
 const CI=()=>CUR=='gram'?GRAM:STAR; // иконка текущей валюты
 const inCur=v=>CUR=='gram'?Math.round(v/(TS||1)*100)/100:Math.round(v); // ⭐ -> число в поле ввода
 const fromCur=t=>{const x=parseFloat(String(t).replace(',','.').replace(/[^\d.]/g,''))||0;return CUR=='gram'?Math.round(x*(TS||1)):Math.round(x)};
-const price=v=>CUR=='gram'?`${fmtG(v/(TS||1))} ${GRAM}`:`${price(v)}`; // цены подарков и кейсов: ⭐ или GRAM
+const price=v=>CUR=='gram'?`${fmtG(v/(TS||1))} ${GRAM}`:`${num(v)} ${STAR}`; // цены подарков и кейсов: ⭐ или GRAM
 const nftVal=(g,m)=>VAL[g]?.[m]??0; // цены моделей приходят с сервера (/api/catalog)
 const isFree=c=>c.price==0;
 /* звук */
