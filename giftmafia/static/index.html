@@ -53,19 +53,16 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .cc{display:block;width:100%;min-width:0;text-align:left;border-radius:26px;padding:8px;background:linear-gradient(180deg,#25274e,#1c1d3c);border:1px solid var(--line);transition:transform .12s}
 .cc:active{transform:scale(.97)}
 .cov{position:relative;aspect-ratio:1;border-radius:20px;overflow:hidden;background:radial-gradient(circle at 50% 50%,var(--gl,#6c63ff66),transparent 62%),linear-gradient(160deg,#2a2c48,#14152a)}
-.cov:after{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,transparent 0 10%,#ffffff0c 12% 14%,transparent 16% 35%,#ffffff0a 37% 40%,transparent 42% 60%,#ffffff0c 62% 65%,transparent 67% 85%,#ffffff08 87% 90%,transparent 92%)}
+.cov:after{content:"";position:absolute;inset:-35%;animation:spin 40s linear infinite;background:conic-gradient(from 0deg,transparent 0 10%,#ffffff0c 12% 14%,transparent 16% 35%,#ffffff0a 37% 40%,transparent 42% 60%,#ffffff0c 62% 65%,transparent 67% 85%,#ffffff08 87% 90%,transparent 92%)}
 .cov img{position:absolute;object-fit:contain;filter:drop-shadow(0 6px 10px #000a);z-index:1}
-.cov .m{width:58%;height:58%;left:21%;top:20%;z-index:2}
+.cov .cg{position:absolute;left:22%;top:22%;width:56%;height:56%;border-radius:50%;background:var(--gl);filter:blur(22px);opacity:.9;z-index:1;animation:pulse 3.2s ease-in-out infinite}
+.cov .m{width:60%;height:60%;left:20%;top:19%;z-index:3;filter:drop-shadow(0 10px 14px #000b);animation:fl2 4s ease-in-out infinite}
+@keyframes fl2{50%{transform:translateY(-4px)}}
+.cov .a,.cov .b,.cov .c,.cov .d{z-index:2;filter:drop-shadow(0 6px 8px #000a) saturate(.95);opacity:.95}
+.cov img.ld{opacity:.95}.cov .m.ld{opacity:1}
 .cov .a{width:30%;height:30%;left:4%;top:5%;transform:rotate(-14deg)}.cov .b{width:28%;height:28%;right:5%;top:4%;transform:rotate(12deg)}
 .cov .c{width:28%;height:28%;left:5%;bottom:4%;transform:rotate(10deg)}.cov .d{width:30%;height:30%;right:4%;bottom:5%;transform:rotate(-10deg)}
 .cov .coin{position:absolute;width:56%;height:56%;left:22%;top:22%;z-index:2}
-.cov.art svg{position:absolute;inset:6%;width:88%;height:88%;z-index:1;overflow:visible;filter:drop-shadow(0 10px 14px #0009)}
-.cov.art .bx{animation:bob 4.2s ease-in-out infinite}
-.cov.art .lid{transform-box:fill-box;transform-origin:0% 100%;animation:lid 4.2s ease-in-out infinite}
-.cov.art .sp{transform-box:fill-box;transform-origin:center;animation:tw 2.6s ease-in-out infinite}.cov.art .s2{animation-delay:.9s}.cov.art .s3{animation-delay:1.7s}
-@keyframes bob{50%{transform:translateY(-4px)}}
-@keyframes lid{0%,62%,100%{transform:none}74%{transform:translateY(-6px) rotate(-9deg)}84%{transform:translateY(-2px) rotate(-3deg)}}
-@keyframes tw{0%,100%{opacity:.15;transform:scale(.5)}50%{opacity:1;transform:scale(1.1) rotate(20deg)}}
 .cf{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;padding:12px 6px 4px}
 .cf b{flex:1 1 auto;font-weight:800;font-size:16px;line-height:1.15;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pr{flex:none;display:inline-flex;align-items:center;gap:4px;height:38px;padding:0 13px;border-radius:999px;background:var(--grad);font-weight:800;font-size:16px;white-space:nowrap;box-shadow:0 6px 16px -8px #6c63ff}
@@ -400,46 +397,11 @@ function renderChips(){$('chips').innerHTML=`<button class="chip ic" id="sbtn" a
   $('sort').onclick=()=>{asc=!asc;renderCases()};$('allnft').onclick=()=>openCatalog();
   $('sbtn').onclick=()=>{$('search').classList.toggle('on');if($('search').classList.contains('on'))$('q').focus()}}
 $('q').oninput=e=>{query=e.target.value.trim().toLowerCase();renderCases()};
-const EM={ // эмблемы на сундуках (рисуются белым в круге)
- star:'<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z"/>',
- coin:'<circle cx="12" cy="12" r="8" fill="none" stroke-width="2.4"/><path d="M12 7.5v9M9.5 9.5h3.8a1.8 1.8 0 0 1 0 3.6h-2.6a1.8 1.8 0 0 0 0 3.6H14" fill="none" stroke-width="2"/>',
- crown:'<path d="M3 8.5l4.5 4 4.5-7 4.5 7 4.5-4-2 10.5H5z"/>',
- snow:'<path d="M12 2.5v19M3.8 7.2l16.4 9.6M3.8 16.8l16.4-9.6M9.5 4l2.5 2.5L14.5 4M9.5 20l2.5-2.5 2.5 2.5" fill="none" stroke-width="2.2" stroke-linecap="round"/>',
- pumpkin:'<path d="M12 7c-5 0-8.5 3-8.5 6.5S7 20 12 20s8.5-3 8.5-6.5S17 7 12 7z"/><path d="M12 7c-.5-2 .5-3.5 2.5-4" fill="none" stroke-width="2" stroke-linecap="round"/>',
- heart:'<path d="M12 20.5S4 15.6 3.2 10.4A4.6 4.6 0 0 1 12 7.6a4.6 4.6 0 0 1 8.8 2.8C20 15.6 12 20.5 12 20.5z"/>',
- candy:'<circle cx="12" cy="12" r="5"/><path d="M7.5 9.5L3 6.5v11l4.5-3M16.5 9.5L21 6.5v11l-4.5-3"/>',
- dollar:'<path d="M12 3v18M16.5 7.5c-1-1.5-2.6-2-4.5-2-2.5 0-4.3 1.3-4.3 3.2 0 4.6 9 2.4 9 6.6 0 2-1.9 3.2-4.6 3.2-2 0-3.8-.7-4.8-2.2" fill="none" stroke-width="2.4" stroke-linecap="round"/>',
- trophy:'<path d="M7 3.5h10v5a5 5 0 0 1-10 0z"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10M17 5h3v1.5A3.5 3.5 0 0 1 16.5 10M12 13.5V17M8 20.5h8M9.5 17h5v3.5h-5z" fill="none" stroke-width="2" stroke-linejoin="round"/>',
- gem:'<path d="M6.5 4h11l4 5.5L12 20.5 2.5 9.5z"/>',
- magic:'<path d="M4 20l10-10M14 4v3M14 13v3M10 8h-3M21 8h-3M16.5 5.5l2-2M9.5 12.5l-2 2" fill="none" stroke-width="2.2" stroke-linecap="round"/>',
- half:'<circle cx="12" cy="12" r="8" fill="none" stroke-width="2.4"/><path d="M12 4a8 8 0 0 1 0 16z"/>',
- gift:'<path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13"/><path d="M12 7C10 3 6.5 3.5 7.5 6M12 7c2-4 5.5-3.5 4.5-1" fill="none" stroke-width="1.8"/>'};
-// [эмблема, основной цвет, тёмный цвет] для каждого кейса; коллекции рисуются из своих NFT
-const ART={'Подарок дня':['gift','#3ee08f','#138a57'],'Мелочь':['coin','#d79a5a','#7a4a20'],'Сдача':['coin','#a9b5d6','#56607e'],'Копилка':['coin','#ff8fb7','#b84a73'],
- 'Заначка':['coin','#5fd1ff','#2a7fb3'],'Кошелёк':['coin','#9b7cff','#4b33b3'],'Сейф':['coin','#ffd23f','#a07400'],
- 'Орёл или решка':['half','#ffc83d','#8a5a00'],'Всё или ничего':['half','#ff6b8a','#8f1f3d'],'Двойной шанс':['half','#6fd3ff','#1f5f9a'],'Ва-банк':['half','#c084ff','#5a2fb3'],
- 'Семья':['crown','#7d8cff','#3542b3'],'Капо':['crown','#a26bff','#5126b0'],'Консильери':['crown','#ff7ab6','#a12d6a'],'Крёстный отец':['crown','#ff6464','#8f1d1d'],
- 'Дон':['crown','#ffb84a','#9a5a00'],'Босс':['crown','#5b5f7a','#20223a'],'Легенда':['crown','#ffe27a','#c07a00'],
- 'Зимний':['snow','#8fdcff','#2f6fd1'],'Хэллоуин':['pumpkin','#ff9a3d','#8a3b10'],'Любовь':['heart','#ff6b9a','#a01f4f'],'Сладкий':['candy','#ffa3dc','#c2459b'],
- 'Westside':['dollar','#5fe39a','#147a45'],'Чемпион':['trophy','#ffd23f','#b37b00'],'Роскошь':['gem','#cfd8ff','#5b68c9'],'Магия':['magic','#c39bff','#5a2fb3']};
-const CAT_ART={free:['gift','#3ee08f','#138a57'],change:['coin','#d79a5a','#7a4a20'],theme:['star','#ff7ad9','#8f2a7a'],fifty:['half','#ffc83d','#8a5a00'],premium:['crown','#ffb84a','#9a5a00']};
-function caseArt(c){const [e,c1,c2]=ART[c.title]||CAT_ART[c.cat]||['star','#8b6cff','#4b33b3'];
-  return `<div class="cov art" style="--gl:${c1}66"><svg viewBox="0 0 120 120" aria-hidden="true">
-  <ellipse cx="60" cy="108" rx="34" ry="5.5" fill="#000" opacity=".4"/>
-  <g class="bx"><rect x="22" y="54" width="76" height="48" rx="11" fill="${c2}"/><rect x="22" y="54" width="76" height="26" rx="11" fill="${c1}" opacity=".55"/>
-  <rect x="26" y="58" width="68" height="40" rx="8" fill="none" stroke="#fff" stroke-opacity=".12"/>
-  <rect x="54" y="54" width="12" height="48" fill="#ffd36b"/><rect x="54" y="54" width="4" height="48" fill="#fff3c0" opacity=".7"/>
-  <g class="lid"><rect x="16" y="38" width="88" height="20" rx="8" fill="${c1}"/><rect x="16" y="38" width="88" height="20" rx="8" fill="${c2}" opacity=".25"/>
-  <rect x="19" y="40" width="82" height="6" rx="3" fill="#fff" opacity=".28"/><rect x="54" y="38" width="12" height="20" fill="#ffd36b"/>
-  <path d="M60 38c-7-13-22-12-18-3 3 5 12 5 18 3zM60 38c7-13 22-12 18-3-3 5-12 5-18 3z" fill="#ffcf4a" stroke="#e29b12" stroke-width="1.5"/><circle cx="60" cy="37" r="4" fill="#ffb81f"/></g>
-  <circle cx="60" cy="80" r="17" fill="#fff"/><circle cx="60" cy="80" r="17" fill="none" stroke="${c2}" stroke-opacity=".35" stroke-width="2"/>
-  <g transform="translate(46.4 66.4) scale(1.13)" fill="${c2}" stroke="${c2}">${EM[e]}</g></g>
-  <path class="sp" d="M20 22l1.6 4.4L26 28l-4.4 1.6L20 34l-1.6-4.4L14 28l4.4-1.6z" fill="#fff"/>
-  <path class="sp s2" d="M100 16l1.2 3.3 3.3 1.2-3.3 1.2-1.2 3.3-1.2-3.3-3.3-1.2 3.3-1.2z" fill="#fff"/>
-  <path class="sp s3" d="M102 64l1 2.7 2.7 1-2.7 1-1 2.7-1-2.7-2.7-1 2.7-1z" fill="${c1}"/></svg></div>`}
-function cover(c){if(c.cat!='coll')return caseArt(c);const n=c.prizes.filter(p=>p.kind=='nft');const ps=[...n].sort((a,b)=>b.stars-a.stars);
-  if(!ps.length)return `<div class="cov" style="--gl:${CAT_GL[c.cat]||'#6c63ff66'}">${COIN}</div>`;
-  const cls=['m','a','b','c','d'];return `<div class="cov" style="--gl:${CAT_GL[c.cat]||'#6c63ff66'}">${ps.slice(0,5).map((p,i)=>`<img class="${cls[i]}" src="${esc(imgOf(p,i?128:256))}" alt="" loading="lazy" decoding="async">`).join('')}</div>`}
+function cover(c){const n=[...c.prizes.filter(p=>p.kind=='nft')].sort((a,b)=>b.stars-a.stars),seen=new Set(),ps=[];
+  for(const p of n){const k=c.cat=='coll'?p.model:p.gift;if(!seen.has(k)){seen.add(k);ps.push(p)}if(ps.length==5)break}
+  const gl=CAT_GL[c.cat]||'#6c63ff66';
+  if(!ps.length)return `<div class="cov" style="--gl:${gl}">${COIN}</div>`;
+  const cls=['m','a','b','c','d'];return `<div class="cov" style="--gl:${gl}"><i class="cg"></i>${ps.map((p,i)=>`<img class="${cls[i]}" src="${esc(imgOf(p,i?128:256))}" alt="" loading="lazy" decoding="async">`).join('')}</div>`}
 let balShown=0;
 function setBal(v){const el=$('balv'),from=balShown;balShown=v;if(from===v){el.textContent=num(v);return}
   const b=$('bal');b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump');const t0=performance.now(),d=600;
