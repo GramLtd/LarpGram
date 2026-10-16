@@ -26,6 +26,8 @@ img{-webkit-user-drag:none;user-select:none}
 .btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:60px;border-radius:999px;background:var(--grad);font:800 18px "Manrope",system-ui,sans-serif;color:#fff;box-shadow:0 10px 30px -10px #6c63ffaa,inset 0 1px 0 #ffffff40;transition:transform .1s,opacity .15s}
 .btn:active{transform:scale(.98)}.btn:disabled{opacity:.45;cursor:default;transform:none}
 .btn.sm{width:auto;height:46px;padding:0 18px;font-size:16px}
+.btn.sm.plus{width:46px!important;padding:0!important;flex:none}.btn.plus svg{width:22px;height:22px}
+.bal{min-width:0}#balv{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .btn.ghost{background:var(--card2);box-shadow:inset 0 1px 0 #ffffff14}
 .btn.green{background:linear-gradient(90deg,#20b56b,#3ee08f);box-shadow:0 10px 30px -12px #3ee08faa}
 .ava{width:46px;height:46px;border-radius:50%;background:var(--card2) center/cover;flex:none;display:grid;place-items:center;font-weight:800;border:2px solid #ffffff1c}
@@ -265,7 +267,7 @@ img{opacity:0;transition:opacity .35s ease}img.ld{opacity:1}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{50%{opacity:.85;transform:scale(1.08)}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@media(max-width:420px){h2{font-size:21px}.logo{font-size:19px}.bal .ch{display:none}.bal{height:42px;font-size:16px;padding-right:12px}.bal .ic{width:30px;height:30px}.btn.sm{height:42px;padding:0 13px;font-size:14px}.ava{width:42px;height:42px}.top{gap:6px}}
+@media(max-width:420px){h2{font-size:21px}.logo{font-size:19px}.bal .ch{display:none}.bal{height:42px;font-size:16px;padding-right:12px}.bal .ic{width:30px;height:30px}.btn.sm{height:42px;padding:0 13px;font-size:14px}.ava{width:42px;height:42px}.top{gap:6px}.btn.sm.plus{width:42px!important}}
 @media(max-width:375px){.logo .full{display:none}.logo .short{display:inline}}
 /* анимации */
 .btn{position:relative;overflow:hidden;isolation:isolate}
@@ -432,7 +434,8 @@ function cover(c){const n=[...c.prizes.filter(p=>p.kind=='nft')].sort((a,b)=>b.s
   if(!ps.length)return `<div class="cov" style="--gl:${gl}">${COIN}</div>`;
   const cls=['m','a','b','c','d'];return `<div class="cov" style="--gl:${gl}"><i class="cg"></i>${ps.map((p,i)=>`<img class="${cls[i]}" src="${esc(imgOf(p,i?128:256))}" alt="" loading="lazy" decoding="async">`).join('')}</div>`}
 let balShown=0;
-function setBal(v){const el=$('balv'),from=balShown;balShown=v;if(from===v){el.textContent=num(v);return}
+function setBal(v){const el=$('balv'),from=balShown;balShown=v;const big=num(v).length>6,t=$('top');
+  if(t.classList.contains('plus')!==big){t.classList.toggle('plus',big);t.innerHTML=big?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>':'Пополнить';t.setAttribute('aria-label','Пополнить')}if(from===v){el.textContent=num(v);return}
   const b=$('bal');b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump');const t0=performance.now(),d=600;
   (function f(t){if(balShown!==v)return;const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3);el.textContent=num(from+(v-from)*e);if(k<1)requestAnimationFrame(f)})(t0)}
 const setHTML=(el,h)=>{if(!el||el._h===h)return false;el._h=h;el.innerHTML=h;return true};
@@ -576,10 +579,12 @@ function winFx(nft,sum){const best=[...nft].sort((a,b)=>b.value-a.value)[0],rest
   ${rest.length||sum?`<div class="wf-more">${rest.map(w=>`<div>${pic(w,128)}${esc(w.gift)} · ${num(w.value)} ${STAR}</div>`).join('')}${sum?`<div>${COIN}+${num(sum)} ${STAR} на баланс</div>`:''}</div>`:''}
   ${nft.some(w=>w.status=='locked')?'<p class="wf-note">Чтобы вывести подарок дня, выполните задания в профиле.</p>':''}
   <div class="wf-b">${nft.some(w=>w.status=='locked')?'<button class="btn" id="wfTask">К заданиям</button>':'<button class="btn" id="wfOk">Забрать в инвентарь</button>'}
+   ${best.story_url?`<button class="btn ghost" id="wfStory"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" stroke-dasharray="4 2.5"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg>Выложить в историю</button>`:''}
    ${ready.length?`<button class="btn ghost" id="wfSell">Продать за ${num(ready.reduce((a,w)=>a+Math.floor(w.value*S.sell_rate),0))} ${STAR}</button>`:''}</div>`;
   fx.classList.add('on');sfx.big();hap('ok');confetti(WC[tier]);
   const close=()=>{fx.classList.remove('on');confetti.stop&&confetti.stop()};
-  const ok=$('wfOk'),tk=$('wfTask'),sl=$('wfSell');
+  const ok=$('wfOk'),tk=$('wfTask'),sl=$('wfSell'),sr=$('wfStory');
+  if(sr)sr.onclick=()=>{try{tg.shareToStory(best.story_url,{text:`Я выиграл ${best.gift} · ${best.model} в GiftMafia 🎁`,widget_link:{url:`https://t.me/${S.bot}`,name:'GiftMafia'}});api(`win/${best.id}/story`,'POST').catch(()=>{})}catch(e){toast('Обновите Telegram, чтобы выкладывать истории')}};
   if(ok)ok.onclick=close;if(tk)tk.onclick=()=>{close();closeCase();openProfile()};
   if(sl)sl.onclick=async()=>{sl.disabled=true;try{let t=0;for(const w of ready)t+=(await api(`win/${w.id}/sell`,'POST')).amount;toast(`+${num(t)} ${STAR} на баланс`);close();await load()}catch(e){toast(e.message);sl.disabled=false}}}
 function confetti(main){confetti.stop&&confetti.stop();if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -852,7 +857,10 @@ function fairInfo(){const g=M.g;sheet(`<h4>Честная игра</h4><p>Исх
   ${g?`<p>Игра #${g.id}: хеш <code>${g.hash}</code></p>${g.seed?`<p>Секрет <code>${esc(g.seed)}</code>, мины <code>${JSON.stringify(g.field)}</code><br>Проверка: sha256("${esc(g.seed)}:${JSON.stringify(g.field).replace(/,/g,', ')}")</p>`:''}`:''}
   <button class="btn" onclick="closeSheet()">Понятно</button>`)}
 $('top').onclick=()=>openTop();$('bal').onclick=()=>openTop();$('ava').onclick=openProfile;
-$('inv').onclick=()=>{const l=`https://t.me/${S.bot}?startapp=r${S.uid}`;tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent('NFT-кейсы, мины и апгрейды в GiftMafia')}`)};
+$('inv').onclick=async()=>{const l=`https://t.me/${S.bot}?startapp=r${S.uid}`,b=$('inv');
+  const plain=()=>tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent('🎁 Забирай NFT-подарки Telegram в GiftMafia! 📦 Кейсы, 💣 мины, 🚀 апгрейды и 🎉 подарок дня бесплатно')}`);
+  if(!tg.isVersionAtLeast||!tg.isVersionAtLeast('8.0'))return plain();
+  b.disabled=true;try{const {id}=await api('invite/prepare','POST');tg.shareMessage(id,ok=>{if(ok){toast('Приглашение отправлено');hap('ok')}})}catch(e){plain()}finally{b.disabled=false}};
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(`https://t.me/${S.bot}?startapp=r${S.uid}`);toast('Ссылка скопирована')}catch(e){toast('Не удалось скопировать')}};
 function afterClose(){if(!$$('.ov.on').length){document.body.style.overflow='';try{tg.BackButton.hide()}catch(e){}}}
 $('winfx').onclick=e=>{if(e.target.id=='winfx'||e.target.id=='wfIn'){$('winfx').classList.remove('on');confetti.stop&&confetti.stop()}};

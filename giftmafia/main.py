@@ -4,7 +4,7 @@ from urllib.parse import parse_qsl
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import (FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle,
+from aiogram.types import (FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultPhoto,
                            InputTextMessageContent, LabeledPrice, WebAppInfo)
 from dotenv import load_dotenv
 from fastapi import Body, Depends, FastAPI, Header, HTTPException
@@ -291,7 +291,9 @@ def roll(case_id):
 def add_win(uid, it, status, source="case", case_id=0):
     wid = run("INSERT INTO wins(user_id,case_id,kind,prize,gift,model,img,value,source,status,created) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
               uid, case_id, it["kind"], it["name"], it["gift"], it["model"], it["img"], it["stars"], source, status, int(time.time()))
-    return q1("SELECT * FROM wins WHERE id=?", wid)
+    w = q1("SELECT * FROM wins WHERE id=?", wid)
+    if w["kind"] == "nft": w["story_url"] = story_url(wid)  # картинка для «Выложить в историю»
+    return w
 
 
 def open_one(uid, case_id, nft_status):
@@ -582,6 +584,23 @@ def story(wid: int, uid: int = Depends(auth)):
     w = own_win(wid, uid)
     if w["status"] == "locked" and not w["story_at"]: run("UPDATE wins SET story_at=? WHERE id=?", int(time.time()), wid)
     return {"ok": True}
+
+
+INVITE_TEXT = ("🎁 <b>Забирай NFT-подарки Telegram в GiftMafia!</b>\n\n"
+               "📦 Кейсы с настоящими NFT\n💣 Мины · 🚀 Апгрейды · 🔴 Плинко\n"
+               "🎉 Подарок дня — бесплатно каждые 24 часа\n⭐ Звёзды за задания и ник\n\n"
+               "👇 Жми кнопку и заходи по моей ссылке")
+
+
+@app.post("/api/invite/prepare")
+async def invite_prepare(uid: int = Depends(auth)):
+    """Готовое сообщение-приглашение: баннер, текст с эмодзи и кнопка с реферальной ссылкой."""
+    link = f"https://t.me/{BOT_USERNAME}?startapp=r{uid}"
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎁 Открыть GiftMafia", url=link, style="primary")]])
+    banner = f"{WEBAPP_URL}/static/banner.jpg"
+    res = InlineQueryResultPhoto(id=f"inv{uid}", photo_url=banner, thumbnail_url=banner, caption=INVITE_TEXT, parse_mode="HTML", reply_markup=kb)
+    pm = await bot.save_prepared_inline_message(user_id=uid, result=res, allow_user_chats=True, allow_group_chats=True, allow_channel_chats=True)
+    return {"id": pm.id, "link": link}
 
 
 @app.post("/api/win/{wid}/prepare")
