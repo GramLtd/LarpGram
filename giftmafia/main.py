@@ -63,11 +63,13 @@ FLOORS = {
 def model_mult(permille):  # редкие модели дороже флора коллекции
     return min(6.0, max(1.0, (20 / max(permille, 1)) ** 0.55))
 
-def model_img(gift, model):
-    return f"https://cdn.changes.tg/gifts/models/{urllib.parse.quote(gift)}/png/{urllib.parse.quote(model)}.png"
+MODELS = {g: dict((m, p) for m, p in c["models"]) for g, c in CATALOG.items()}
+
+def model_img(gift, model, size=256):  # лёгкое превью webp с нашего сервера, см. /img
+    return f"/img/{size}?" + urllib.parse.urlencode({"g": gift, "m": model})
 
 def nft_value(gift, model):
-    perm = dict((m, p) for m, p in CATALOG[gift]["models"]).get(model)
+    perm = MODELS.get(gift, {}).get(model)
     if perm is None: raise HTTPException(404, "Нет такой модели")
     return round(FLOORS.get(gift, DEFAULT_FLOOR) * TON_STARS * model_mult(perm))
 
@@ -160,8 +162,10 @@ def build_cases():
 build_cases()
 # стоимость NFT пересчитывается из FLOORS при каждом старте
 for p in q("SELECT id,gift,model FROM prizes WHERE kind='nft'"):
-    try: run("UPDATE prizes SET stars=? WHERE id=?", nft_value(p["gift"], p["model"]), p["id"])
+    try: run("UPDATE prizes SET stars=?,img=? WHERE id=?", nft_value(p["gift"], p["model"]), model_img(p["gift"], p["model"]), p["id"])
     except HTTPException: pass
+for w in q("SELECT id,gift,model FROM wins WHERE kind='nft' AND img NOT LIKE '/img/%'"):  # старые ссылки на CDN -> превью
+    run("UPDATE wins SET img=? WHERE id=?", model_img(w["gift"], w["model"]), w["id"])
 
 
 def roll(case_id):
@@ -184,19 +188,50 @@ def open_one(uid, case_id, nft_status):
     return add_win(uid, p, nft_status, case_id=case_id)
 
 
-# ---------- картинки для сторис ----------
-os.makedirs("static/cache", exist_ok=True)
+# ---------- картинки моделей ----------
+# Оригиналы PNG качаются один раз с cdn.changes.tg (запасной вариант - api.changes.tg) и хранятся в static/cache,
+# в мини-апп отдаются уменьшенные webp (в 5-10 раз легче), чтобы экраны грузились быстро.
+THUMB_SIZES = (128, 256, 512)
+for d in ("static/cache", *(f"static/cache/t{s}" for s in THUMB_SIZES)): os.makedirs(d, exist_ok=True)
 
 
-def local_img(url):
-    if not url: return ""
-    if url.startswith("/"): return url.lstrip("/")
-    path = f"static/cache/{hashlib.sha1(url.encode()).hexdigest()[:20]}.png"
-    if not os.path.exists(path):
+def _key(gift, model): return hashlib.sha1(f"{gift}\n{model}".encode()).hexdigest()[:24]
+
+
+def _save(path, data):
+    tmp = f"{path}.{os.getpid()}.{secrets.token_hex(4)}.tmp"
+    with open(tmp, "wb") as f: f.write(data)
+    os.replace(tmp, path)
+
+
+def model_png(gift, model):
+    """Путь к оригинальной картинке модели (скачивает при первом обращении) или '' если недоступна."""
+    path = f"static/cache/{_key(gift, model)}.png"
+    if os.path.exists(path): return path
+    g, m = urllib.parse.quote(gift, safe=""), urllib.parse.quote(model, safe="")
+    for url in (f"https://cdn.changes.tg/gifts/models/{g}/png/{m}.png", f"https://api.changes.tg/model/{g}/{m}.png?size=512"):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "giftmafia/1.0"})
-            with urllib.request.urlopen(req, timeout=15) as r, open(path, "wb") as f: f.write(r.read())
-        except Exception: return ""
+            with urllib.request.urlopen(req, timeout=15) as r: _save(path, r.read())
+            return path
+        except Exception: continue
+    return ""
+
+
+def warm_thumbs():  # заранее готовим превью призов кейсов, чтобы первый вход был быстрым
+    for p in q("SELECT DISTINCT gift,model FROM prizes WHERE kind='nft'"):
+        for size in (128, 256):
+            try: model_thumb(p["gift"], p["model"], size)
+            except Exception: pass
+
+
+def model_thumb(gift, model, size):
+    path = f"static/cache/t{size}/{_key(gift, model)}.webp"
+    if os.path.exists(path): return path
+    src = model_png(gift, model)
+    if not src: return ""
+    im = Image.open(src).convert("RGBA"); im.thumbnail((size, size), Image.LANCZOS)
+    out = io.BytesIO(); im.save(out, "WEBP", quality=85, method=4); _save(path, out.getvalue())
     return path
 
 
@@ -223,7 +258,7 @@ def story_image(w):  # сторис 1080x1920 из выигранного NFT
     base.paste((112, 96, 255, 255), (0, 0), glow(W, H, W // 2, 840, 560, 70))
     d = ImageDraw.Draw(base)
     d.text((W // 2, 150), "GiftMafia", font=font(54), fill="#f5f5f7", anchor="mm")
-    img = local_img(w["img"])
+    img = model_png(w["gift"], w["model"]) if w["gift"] else ""
     if img: put_nft(base, img, 640, W // 2, 840)
     d.text((W // 2, 1290), w["gift"] or w["prize"], font=font(84), fill="#f5f5f7", anchor="mm")
     d.text((W // 2, 1390), w["model"] or "выигрыш в GiftMafia", font=font(44, False), fill="#a7a9c9", anchor="mm")
@@ -243,7 +278,7 @@ def make_banner():  # баннер для /start в стиле мини-аппа
     d.rounded_rectangle((90, 430, 400, 510), 40, fill="#6c63ff")
     d.text((245, 470), "Играть", font=font(32), fill="#ffffff", anchor="mm")
     d.rounded_rectangle((740, 80, 1120, 560), 44, fill="#23243b", outline="#34365a", width=3)
-    img = local_img(model_img("Plush Pepe", CATALOG["Plush Pepe"]["models"][0][0])) if "Plush Pepe" in CATALOG else ""
+    img = model_png("Plush Pepe", CATALOG["Plush Pepe"]["models"][0][0]) if "Plush Pepe" in CATALOG else ""
     if img: put_nft(base, img, 300, 930, 320)
     base.convert("RGB").save("static/banner.jpg", quality=92)
 
@@ -326,6 +361,7 @@ async def lifespan(_):
     global BOT_USERNAME
     BOT_USERNAME = (await bot.get_me()).username
     await asyncio.to_thread(make_banner)
+    warm = asyncio.create_task(asyncio.to_thread(warm_thumbs))
     t = asyncio.create_task(dp.start_polling(bot))
     yield
     t.cancel()
@@ -583,6 +619,14 @@ def a_stats():
             "requested": q1("SELECT COUNT(*) n FROM wins WHERE status='requested'")["n"],
             "sent": q1("SELECT COUNT(*) n FROM wins WHERE status='sent'")["n"],
             "mines": q1("SELECT COALESCE(SUM(bet),0)-COALESCE(SUM(payout),0) n FROM mines WHERE status!='live'")["n"]}
+
+
+@app.get("/img/{size}")
+def img(size: int, g: str, m: str):
+    if size not in THUMB_SIZES or m not in MODELS.get(g, {}): raise HTTPException(404)
+    path = model_thumb(g, m, size)
+    if not path: raise HTTPException(404)
+    return FileResponse(path, media_type="image/webp", headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 @app.get("/admin")
