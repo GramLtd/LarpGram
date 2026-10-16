@@ -50,21 +50,33 @@ bot = Bot(TOKEN)
 import html as _html
 from aiogram.client.session.middlewares.base import BaseRequestMiddleware
 from aiogram.methods import EditMessageCaption, EditMessageText, SavePreparedInlineMessage, SendMessage, SendPhoto, SendVideo
-CE = {}  # обычный эмодзи (без FE0F) -> custom_emoji_id
+CE = {}  # обычный эмодзи (без FE0F) -> custom_emoji_id (из набора + ручные сопоставления emoji_alias)
+PACK = []  # иконки набора для админки: {emoji, id, thumb}
 _CE_RE = None
+_ce_loaded = 0
 
 
 def _bare(e): return e.replace("\ufe0f", "")
 
 
+def emoji_alias():
+    """Ручные сопоставления из админки: эмодзи в тексте -> custom_emoji_id иконки набора."""
+    try: return {_bare(k): v for k, v in json.loads(setting("emoji_alias") or "{}").items() if v}
+    except Exception: return {}
+
+
 async def load_emoji():
-    global _CE_RE
+    global _CE_RE, _ce_loaded
     try: st = await bot.get_sticker_set(setting("emoji_set"))
-    except Exception as e: print("emoji set:", e); return 0
-    m = {}
+    except Exception as e: print("emoji set:", e); _ce_loaded = int(time.time()); return 0
+    m, PACK[:] = {}, []
     for s in st.stickers:
-        if s.custom_emoji_id and s.emoji: m.setdefault(_bare(s.emoji), s.custom_emoji_id)
-    CE.clear(); CE.update(m)
+        if not s.custom_emoji_id: continue
+        PACK.append({"emoji": s.emoji or "", "id": s.custom_emoji_id, "thumb": (s.thumbnail or s).file_id})
+        if s.emoji: m.setdefault(_bare(s.emoji), s.custom_emoji_id)
+    ids = {p["id"] for p in PACK}
+    m.update({k: v for k, v in emoji_alias().items() if v in ids})  # ручные сопоставления важнее
+    CE.clear(); CE.update(m); _ce_loaded = int(time.time())
     _CE_RE = re.compile("(" + "|".join(re.escape(k) + "\ufe0f?" for k in sorted(CE, key=len, reverse=True)) + ")") if CE else None
     print(f"emoji set {st.name}: {len(CE)} -", " ".join(CE)); return len(CE)
 
@@ -93,6 +105,10 @@ class EmojiMiddleware(BaseRequestMiddleware):
         if CE:
             try:
                 tgt = method.result if isinstance(method, SavePreparedInlineMessage) else method
+                imc = getattr(tgt, "input_message_content", None)
+                if isinstance(imc, InputTextMessageContent) and isinstance(imc.message_text, str):  # «поделиться выигрышем»
+                    if imc.parse_mode != "HTML": imc.message_text = _html.escape(imc.message_text, quote=False); imc.parse_mode = "HTML"
+                    if not imc.entities: imc.message_text = ce(imc.message_text)
                 attr = "text" if isinstance(method, (SendMessage, EditMessageText)) else "caption" if isinstance(tgt, (SendPhoto, SendVideo, EditMessageCaption, InlineQueryResultPhoto)) else None
                 v = getattr(tgt, attr, None) if attr else None
                 if isinstance(v, str):
@@ -254,6 +270,7 @@ SETTINGS_DEFAULT = {
     "cm_max": "300",                           # скриншотов в день на человека
     "cm_chat": "",                             # id чата модерации (пусто = ADMIN_CHAT_ID)
     "emoji_set": "GiftMafiaNFT",               # набор премиум-эмодзи для текстов бота (t.me/addemoji/ИМЯ)
+    "emoji_alias": "{}",                       # ручные сопоставления: {"🚀": "<custom_emoji_id>"}
     "stats_exclude": "@IbuyBalenciaga",        # аккаунты, которые не учитываются в дашборде и статистике (через запятую)
     "stats_since": "0",                        # статистика админки считается с этого момента (unix-время), кнопка «Сбросить»
 }
@@ -999,6 +1016,7 @@ async def pay_loop():  # фоновые проверки оплат + напом
             if XROCKET_KEY:
                 for u, st, bo in await check_xrocket(): await notify_deposit(u, st, bo, "xRocket")
             await free_notify()
+            if time.time() - _ce_loaded > 1800: await load_emoji()  # набор обновили в @Stickers - подхватим за 30 минут
         except Exception as e: print("pay loop:", e)
         await asyncio.sleep(30)
 
@@ -1248,7 +1266,9 @@ async def a_cm_file(f: str, t: str = ""):
     if f not in _tg_files: _tg_files[f] = (await bot.get_file(f)).file_path
     url = f"https://api.telegram.org/file/bot{TOKEN}/{_tg_files[f]}"
     data = await asyncio.to_thread(lambda: urllib.request.urlopen(url, timeout=20).read())
-    return Response(data, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
+    ext = _tg_files[f].rsplit(".", 1)[-1].lower()
+    return Response(data, media_type={"webp": "image/webp", "png": "image/png", "webm": "video/webm", "tgs": "application/octet-stream"}.get(ext, "image/jpeg"),
+                    headers={"Cache-Control": "private, max-age=86400"})
 
 
 # ---------- мины ----------
@@ -1754,11 +1774,28 @@ USER_COLS = ("SELECT u.id,u.username,u.name,u.balance,u.created,u.last_seen,u.ut
              "(SELECT COUNT(*) FROM bets b WHERE b.user_id=u.id AND b.game!='free') games FROM users u")
 
 
+def bot_emoji():
+    """Все эмодзи, которые встречаются в текстах бота (из этого файла)."""
+    src = open(__file__, encoding="utf-8").read()
+    return sorted({_bare(x) for x in re.findall(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\u2B50\u2B06\u231B\u23F3\u2194-\u21AA]\ufe0f?", src)} - {"\u2014"})
+
+
 @app.get("/api/admin/emoji", dependencies=[Depends(admin)])
 async def a_emoji(reload: int = 0):
-    if reload: await load_emoji()
-    used = sorted({_bare(x) for x in re.findall(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\u2B50\u231B\u23F3]\ufe0f?", open(__file__, encoding="utf-8").read())})
-    return {"set": setting("emoji_set"), "map": CE, "missing": [e for e in used if e not in CE]}
+    if reload or not PACK: await load_emoji()
+    al = emoji_alias()
+    return {"set": setting("emoji_set"), "loaded": _ce_loaded, "pack": PACK, "alias": al,
+            "used": [{"emoji": e, "id": CE.get(e), "manual": e in al} for e in bot_emoji()]}
+
+
+@app.post("/api/admin/emoji_alias", dependencies=[Depends(admin)])
+async def a_emoji_alias(b: dict):
+    al = emoji_alias(); e = _bare(b.get("emoji", ""))
+    if not e: raise HTTPException(400, "Нет эмодзи")
+    if b.get("id"): al[e] = str(b["id"])
+    else: al.pop(e, None)
+    run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:emoji_alias',?)", json.dumps(al, ensure_ascii=False))
+    await load_emoji(); return {"ok": True}
 
 
 @app.post("/api/admin/stats/reset", dependencies=[Depends(admin)])

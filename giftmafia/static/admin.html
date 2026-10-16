@@ -93,6 +93,13 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .shots{display:flex;gap:8px;overflow-x:auto;margin-top:12px;padding-bottom:4px}.shots img{height:180px;border-radius:12px;border:1px solid var(--line);display:block}
 .cmrep .acts{flex-wrap:wrap}
 .rst{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:12px 16px}.rst span{flex:1;min-width:180px;color:var(--mut);font-size:14px}
+.epk{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.epk span,.epk button{position:relative;width:52px;height:52px;border-radius:12px;background:#ffffff0d;display:grid;place-items:center}
+.epk img{width:40px;height:40px;object-fit:contain}.epk i{position:absolute;right:2px;bottom:0;font-style:normal;font-size:13px}
+.epk.big button{width:64px;height:64px}.epk.big img{width:50px;height:50px}.epk.big button:hover{background:#ffffff26}
+.eus{display:grid;gap:6px;margin-top:8px}.eu{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:12px;background:#ffffff08}
+.eu b{font-size:22px;width:30px;text-align:center}.eu span{color:var(--mut)}.eu img{width:32px;height:32px;object-fit:contain}.eu em{color:var(--mut);font-style:normal;font-size:13px;flex:1}
+.eu img+small,.eu img+button{margin-left:auto}.eu small{color:var(--gold);font-size:12px}.eu .btn{margin-left:auto}.eu small+.btn{margin-left:8px}.eu.no{background:#ffc83d12}
+.epick{position:fixed;inset:0;z-index:50;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}.epick .card{max-width:520px;width:100%;max-height:80vh;overflow:auto}
 </style></head><body>
 <div id="app"></div><div id="toast" role="status"></div>
 <script>
@@ -287,6 +294,22 @@ async function renderCmAdmin(){const M=$('main');let d;try{d=await api('cm?statu
   $$('[data-ca]',M).forEach(b=>b.onclick=()=>act(api(`cm/${b.dataset.r}/${b.dataset.ca}`,'POST'),b.dataset.ca=='no'?'Отклонено':'Зачтено',renderCmAdmin));
   $('cOn').onclick=()=>$('cOn').classList.toggle('on');
   $('cSave').onclick=()=>act(api('settings','POST',{cm_on:$('cOn').classList.contains('on')?'1':'0',cm_rate:$('cRate').value,cm_img_bonus:$('cImg').value,cm_mention:$('cMen').value,cm_tags:$('cTag').value,cm_max:$('cMax').value,cm_chat:$('cChat').value}),'Сохранено',renderCmAdmin)}
+/* ---------- премиум-эмодзи ---------- */
+const efile=f=>`/api/admin/cm_file?f=${encodeURIComponent(f)}&t=${encodeURIComponent(T)}`;
+async function renderEmoji(reload){const el=$('emInfo');if(!el)return;let e;try{e=await api('emoji'+(reload?'?reload=1':''))}catch(x){el.textContent='Не удалось загрузить: '+x.message;return}
+  const byId=Object.fromEntries(e.pack.map(p=>[p.id,p])),miss=e.used.filter(u=>!u.id);
+  el.innerHTML=`<b>Набор «${esc(e.set)}»: ${e.pack.length} иконок</b>${e.loaded?` <small style="color:var(--mut)">· обновлён ${new Date(e.loaded*1000).toLocaleTimeString('ru-RU')}</small>`:''}
+   ${e.pack.length?`<div class="epk">${e.pack.map(p=>`<span title="${esc(p.emoji)}"><img src="${efile(p.thumb)}" alt="" loading="lazy"><i>${esc(p.emoji)}</i></span>`).join('')}</div>`:'<p style="color:var(--bad);margin-top:8px">Набор не загрузился. Проверьте имя набора и что бот запущен.</p>'}
+   <p style="margin-top:12px;font-weight:800">Эмодзи в текстах бота ${miss.length?`<span style="color:var(--gold)">· без иконки: ${miss.length}</span>`:'<span style="color:var(--ok)">· все с иконками</span>'}</p>
+   <p style="color:var(--mut);font-size:13px">Бот берёт у каждой иконки только первый эмодзи, указанный в @Stickers. Если эмодзи из текста не совпал — выберите иконку вручную.</p>
+   <div class="eus">${e.used.map(u=>{const p=u.id&&byId[u.id];return `<div class="eu ${u.id?'':'no'}"><b>${esc(u.emoji)}</b><span>→</span>${p?`<img src="${efile(p.thumb)}" alt="">`:'<em>обычный</em>'}${u.manual?'<small>вручную</small>':''}
+     <button class="btn ghost sm" data-ep="${esc(u.emoji)}">${u.id?'Изменить':'Выбрать'}</button>${u.manual?`<button class="x" data-er="${esc(u.emoji)}" aria-label="Сбросить">×</button>`:''}</div>`}).join('')}</div>
+   <button class="btn ghost sm" id="emRe" type="button" style="margin-top:12px">Обновить набор</button>`;
+  $('emRe').onclick=()=>{el.innerHTML='Загрузка…';renderEmoji(1)};
+  $$('[data-er]',el).forEach(b=>b.onclick=()=>act(api('emoji_alias','POST',{emoji:b.dataset.er,id:''}),'Сопоставление сброшено',()=>renderEmoji()));
+  $$('[data-ep]',el).forEach(b=>b.onclick=()=>{const em=b.dataset.ep,box=document.createElement('div');box.className='epick';
+    box.innerHTML=`<div class="card"><p style="font-weight:800;margin-bottom:10px">Какой иконкой показывать ${esc(em)}?</p><div class="epk big">${e.pack.map(p=>`<button data-id="${p.id}"><img src="${efile(p.thumb)}" alt=""><i>${esc(p.emoji)}</i></button>`).join('')}</div><button class="btn ghost sm" style="margin-top:12px">Отмена</button></div>`;
+    document.body.appendChild(box);box.onclick=ev=>{const t=ev.target.closest('[data-id]');if(t)act(api('emoji_alias','POST',{emoji:em,id:t.dataset.id}),'Сохранено',()=>renderEmoji());if(t||ev.target==box||ev.target.matches('.btn'))box.remove()}})}
 const KIND={channel:'Подписка на канал',bot:'Запустить бота',story:'Сторис',link:'Перейти по ссылке'};
 async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks')}catch(e){return toast(e.message)}const st=d.settings;
   M.innerHTML=`<h2>Настройки</h2><div class="card set">
@@ -317,8 +340,7 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
   $('sFn').onclick=()=>$('sFn').classList.toggle('on');
   $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value,
     ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value,emoji_set:$('sEm').value}),'Настройки сохранены',async()=>{await api('emoji?reload=1');renderTasksAdmin()});
-  api('emoji').then(e=>{$('emInfo').innerHTML=`Загружено эмодзи: <b>${Object.keys(e.map).length}</b> ${Object.keys(e.map).join(' ')}<br><small style="color:var(--mut)">${e.missing.length?'Нет в наборе (останутся обычными): '+e.missing.join(' '):'Все эмодзи из текстов бота есть в наборе'}</small> <button class="btn ghost sm" id="emRe" type="button" style="margin-top:8px">Обновить набор</button>`;
-    $('emRe').onclick=()=>act(api('emoji?reload=1'),'Набор обновлён',renderTasksAdmin)}).catch(()=>{$('emInfo').textContent='Не удалось загрузить информацию'});
+  renderEmoji();
   $('nAdd').onclick=()=>act(api('task','POST',{kind:$('nK').value,title:$('nT').value,target:$('nTg').value,reward:$('nR').value}),'Задание добавлено',renderTasksAdmin);
   $$('[data-trw]').forEach(i=>i.onchange=()=>act(api(`task/${i.dataset.trw}`,'PATCH',{reward:i.value}),'Награда сохранена',renderTasksAdmin));
   $$('[data-ton]').forEach(b=>b.onclick=()=>act(api(`task/${b.dataset.ton}`,'PATCH',{active:!b.classList.contains('on')}),b.classList.contains('on')?'Задание выключено':'Задание включено',renderTasksAdmin));
