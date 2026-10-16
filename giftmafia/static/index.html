@@ -629,15 +629,15 @@ const CMI='<svg viewBox="0 0 96 96"><defs><linearGradient id="cmB" x1="0" y1="0"
 function renderEarn(){$('nickBox').hidden=esec!='nick';$('cmBox').hidden=esec!='cm';moveLens($('esw'));if(esec=='nick')renderNick();else renderCm()}
 $$('#esw button').forEach(b=>b.onclick=()=>{esec=b.dataset.e;$$('#esw button').forEach(x=>x.classList.toggle('on',x==b));hap();renderEarn()});
 function renderCm(){const c=S?.cm;if(!c)return;
-  const pay=n=>c.rate*n*(1+cm_tier(c,n)/100),mx=c.rate*c.max*(1+c.img_bonus/100)*(1+cm_tier(c,c.max)/100);
+  const pay=n=>c.rate*n*(1+cm_tier(c,n)/100);
   const nx=c.tiers.find(([k])=>c.today<k),pr=nx?Math.min(100,c.today/nx[0]*100):100;
   setHTML($('cmBox'),`<div class="card cmh"><div class="cmi">${CMI}</div><h3>Напиши коммент</h3>
-    <div class="cmu">до <b>${price(mx)}</b> в день</div><p>За комментарии с <b>${esc(c.mention)}</b> под видео в TikTok и в больших Telegram-чатах</p></div>
+    <div class="cmu">до <b>${price(1000)}</b> в день</div><p>За комментарии с <b>${esc(c.mention)}</b> под видео в TikTok и в больших Telegram-чатах</p></div>
    ${c.on?'':'<p class="maxw" style="justify-content:center;color:var(--gold)">Программа временно на паузе</p>'}
    <div class="card cmst"><div><small>Сегодня зачтено</small><b>${num(c.today)}</b></div><div><small>На проверке</small><b>${num(c.pending)}</b></div><div><small>Заработано</small><b>${price(c.earned)}</b></div>
     <div class="cmp"><i style="width:${pr}%"></i></div><small class="cmpl">${nx?`До бонуса +${nx[1]}%: ещё ${num(nx[0]-c.today)}`:`Максимальный бонус дня +${c.tier}%`}${c.tier?` · сейчас +${c.tier}%`:''}</small></div>
    <div class="card cmr">${[10,100,1000].map(n=>`<div class="line"><span>${num(n)} ${plural(n,'комментарий','комментария','комментариев')}</span><b>${price(pay(n))}</b></div>`).join('')}
-    <div class="line"><span>С нашей картинкой</span><b>+${c.img_bonus}%</b></div>
+    <div class="line"><span style="display:flex;align-items:center;gap:10px"><img src="/static/cm_pic.jpg" alt="" style="width:40px;height:40px;border-radius:10px;object-fit:cover">С нашей картинкой</span><b>+${c.img_bonus}%</b></div>
     <p class="mut" style="margin-top:6px">Бонус дня: ${c.tiers.map(([k,p])=>`от ${num(k)} +${p}%`).join(' · ')}. Счёт обнуляется в 00:00 МСК</p></div>
    ${['Пишите комментарии с <b>'+esc(c.mention)+'</b> под видео в TikTok с '+esc(c.tags)+' или в открытых Telegram-чатах от 2 000 участников',
       'Делайте скриншот: должны быть видны ваш ник и текст комментария','Присылайте скриншоты в бота — можно альбомом до 10 штук',

@@ -1127,7 +1127,7 @@ async def cm_start_msg(m):
 
 @dp.callback_query(F.data == "cmimg")
 async def cm_img(c):
-    await c.message.answer_photo(FSInputFile("static/banner.jpg"), caption="Прикрепляйте эту картинку к комментарию — получите +%s%%." % setting("cm_img_bonus"))
+    await c.message.answer_photo(FSInputFile("static/cm_pic.jpg"), caption="Прикрепляйте эту картинку к комментарию — получите +%s%%." % setting("cm_img_bonus"))
     await c.answer()
 
 
