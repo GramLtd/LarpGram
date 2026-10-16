@@ -678,7 +678,9 @@ function renderCm(){const c=S?.cm;if(!c)return;
       'После проверки ⭐ приходят на баланс. Повторы и чужие скрины не засчитываются'].map((t,i)=>`<div class="card cms"><span>${i+1}</span><p>${t}</p></div>`).join('')}
    <button class="btn tgb" id="cmGo">${TGI.replace('<svg','<svg width="22" height="22"')}Отправить скриншоты</button>
    <p class="maxw" style="justify-content:center">Лимит ${num(c.max)} скриншотов в день</p>`);
-  $('cmGo').onclick=()=>tg.openTelegramLink(`https://t.me/${S.bot}?start=cm`)}
+  $('cmGo').onclick=async()=>{const b=$('cmGo');b.disabled=true;hap();let link=`https://t.me/${S.bot}`;
+    try{if(!(await api('cm/open','POST')).sent)link+='?start=cm'}catch(e){link+='?start=cm'}
+    tg.openTelegramLink(link);setTimeout(()=>{try{tg.close()}catch(e){}b.disabled=false},350)}}
 const cm_tier=(c,n)=>Math.max(0,...c.tiers.filter(([k])=>n>=k).map(([,p])=>p));
 
 /* ---------- ник ---------- */

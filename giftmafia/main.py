@@ -1300,11 +1300,12 @@ async def cm_cb(c):
     await c.answer("Готово"); await cm_notify(r, act, reward)
 
 
-async def cm_start_msg(m):
-    st = cm_state(m.from_user.id)
+async def cm_start_msg(m, uid=None):
+    """Правила программы. m - входящее сообщение (/start cm) или None, тогда пишем в чат uid."""
+    st = cm_state(uid or m.from_user.id)
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🖼 Наша картинка (+%d%%)" % st["img_bonus"], callback_data="cmimg", style="primary")],
                                                [InlineKeyboardButton(text="📊 Мой заработок", web_app=WebAppInfo(url=WEBAPP_URL + "?go=earn"), style="success")]])
-    await m.answer(
+    await (m.answer if m else functools.partial(bot.send_message, uid))(
         f"💬 <b>Платим за комментарии</b> с {E(setting('cm_mention'))}\n\n"
         f"✈️ <b>Где писать</b>\n<blockquote>• TikTok — под видео с {E(setting('cm_tags'))}\n• Telegram — в открытых чатах от 2 000 участников</blockquote>\n\n"
         f"⭐ <b>Сколько платим</b>\n<blockquote>• <b>{st['rate']:g}</b> ⭐ за комментарий\n• С нашей картинкой <b>+{st['img_bonus']}%</b>\n• Выплата на баланс GiftMafia</blockquote>\n\n"
@@ -1312,6 +1313,13 @@ async def cm_start_msg(m):
         f"📥 <b>Как отправить</b>\n<blockquote>Присылайте сюда скриншоты своих комментариев — можно альбомом до 10 штук.\n"
         f"На скриншоте должны быть видны ваш ник и текст с {E(setting('cm_mention'))}.</blockquote>\n\n<i>1 скриншот = 1 комментарий, повторы не засчитываются</i>",
         parse_mode="HTML", reply_markup=kb)
+
+
+@app.post("/api/cm/open")
+async def cm_open(uid: int = Depends(auth)):
+    """Кнопка «Отправить скриншоты»: бот присылает правила в чат, мини-апп закрывается и открывается чат с ботом."""
+    try: await cm_start_msg(None, uid); return {"sent": True}
+    except Exception: return {"sent": False}  # пользователь ещё не запускал бота - откроем ссылку со стартом
 
 
 @dp.callback_query(F.data == "cmimg")
