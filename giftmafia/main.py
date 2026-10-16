@@ -30,6 +30,7 @@ MINES_MAX_WIN = 181818  # максимум выплаты за раунд мин
 UPGRADE_EDGE = 0.9  # шанс апгрейда = стоимость источника / стоимость цели * EDGE
 UPGRADE_MAX_CHANCE = 0.8
 CELLS = 25
+TOPUP_MIN, TOPUP_MAX = 1, 10000  # пополнение на любую сумму в этих пределах, ⭐
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
@@ -296,9 +297,16 @@ def own_win(wid, uid):
 # ---------- bot ----------
 @dp.message(CommandStart())
 async def start(m):
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Открыть GiftMafia", web_app=WebAppInfo(url=WEBAPP_URL))]])
-    await m.answer_photo(FSInputFile("static/banner.jpg"), caption="GiftMafia\nNFT-кейсы, мины и апгрейды. Подарок дня — бесплатно.\n\n"
-                         "Каталог NFT: thanks to @GiftChanges for the API", reply_markup=kb)
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎁 Открыть GiftMafia", web_app=WebAppInfo(url=WEBAPP_URL), style="primary")],
+        [InlineKeyboardButton(text="🎉 Подарок дня бесплатно", web_app=WebAppInfo(url=WEBAPP_URL), style="success")]])
+    await m.answer_photo(FSInputFile("static/banner.jpg"), caption=(
+        "🎩 <b>GiftMafia</b>\n\n"
+        "📦 NFT-кейсы с подарками Telegram\n"
+        "💣 Мины и 🚀 апгрейды\n"
+        "🎁 Подарок дня — бесплатно каждые 24 часа\n"
+        "👥 Приглашай друзей и получай ⭐\n\n"
+        "<i>Каталог NFT: thanks to @GiftChanges for the API</i>"), parse_mode="HTML", reply_markup=kb)
 
 
 @dp.pre_checkout_query()
@@ -341,7 +349,7 @@ def state(uid: int = Depends(auth)):
             "inventory": inventory(uid), "balance": u["balance"], "mines": mines_view(g) if g else None,
             "refs": q1("SELECT COUNT(*) n FROM users WHERE ref_by=?", uid)["n"], "ref_earned": u["ref_earned"],
             "ref_bonus": REF_BONUS, "ref_percent": REF_PERCENT, "uid": uid, "need": FRIENDS_REQUIRED, "bot": BOT_USERNAME,
-            "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "upgrade_max": UPGRADE_MAX_CHANCE}
+            "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX, "upgrade_max": UPGRADE_MAX_CHANCE}
 
 
 @app.get("/api/catalog")
@@ -358,7 +366,7 @@ def free(uid: int = Depends(auth)):
 
 @app.post("/api/topup/{amount}")
 async def topup(amount: int, uid: int = Depends(auth)):
-    if amount not in (50, 100, 250, 500, 1000, 2500): raise HTTPException(400, "Неверная сумма")
+    if not TOPUP_MIN <= amount <= TOPUP_MAX: raise HTTPException(400, f"Сумма от {TOPUP_MIN} до {TOPUP_MAX} ⭐")
     link = await bot.create_invoice_link(title="Пополнение баланса", description=f"{amount} ⭐ на баланс GiftMafia", payload=f"top:{amount}",
                                          currency="XTR", prices=[LabeledPrice(label="Пополнение", amount=amount)])
     return {"link": link}

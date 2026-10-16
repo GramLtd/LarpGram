@@ -91,8 +91,8 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .pc em{font-style:normal;font-weight:800;font-size:16px;display:flex;align-items:center;gap:4px;margin-top:6px}
 .pc .ch{position:absolute;top:8px;right:9px;font-size:11px;color:#ffffffb0;font-weight:700}
 /* оверлеи */
-.ov{position:fixed;inset:0;background:var(--bg);z-index:20;overflow-y:auto;display:none;padding:0 16px calc(40px + env(safe-area-inset-bottom,0px))}
-.ov.on{display:block;animation:up .22s ease-out}.ov.z2{z-index:25}.ov.z3{z-index:28}
+.ov{position:fixed;left:0;right:0;top:0;height:var(--tg-viewport-height,100vh);background:var(--bg);z-index:20;overflow-y:auto;display:none;padding:0 16px calc(40px + env(safe-area-inset-bottom,0px))}
+.ov.on{display:block;animation:up .22s ease-out}.ov.z2{z-index:25}.ov.z3{z-index:28}.ov.z4{z-index:30}
 .ovi{max-width:520px;margin:auto}
 @keyframes up{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
 .bar{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:12px;padding:12px 0;background:var(--bg)}
@@ -156,9 +156,14 @@ h2 small{font:700 15px "Manrope";color:var(--mut);white-space:nowrap}
 .empty{color:var(--mut);padding:14px 2px}
 .credit{color:#6f7194;font-size:12px;text-align:center;margin-top:22px}.credit a{color:#8f92bb}
 /* шторки */
-.sheet{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;z-index:40}
-.sheet>div{background:var(--bg2);border-top:1px solid var(--line);border-radius:30px 30px 0 0;width:100%;max-width:520px;margin:auto;padding:22px 18px calc(22px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow-y:auto;animation:up .2s}
+.sheet{position:fixed;left:0;right:0;top:0;height:var(--tg-viewport-height,100vh);background:#0008;display:none;align-items:flex-end;z-index:40}
+.sheet>div{background:var(--bg2);border-top:1px solid var(--line);border-radius:30px 30px 0 0;width:100%;max-width:520px;margin:auto;padding:22px 18px calc(22px + env(safe-area-inset-bottom,0px));max-height:calc(var(--tg-viewport-height,100vh) - 40px);overflow-y:auto;animation:up .2s}
 .sheet h4{font:800 22px "Unbounded",system-ui;margin-bottom:12px}.sheet p{color:var(--mut);margin-bottom:10px;font-weight:600}
+.amt{margin-top:16px;display:flex;align-items:center;gap:12px;height:76px;padding:0 20px;border-radius:24px;background:var(--card);border:1.5px solid var(--line)}
+.amt:focus-within{border-color:var(--acc1);box-shadow:0 0 0 4px #5a6cff26}.amt svg{width:30px;height:30px}
+.amt input{flex:1;min-width:0;background:none;border:0;outline:0;color:#fff;font:800 32px "Unbounded",system-ui}.amt input::placeholder{color:#55577a}
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.presets button{height:50px;border-radius:16px;background:var(--card);border:1px solid var(--line);font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:5px}
+.presets button.on{background:var(--grad);border-color:transparent}
 .tops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.tops button{height:58px;border-radius:18px;background:var(--card2);border:1px solid var(--line);font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;gap:5px}
 .wins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:6px 0 16px}
 code{font:12px ui-monospace,monospace;word-break:break-all;color:#c9cbe4}
@@ -206,6 +211,7 @@ code{font:12px ui-monospace,monospace;word-break:break-all;color:#c9cbe4}
 
 <div class="ov" id="ovCase"><div class="ovi" id="caseIn"></div></div>
 <div class="ov z2" id="ovProf"><div class="ovi" id="profIn"></div></div>
+<div class="ov z4" id="ovTop"><div class="ovi" id="topIn"></div></div>
 <div class="ov z3" id="ovCat"><div class="ovi" id="catIn"></div></div>
 <div class="sheet" id="sheet"><div id="sheetIn"></div></div><div id="toast" role="status"></div>
 
@@ -246,9 +252,13 @@ const mult=pm=>Math.min(6,Math.max(1,Math.pow(20/Math.max(pm,1),.55)));
 const nftVal=(g,pm)=>Math.round((FL[g]??4.5)*TS*mult(pm));
 const isFree=c=>c.price==0;
 /* звук */
-let AC;function beep(f=660,d=.06,type='sine',v=.05){if(!sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
-const chime=()=>{[523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.18,'triangle',.06),i*90))};
-const boom=()=>beep(90,.35,'sawtooth',.08);
+let AC;const ac=()=>{try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume();return AC}catch(e){return null}};
+function tone(f,{d=.12,v=.05,at=0,to=0}={}){if(!sound)return;const a=ac();if(!a)return;const t=a.currentTime+at,o=a.createOscillator(),g=a.createGain();
+  o.type='sine';o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+d);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+.02)}
+const SCALE=[0,2,4,7,9,12,14,16,19,21,24];
+const sfx={tick:()=>tone(1400,{d:.03,v:.015}),pop:n=>tone(523.25*Math.pow(2,SCALE[Math.min(n,SCALE.length-1)]/12),{d:.16,v:.04}),
+  win:()=>[523.25,659.25,783.99].forEach((f,i)=>tone(f,{d:.4,v:.035,at:i*.08})),lose:()=>tone(240,{d:.3,v:.04,to:120})};
 
 /* ---------- вкладки ---------- */
 function setTab(t){tab=t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));
@@ -315,11 +325,12 @@ CaseView.prototype.spin=async function(wins){const pool=this.c.prizes,N=44,AT=N-
   strips.forEach((st,i)=>{const w=wins[i],items=[...Array(N)].map(()=>pool[Math.random()*pool.length|0]);items[AT]={...w,stars:w.value};
     st.innerHTML=items.map(p=>this.card(p)).join('');st.style.transition='none';st.style.transform='translateX(0)'});
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-  let ticks=0;const tick=setInterval(()=>{if(ticks++<(fast?10:26))beep(900+Math.random()*200,.03,'square',.02)},fast?110:150);
   strips.forEach((st,i)=>{const w=st.children[0].offsetWidth+10,jit=(Math.random()-.5)*w*.6,off=AT*w+w/2-st.parentElement.clientWidth/2+5+jit;
     st.style.transition=`transform ${(dur+i*250)/1000}s cubic-bezier(.08,.6,.08,1)`;st.style.transform=`translateX(${-off}px)`});
-  await new Promise(r=>setTimeout(r,dur+wins.length*250+100));clearInterval(tick);
-  strips.forEach(st=>st.children[AT].classList.add('hit'));chime();hap('ok')};
+  let run=true,last=-1;const st0=strips[0],w0=st0.children[0].offsetWidth+10,cx=st0.parentElement.clientWidth/2;
+  (function tk(){if(!run)return;const x=new DOMMatrixReadOnly(getComputedStyle(st0).transform).m41,k=Math.floor((cx-x)/w0);if(k!=last){if(last>=0)sfx.tick();last=k}requestAnimationFrame(tk)})();
+  await new Promise(r=>setTimeout(r,dur+wins.length*250+100));run=false;
+  strips.forEach(st=>st.children[AT].classList.add('hit'));sfx.win();hap('ok')};
 CaseView.prototype.go=async function(){const c=this.c;if(this.spinning)return;
   try{let wins;
     if(isFree(c)){this.spinning=true;this.refresh();wins=[await api('free','POST')]}
@@ -407,11 +418,11 @@ async function startMines(){if(M.busy)return;
   catch(e){M.busy=false;toast(e.message);hap('err');renderMines();load()}}
 async function openCell(i,auto){if(!auto&&M.busy)return;if(M.g.opened.includes(i))return;M.busy=!auto?true:M.busy;
   try{const g=await api(`mines/${M.g.id}/open/${i}`,'POST');M.g=g;
-    if(g.status=='lost'){boom();hap('err');toast('Мина! Ставка сгорела')}
-    else if(g.status=='won'){chime();hap('ok');toast(`Выигрыш: ${num(g.payout)} ⭐`)}
-    else{beep(700+g.opened.length*40,.08,'triangle');hap()}}
+    if(g.status=='lost'){sfx.lose();hap('err');toast('Мина! Ставка сгорела')}
+    else if(g.status=='won'){sfx.win();hap('ok');toast(`Выигрыш: ${num(g.payout)} ⭐`)}
+    else{sfx.pop(g.opened.length-1);hap()}}
   catch(e){toast(e.message)}if(!auto)M.busy=false;renderMines();if(M.g.status!='live')load()}
-async function cashout(){if(!M.g)return;M.busy=true;try{M.g=await api(`mines/${M.g.id}/cashout`,'POST');chime();hap('ok');toast(`Выигрыш: ${num(M.g.payout)} ⭐`)}catch(e){toast(e.message)}
+async function cashout(){if(!M.g)return;M.busy=true;try{M.g=await api(`mines/${M.g.id}/cashout`,'POST');sfx.win();hap('ok');toast(`Выигрыш: ${num(M.g.payout)} ⭐`)}catch(e){toast(e.message)}
   M.busy=false;renderMines();load()}
 
 /* ---------- апгрейд ---------- */
@@ -449,7 +460,7 @@ async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
     const end=U.rot-U.rot%360+360*(fast?2:5)+r.roll*360,p=$('ptr');
     p.style.transition=`transform ${fast?1.2:3.6}s cubic-bezier(.12,.7,.1,1)`;requestAnimationFrame(()=>p.style.transform=`rotate(${end}deg)`);
     await new Promise(z=>setTimeout(z,fast?1300:3700));U.rot=end;
-    U.res=r.ok?'win':'lose';if(r.ok){chime();hap('ok')}else{boom();hap('err')}
+    U.res=r.ok?'win':'lose';if(r.ok){sfx.win();hap('ok')}else{sfx.lose();hap('err')}
     if(U.src.kind!='stars')U.src={kind:'gift',value:0};
     U.busy=false;renderUpgrade();await load();
     if(r.ok)showWins([r.win]);else toast('Не повезло — попробуйте ещё')}
@@ -515,9 +526,26 @@ function pickInv(cb){const inv=(S?.inventory||[]).filter(w=>w.status=='ready');
 function sheet(h){$('sheetIn').innerHTML=h;$('sheet').style.display='flex'}
 function closeSheet(){$('sheet').style.display='none'}
 $('sheet').onclick=e=>{if(e.target==$('sheet'))closeSheet()};
-function openTop(need){sheet(`<h4>Пополнить баланс</h4>${need?`<p>Не хватает ${num(need)} ⭐</p>`:'<p>Оплата через Telegram Stars</p>'}<div class="tops">${[50,100,250,500,1000,2500].map(a=>`<button data-t="${a}">${STAR} ${num(a)}</button>`).join('')}</div>`);
-  $$('#sheetIn [data-t]').forEach(b=>b.onclick=async()=>{closeSheet();
-    try{const {link}=await api('topup/'+b.dataset.t,'POST');tg.openInvoice(link,s=>{if(s=='paid'){toast('Баланс пополнен');setTimeout(load,1500)}})}catch(e){toast(e.message)}})}
+function openTop(need){closeSheet();const mn=S?.topup_min||1,mx=S?.topup_max||10000,pre=[50,100,250,500,1000,2500];
+  $('topIn').innerHTML=`<div class="bar"><button class="x" id="tX" aria-label="Закрыть">${IC.x}</button><h3>Пополнить баланс</h3></div>
+  <div class="card" style="margin-top:4px"><p style="color:var(--mut)">Сейчас на балансе</p><div class="big">${num(S?.balance||0)} ${STAR}</div>
+   ${need?`<p style="color:var(--gold);margin-top:6px">Не хватает ${num(need)} ⭐</p>`:''}</div>
+  <label class="amt">${STAR}<input id="tAmt" inputmode="numeric" pattern="[0-9]*" placeholder="Сумма" value="${need?Math.max(mn,Math.ceil(need)):''}" aria-label="Сумма пополнения" enterkeyhint="done"></label>
+  <p class="maxw">От ${num(mn)} до ${num(mx)} ⭐</p>
+  <div class="presets">${pre.map(a=>`<button data-p="${a}">${STAR} ${num(a)}</button>`).join('')}</div>
+  <button class="btn" id="tGo" style="margin-top:18px"></button>
+  <p class="maxw" style="justify-content:center">Оплата через Telegram Stars, звёзды приходят на баланс сразу</p>`;
+  const inp=$('tAmt'),go=$('tGo'),val=()=>parseInt(inp.value.replace(/\D/g,''))||0;
+  const upd=()=>{const v=val();inp.value=v?String(v):'';$$('#topIn [data-p]').forEach(b=>b.classList.toggle('on',+b.dataset.p==v));
+    go.disabled=v<mn||v>mx;go.innerHTML=v>mx?`Максимум ${num(mx)} ⭐`:v?`Пополнить на ${num(v)} ${STAR}`:'Введите сумму'};
+  inp.oninput=upd;inp.onkeydown=e=>{if(e.key=='Enter'){inp.blur();go.click()}};
+  $$('#topIn [data-p]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.p;upd();hap()});
+  $('tX').onclick=closeTop;
+  go.onclick=async()=>{const v=val();if(v<mn||v>mx)return;go.disabled=true;
+    try{const {link}=await api('topup/'+v,'POST');tg.openInvoice(link,s=>{go.disabled=false;if(s=='paid'){toast(`Баланс пополнен на ${num(v)} ⭐`);sfx.win();closeTop();setTimeout(load,1500)}})}
+    catch(e){toast(e.message);go.disabled=false}};
+  upd();$('ovTop').classList.add('on');$('ovTop').scrollTop=0;document.body.style.overflow='hidden';try{tg.BackButton.show()}catch(e){}}
+function closeTop(){$('ovTop').classList.remove('on');afterClose()}
 function fairInfo(){const g=M.g;sheet(`<h4>Честная игра</h4><p>Исход определяется на сервере криптостойким генератором до вашего хода. В минах сервер заранее показывает SHA-256 от поля и секрета, а после игры раскрывает их — можно проверить, что поле не менялось.</p>
   ${g?`<p>Игра #${g.id}: хеш <code>${g.hash}</code></p>${g.seed?`<p>Секрет <code>${esc(g.seed)}</code>, мины <code>${JSON.stringify(g.field)}</code><br>Проверка: sha256("${esc(g.seed)}:${JSON.stringify(g.field).replace(/,/g,', ')}")</p>`:''}`:''}
   <button class="btn" onclick="closeSheet()">Понятно</button>`)}
@@ -525,7 +553,7 @@ $('top').onclick=()=>openTop();$('bal').onclick=()=>openTop();$('ava').onclick=o
 $('inv').onclick=()=>{const l=`https://t.me/${S.bot}?startapp=r${S.uid}`;tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(l)}&text=${encodeURIComponent('NFT-кейсы, мины и апгрейды в GiftMafia')}`)};
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(`https://t.me/${S.bot}?startapp=r${S.uid}`);toast('Ссылка скопирована')}catch(e){toast('Не удалось скопировать')}};
 function afterClose(){if(!$$('.ov.on').length){document.body.style.overflow='';try{tg.BackButton.hide()}catch(e){}}}
-try{tg.BackButton.onClick(()=>{if(catOn())closeCat();else if($('ovProf').classList.contains('on'))closeProf();else closeCase()})}catch(e){}
+try{tg.BackButton.onClick(()=>{if($('ovTop').classList.contains('on'))closeTop();else if(catOn())closeCat();else if($('ovProf').classList.contains('on'))closeProf();else closeCase()})}catch(e){}
 const catOn=()=>$('ovCat').classList.contains('on');
 
 /* ---------- состояние ---------- */
