@@ -297,6 +297,8 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     <label>Кошелёк для оплаты GRAM через TON Connect (пусто — способ выключен)<input class="inp" id="sTon" value="${esc(st.ton_wallet)}" placeholder="UQ..."></label>
     <label>Аккаунт для пополнения подарками (бизнес-аккаунт, подключённый к боту)<input class="inp" id="sGa" value="${esc(st.gift_account)}" placeholder="@account"></label>
     <label>Сколько % от оценки NFT зачислять за подарок<input class="inp" id="sGr" type="number" min="1" max="100" value="${esc(st.gift_rate)}"></label>
+    <label>Набор премиум-эмодзи для текстов бота (имя из ссылки t.me/addemoji/ИМЯ)<input class="inp" id="sEm" value="${esc(st.emoji_set)}" placeholder="GiftMafiaNFT"></label>
+    <div class="card" style="padding:12px;background:#ffffff08" id="emInfo">Загрузка…</div>
     <label>Не учитывать в дашборде и статистике (аккаунты через запятую: @username или id)<input class="inp" id="sEx" value="${esc(st.stats_exclude)}" placeholder="@IbuyBalenciaga"></label>
     <label style="display:flex;align-items:center;gap:10px;color:#fff"><button class="sw ${st.free_notify=='1'?'on':''}" id="sFn" type="button" aria-label="Напоминание"></button>Писать в бота, когда снова доступен «Подарок дня»</label>
     <button class="btn" id="sSave">Сохранить</button>
@@ -314,7 +316,9 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
   const kind=()=>{$('nTgL').style.display=['channel','link'].includes($('nK').value)?'':'none'};$('nK').onchange=kind;kind();
   $('sFn').onclick=()=>$('sFn').classList.toggle('on');
   $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value,
-    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value}),'Настройки сохранены',renderTasksAdmin);
+    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value,emoji_set:$('sEm').value}),'Настройки сохранены',async()=>{await api('emoji?reload=1');renderTasksAdmin()});
+  api('emoji').then(e=>{$('emInfo').innerHTML=`Загружено эмодзи: <b>${Object.keys(e.map).length}</b> ${Object.keys(e.map).join(' ')}<br><small style="color:var(--mut)">${e.missing.length?'Нет в наборе (останутся обычными): '+e.missing.join(' '):'Все эмодзи из текстов бота есть в наборе'}</small> <button class="btn ghost sm" id="emRe" type="button" style="margin-top:8px">Обновить набор</button>`;
+    $('emRe').onclick=()=>act(api('emoji?reload=1'),'Набор обновлён',renderTasksAdmin)}).catch(()=>{$('emInfo').textContent='Не удалось загрузить информацию'});
   $('nAdd').onclick=()=>act(api('task','POST',{kind:$('nK').value,title:$('nT').value,target:$('nTg').value,reward:$('nR').value}),'Задание добавлено',renderTasksAdmin);
   $$('[data-trw]').forEach(i=>i.onchange=()=>act(api(`task/${i.dataset.trw}`,'PATCH',{reward:i.value}),'Награда сохранена',renderTasksAdmin));
   $$('[data-ton]').forEach(b=>b.onclick=()=>act(api(`task/${b.dataset.ton}`,'PATCH',{active:!b.classList.contains('on')}),b.classList.contains('on')?'Задание выключено':'Задание включено',renderTasksAdmin));

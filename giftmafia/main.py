@@ -41,6 +41,72 @@ PLINKO_RTP = 0.95  # средний возврат плинко
 PLINKO_MAX_BET = 10000
 
 bot = Bot(TOKEN)
+
+
+# ---------- премиум-эмодзи ----------
+# При старте бот загружает набор кастомных эмодзи (настройка emoji_set, по умолчанию GiftMafiaNFT) и во всех исходящих
+# сообщениях подменяет обычные эмодзи на премиум из набора: в тексте - <tg-emoji>, на кнопках - icon_custom_emoji_id.
+# Сопоставление по эмодзи, указанному для каждой иконки при загрузке в @Stickers. Работает, если у владельца бота Telegram Premium.
+import html as _html
+from aiogram.client.session.middlewares.base import BaseRequestMiddleware
+from aiogram.methods import EditMessageCaption, EditMessageText, SavePreparedInlineMessage, SendMessage, SendPhoto, SendVideo
+CE = {}  # обычный эмодзи (без FE0F) -> custom_emoji_id
+_CE_RE = None
+
+
+def _bare(e): return e.replace("\ufe0f", "")
+
+
+async def load_emoji():
+    global _CE_RE
+    try: st = await bot.get_sticker_set(setting("emoji_set"))
+    except Exception as e: print("emoji set:", e); return 0
+    m = {}
+    for s in st.stickers:
+        if s.custom_emoji_id and s.emoji: m.setdefault(_bare(s.emoji), s.custom_emoji_id)
+    CE.clear(); CE.update(m)
+    _CE_RE = re.compile("(" + "|".join(re.escape(k) + "\ufe0f?" for k in sorted(CE, key=len, reverse=True)) + ")") if CE else None
+    print(f"emoji set {st.name}: {len(CE)} -", " ".join(CE)); return len(CE)
+
+
+def ce(text):
+    """HTML-текст -> те же эмодзи, обёрнутые в <tg-emoji> из набора (теги и уже обёрнутые эмодзи не трогаем)."""
+    if not _CE_RE or not text: return text
+    out, i = [], 0
+    for m in re.finditer(r"<tg-emoji[^>]*>.*?</tg-emoji>|<[^>]+>", text, re.S):  # заменяем только в тексте между тегами
+        out.append(_CE_RE.sub(lambda x: f'<tg-emoji emoji-id="{CE[_bare(x.group(1))]}">{x.group(1)}</tg-emoji>', text[i:m.start()])); out.append(m.group(0)); i = m.end()
+    out.append(_CE_RE.sub(lambda x: f'<tg-emoji emoji-id="{CE[_bare(x.group(1))]}">{x.group(1)}</tg-emoji>', text[i:]))
+    return "".join(out)
+
+
+def ce_kb(kb):
+    """Кнопки: эмодзи в начале текста -> иконка из набора."""
+    if not _CE_RE or not isinstance(kb, InlineKeyboardMarkup): return
+    for row in kb.inline_keyboard:
+        for b in row:
+            m = _CE_RE.match(b.text or "")
+            if m and not b.icon_custom_emoji_id: b.icon_custom_emoji_id = CE[_bare(m.group(1))]; b.text = b.text[m.end():].lstrip() or b.text
+
+
+class EmojiMiddleware(BaseRequestMiddleware):
+    async def __call__(self, make_request, b, method):
+        if CE:
+            try:
+                tgt = method.result if isinstance(method, SavePreparedInlineMessage) else method
+                attr = "text" if isinstance(method, (SendMessage, EditMessageText)) else "caption" if isinstance(tgt, (SendPhoto, SendVideo, EditMessageCaption, InlineQueryResultPhoto)) else None
+                v = getattr(tgt, attr, None) if attr else None
+                if isinstance(v, str):
+                    pm = getattr(tgt, "parse_mode", None)
+                    if pm != "HTML":  # обычный текст -> безопасный HTML
+                        if isinstance(pm, str) and pm: v = None  # Markdown не трогаем
+                        else: v = _html.escape(v, quote=False); tgt.parse_mode = "HTML"
+                    if v is not None and not getattr(tgt, "entities", None) and not getattr(tgt, "caption_entities", None): setattr(tgt, attr, ce(v))
+                ce_kb(getattr(tgt, "reply_markup", None))
+            except Exception as e: print("emoji mw:", e)
+        return await make_request(b, method)
+
+
+bot.session.middleware(EmojiMiddleware())
 dp = Dispatcher()
 BOT_USERNAME = ""
 
@@ -187,6 +253,7 @@ SETTINGS_DEFAULT = {
     "cm_tags": "#тгподарки #подаркитг #нфт #giftmafia",  # хэштеги видео в TikTok
     "cm_max": "300",                           # скриншотов в день на человека
     "cm_chat": "",                             # id чата модерации (пусто = ADMIN_CHAT_ID)
+    "emoji_set": "GiftMafiaNFT",               # набор премиум-эмодзи для текстов бота (t.me/addemoji/ИМЯ)
     "stats_exclude": "@IbuyBalenciaga",        # аккаунты, которые не учитываются в дашборде и статистике (через запятую)
     "stats_since": "0",                        # статистика админки считается с этого момента (unix-время), кнопка «Сбросить»
 }
@@ -568,10 +635,10 @@ async def start(m):
     await m.answer_photo(FSInputFile("static/banner.jpg"), caption=(
         "🎩 <b>GiftMafia</b>\n\n"
         "📦 NFT-кейсы с подарками Telegram\n"
-        "💣 Мины и 🚀 апгрейды\n"
+        "💣 Мины, ⬆️ апгрейды и 🎯 плинко\n"
         "🎁 Подарок дня — бесплатно каждые 24 часа\n"
-        "👥 Приглашай друзей и получай ⭐\n\n"
-        ""), parse_mode="HTML", reply_markup=kb)
+        "💬 Платим ⭐ за комментарии\n"
+        "👥 Приглашай друзей и получай ⭐"), parse_mode="HTML", reply_markup=kb)
 
 
 @dp.pre_checkout_query()
@@ -592,6 +659,7 @@ async def lifespan(_):
     BOT_USERNAME = (await bot.get_me()).username
     await asyncio.to_thread(make_banner)
     await asyncio.to_thread(make_avatar)
+    await load_emoji()
     if (q1("SELECT v FROM meta WHERE k='avatar_set'") or {}).get("v") != AVATAR_VERSION:  # ставим аватарку бота один раз
         try:
             await bot.set_my_profile_photo(photo=InputProfilePhotoStatic(photo=FSInputFile("static/avatar.png")))
@@ -765,7 +833,7 @@ async def withdraw(wid: int, uid: int = Depends(auth)):
     if changed("UPDATE wins SET status='requested' WHERE id=? AND status='ready'", wid) == 0: raise HTTPException(400, "Уже подана заявка")
     if ADMIN_CHAT_ID:
         u = q1("SELECT * FROM users WHERE id=?", uid)
-        await bot.send_message(ADMIN_CHAT_ID, f"Заявка #{wid}: {w['prize']} → @{u['username'] or u['id']} (id {uid})")
+        await bot.send_message(ADMIN_CHAT_ID, f"📦 Заявка #{wid}: {w['prize']} → @{u['username'] or u['id']} (id {uid})")
     try: await bot.send_message(uid, f"📦 Заявка на вывод {w['prize']} принята.\n⏳ Вывод подарка в течение 24 ч.")
     except Exception: pass
     return {"ok": True, "eta": "24 ч"}
@@ -957,7 +1025,7 @@ async def biz_conn(c):
         if not setting("gift_account") and c.user.username: run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:gift_account',?)", "@" + c.user.username)
     else: run("DELETE FROM meta WHERE k='biz_conn'")
     if ADMIN_CHAT_ID:
-        try: await bot.send_message(ADMIN_CHAT_ID, f"Бизнес-аккаунт @{c.user.username or c.user.id} {'подключён' if c.is_enabled else 'отключён'}: приём подарков {'включён' if c.is_enabled else 'выключен'}.")
+        try: await bot.send_message(ADMIN_CHAT_ID, f"🎁 Бизнес-аккаунт @{c.user.username or c.user.id} {'подключён' if c.is_enabled else 'отключён'}: приём подарков {'включён' if c.is_enabled else 'выключен'}.")
         except Exception: pass
 
 
@@ -1038,7 +1106,7 @@ def cm_chat(): return int(setting("cm_chat") or 0) or ADMIN_CHAT_ID
 async def cm_report(m, photos):
     """photos: [(file_id, file_unique_id)] - один отчёт (одно фото или альбом)."""
     uid = m.from_user.id
-    if setting("cm_on") != "1": return await m.answer("Программа «Комментарии» сейчас на паузе.")
+    if setting("cm_on") != "1": return await m.answer("⏳ Программа «Комментарии» сейчас на паузе.")
     st = cm_state(uid); left = st["max"] - st["today"] - st["pending"]
     if left <= 0: return await m.answer(f"⏳ Лимит {st['max']} скриншотов в день. Счёт обнуляется в 00:00 МСК.")
     fresh, dup = [], 0
@@ -1133,17 +1201,17 @@ async def cm_start_msg(m):
                                                [InlineKeyboardButton(text="📊 Мой заработок", web_app=WebAppInfo(url=WEBAPP_URL + "?go=earn"), style="success")]])
     await m.answer(
         f"💬 <b>Платим за комментарии с {setting('cm_mention')}</b>\n\n"
-        f"<b>Где писать</b>\n• TikTok: под видео с {setting('cm_tags')}\n• Telegram: в открытых чатах от 2 000 участников\n\n"
-        f"<b>Сколько платим</b>\n• {st['rate']:g} ⭐ за коммент\n• С нашей картинкой: +{st['img_bonus']}%\n• Выплата на баланс GiftMafia\n\n"
-        f"<b>Бонус дня</b>\n" + "\n".join(f"• от {k} комментов +{p}%" for k, p in CM_TIERS) + "\nСчёт обнуляется в 00:00 МСК\n\n"
-        f"<b>Как отправить</b>\nПрисылайте сюда скриншоты своих комментариев (можно альбомом до 10 штук). "
+        f"✈️ <b>Где писать</b>\n• TikTok: под видео с {setting('cm_tags')}\n• Telegram: в открытых чатах от 2 000 участников\n\n"
+        f"⭐ <b>Сколько платим</b>\n• {st['rate']:g} ⭐ за коммент\n• С нашей картинкой: +{st['img_bonus']}%\n• Выплата на баланс GiftMafia\n\n"
+        f"🔥 <b>Бонус дня</b>\n" + "\n".join(f"• от {k} комментов +{p}%" for k, p in CM_TIERS) + "\n⏳ Счёт обнуляется в 00:00 МСК\n\n"
+        f"📥 <b>Как отправить</b>\nПрисылайте сюда скриншоты своих комментариев (можно альбомом до 10 штук). "
         f"На скрине должны быть видны ваш ник и текст с {setting('cm_mention')}.\nОдин скриншот — один коммент, повторы не засчитываются.",
         parse_mode="HTML", reply_markup=kb)
 
 
 @dp.callback_query(F.data == "cmimg")
 async def cm_img(c):
-    await c.message.answer_photo(FSInputFile("static/cm_pic.jpg"), caption="Прикрепляйте эту картинку к комментарию — получите +%s%%." % setting("cm_img_bonus"))
+    await c.message.answer_photo(FSInputFile("static/cm_pic.jpg"), caption="🎁 Прикрепляйте эту картинку к комментарию — получите +%s%% ⭐" % setting("cm_img_bonus"))
     await c.answer()
 
 
@@ -1395,7 +1463,7 @@ async def a_win(wid: int, act: str):
     w = q1("SELECT * FROM wins WHERE id=?", wid)
     run("UPDATE wins SET status=? WHERE id=?", act, wid)
     if act == "sent":
-        try: await bot.send_message(w["user_id"], f"✅ Ваш подарок {w['prize']} отправлен!")
+        try: await bot.send_message(w["user_id"], f"✅ Ваш подарок {w['prize']} отправлен! 🎁")
         except Exception: pass
     return {"ok": True}
 
@@ -1684,6 +1752,13 @@ USER_COLS = ("SELECT u.id,u.username,u.name,u.balance,u.created,u.last_seen,u.ut
              "(SELECT COALESCE(SUM(amount),0) FROM bets b WHERE b.user_id=u.id) turnover,"
              "(SELECT COALESCE(SUM(amount-payout),0) FROM bets b WHERE b.user_id=u.id) ggr,"
              "(SELECT COUNT(*) FROM bets b WHERE b.user_id=u.id AND b.game!='free') games FROM users u")
+
+
+@app.get("/api/admin/emoji", dependencies=[Depends(admin)])
+async def a_emoji(reload: int = 0):
+    if reload: await load_emoji()
+    used = sorted({_bare(x) for x in re.findall(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\u2B50\u231B\u23F3]\ufe0f?", open(__file__, encoding="utf-8").read())})
+    return {"set": setting("emoji_set"), "map": CE, "missing": [e for e in used if e not in CE]}
 
 
 @app.post("/api/admin/stats/reset", dependencies=[Depends(admin)])
