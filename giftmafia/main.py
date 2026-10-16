@@ -65,20 +65,37 @@ def emoji_alias():
     except Exception: return {}
 
 
+EXTRA = {}  # премиум-эмодзи, добавленные по ID не из набора: id -> {emoji, thumb}
+
+
+async def custom_emoji_info(ids):
+    """id -> {emoji, thumb} через getCustomEmojiStickers (до 200 за запрос)."""
+    out = {}
+    for i in range(0, len(ids), 200):
+        for s in await bot.get_custom_emoji_stickers(custom_emoji_ids=ids[i:i + 200]):
+            out[s.custom_emoji_id] = {"emoji": s.emoji or "", "thumb": (s.thumbnail or s).file_id}
+    return out
+
+
 async def load_emoji():
     global _CE_RE, _ce_loaded
-    try: st = await bot.get_sticker_set(setting("emoji_set"))
-    except Exception as e: print("emoji set:", e); _ce_loaded = int(time.time()); return 0
-    m, PACK[:] = {}, []
-    for s in st.stickers:
-        if not s.custom_emoji_id: continue
-        PACK.append({"emoji": s.emoji or "", "id": s.custom_emoji_id, "thumb": (s.thumbnail or s).file_id})
-        if s.emoji: m.setdefault(_bare(s.emoji), s.custom_emoji_id)
-    ids = {p["id"] for p in PACK}
-    m.update({k: v for k, v in emoji_alias().items() if v in ids})  # ручные сопоставления важнее
+    m, pack, name = {}, [], setting("emoji_set")
+    try:
+        st = await bot.get_sticker_set(name)
+        for s in st.stickers:
+            if not s.custom_emoji_id: continue
+            pack.append({"emoji": s.emoji or "", "id": s.custom_emoji_id, "thumb": (s.thumbnail or s).file_id})
+            if s.emoji: m.setdefault(_bare(s.emoji), s.custom_emoji_id)
+        PACK[:] = pack
+    except Exception as e: print("emoji set:", e)
+    al = emoji_alias(); m.update(al)  # ручные сопоставления и эмодзи по ID важнее набора
+    extra = [v for v in set(al.values()) if v not in {p["id"] for p in PACK} and v not in EXTRA]
+    if extra:
+        try: EXTRA.update(await custom_emoji_info(extra))
+        except Exception as e: print("custom emoji:", e)
     CE.clear(); CE.update(m); _ce_loaded = int(time.time())
     _CE_RE = re.compile("(" + "|".join(re.escape(k) + "\ufe0f?" for k in sorted(CE, key=len, reverse=True)) + ")") if CE else None
-    print(f"emoji set {st.name}: {len(CE)} -", " ".join(CE)); return len(CE)
+    print(f"emoji {name}: {len(CE)} -", " ".join(CE)); return len(CE)
 
 
 def ce(text):
@@ -1784,15 +1801,24 @@ def bot_emoji():
 async def a_emoji(reload: int = 0):
     if reload or not PACK: await load_emoji()
     al = emoji_alias()
-    return {"set": setting("emoji_set"), "loaded": _ce_loaded, "pack": PACK, "alias": al,
-            "used": [{"emoji": e, "id": CE.get(e), "manual": e in al} for e in bot_emoji()]}
+    used = bot_emoji()
+    return {"set": setting("emoji_set"), "loaded": _ce_loaded, "pack": PACK, "alias": al, "extra": EXTRA,
+            "used": [{"emoji": e, "id": CE.get(e), "manual": e in al} for e in used + sorted(set(al) - set(used))]}
 
 
 @app.post("/api/admin/emoji_alias", dependencies=[Depends(admin)])
 async def a_emoji_alias(b: dict):
     al = emoji_alias(); e = _bare(b.get("emoji", ""))
-    if not e: raise HTTPException(400, "Нет эмодзи")
-    if b.get("id"): al[e] = str(b["id"])
+    if not e or len(e) > 8 or not re.search(r"[\U0001F000-\U0001FAFF\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u3030\u303D\u3297\u3299]", e) or re.search(r"[\w\s]", e):
+        raise HTTPException(400, "Укажите один обычный эмодзи, например 🎁")
+    cid = re.sub(r"\D", "", str(b.get("id") or ""))
+    if cid:
+        if cid not in {p["id"] for p in PACK} and cid not in EXTRA:  # ID не из набора - проверяем, что такой премиум-эмодзи существует
+            try: info = await custom_emoji_info([cid])
+            except Exception as x: raise HTTPException(400, f"Telegram не ответил: {x}")
+            if cid not in info: raise HTTPException(400, "Премиум-эмодзи с таким ID не найден")
+            EXTRA.update(info)
+        al[e] = cid
     else: al.pop(e, None)
     run("INSERT OR REPLACE INTO meta(k,v) VALUES('set:emoji_alias',?)", json.dumps(al, ensure_ascii=False))
     await load_emoji(); return {"ok": True}

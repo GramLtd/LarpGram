@@ -100,6 +100,7 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .eu b{font-size:22px;width:30px;text-align:center}.eu span{color:var(--mut)}.eu img{width:32px;height:32px;object-fit:contain}.eu em{color:var(--mut);font-style:normal;font-size:13px;flex:1}
 .eu img+small,.eu img+button{margin-left:auto}.eu small{color:var(--gold);font-size:12px}.eu .btn{margin-left:auto}.eu small+.btn{margin-left:8px}.eu.no{background:#ffc83d12}
 .epick{position:fixed;inset:0;z-index:50;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}.epick .card{max-width:520px;width:100%;max-height:80vh;overflow:auto}
+.eadd{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:8px;margin-top:8px;max-width:100%}.eadd .btn{padding:0 12px}.eadd .inp{min-width:0}#eaE{text-align:center;font-size:20px}
 </style></head><body>
 <div id="app"></div><div id="toast" role="status"></div>
 <script>
@@ -297,15 +298,19 @@ async function renderCmAdmin(){const M=$('main');let d;try{d=await api('cm?statu
 /* ---------- премиум-эмодзи ---------- */
 const efile=f=>`/api/admin/cm_file?f=${encodeURIComponent(f)}&t=${encodeURIComponent(T)}`;
 async function renderEmoji(reload){const el=$('emInfo');if(!el)return;let e;try{e=await api('emoji'+(reload?'?reload=1':''))}catch(x){el.textContent='Не удалось загрузить: '+x.message;return}
-  const byId=Object.fromEntries(e.pack.map(p=>[p.id,p])),miss=e.used.filter(u=>!u.id);
+  const byId={...Object.fromEntries(Object.entries(e.extra||{}).map(([id,x])=>[id,{...x,id}])),...Object.fromEntries(e.pack.map(p=>[p.id,p]))},miss=e.used.filter(u=>!u.id);
   el.innerHTML=`<b>Набор «${esc(e.set)}»: ${e.pack.length} иконок</b>${e.loaded?` <small style="color:var(--mut)">· обновлён ${new Date(e.loaded*1000).toLocaleTimeString('ru-RU')}</small>`:''}
    ${e.pack.length?`<div class="epk">${e.pack.map(p=>`<span title="${esc(p.emoji)}"><img src="${efile(p.thumb)}" alt="" loading="lazy"><i>${esc(p.emoji)}</i></span>`).join('')}</div>`:'<p style="color:var(--bad);margin-top:8px">Набор не загрузился. Проверьте имя набора и что бот запущен.</p>'}
+   <p style="margin-top:14px;font-weight:800">Добавить по ID премиум-эмодзи</p>
+   <p style="color:var(--mut);font-size:13px">Обычный эмодзи из текста бота и ID премиум-эмодзи (можно не из набора). ID можно узнать, переслав премиум-эмодзи боту @getidsbot или похожему.</p>
+   <div class="eadd"><input class="inp" id="eaE" placeholder="🎁" maxlength="8" aria-label="Обычный эмодзи"><input class="inp" id="eaI" placeholder="ID эмодзи" inputmode="numeric" aria-label="ID премиум-эмодзи"><button class="btn sm" id="eaGo" type="button">Добавить</button></div>
    <p style="margin-top:12px;font-weight:800">Эмодзи в текстах бота ${miss.length?`<span style="color:var(--gold)">· без иконки: ${miss.length}</span>`:'<span style="color:var(--ok)">· все с иконками</span>'}</p>
    <p style="color:var(--mut);font-size:13px">Бот берёт у каждой иконки только первый эмодзи, указанный в @Stickers. Если эмодзи из текста не совпал — выберите иконку вручную.</p>
    <div class="eus">${e.used.map(u=>{const p=u.id&&byId[u.id];return `<div class="eu ${u.id?'':'no'}"><b>${esc(u.emoji)}</b><span>→</span>${p?`<img src="${efile(p.thumb)}" alt="">`:'<em>обычный</em>'}${u.manual?'<small>вручную</small>':''}
      <button class="btn ghost sm" data-ep="${esc(u.emoji)}">${u.id?'Изменить':'Выбрать'}</button>${u.manual?`<button class="x" data-er="${esc(u.emoji)}" aria-label="Сбросить">×</button>`:''}</div>`}).join('')}</div>
    <button class="btn ghost sm" id="emRe" type="button" style="margin-top:12px">Обновить набор</button>`;
   $('emRe').onclick=()=>{el.innerHTML='Загрузка…';renderEmoji(1)};
+  $('eaGo').onclick=()=>{const em=$('eaE').value.trim(),id=$('eaI').value.replace(/\D/g,'');if(!em||!id)return toast('Укажите эмодзи и ID');act(api('emoji_alias','POST',{emoji:em,id}),'Эмодзи добавлен',()=>renderEmoji())};
   $$('[data-er]',el).forEach(b=>b.onclick=()=>act(api('emoji_alias','POST',{emoji:b.dataset.er,id:''}),'Сопоставление сброшено',()=>renderEmoji()));
   $$('[data-ep]',el).forEach(b=>b.onclick=()=>{const em=b.dataset.ep,box=document.createElement('div');box.className='epick';
     box.innerHTML=`<div class="card"><p style="font-weight:800;margin-bottom:10px">Какой иконкой показывать ${esc(em)}?</p><div class="epk big">${e.pack.map(p=>`<button data-id="${p.id}"><img src="${efile(p.thumb)}" alt=""><i>${esc(p.emoji)}</i></button>`).join('')}</div><button class="btn ghost sm" style="margin-top:12px">Отмена</button></div>`;
