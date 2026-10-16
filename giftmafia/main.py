@@ -1,4 +1,4 @@
-import asyncio, functools, hashlib, hmac, io, json, math, os, random, re, secrets, sqlite3, time, urllib.parse, urllib.request
+import asyncio, functools, hashlib, shutil, subprocess, threading, hmac, io, json, math, os, random, re, secrets, sqlite3, time, urllib.parse, urllib.request
 from contextlib import asynccontextmanager
 from urllib.parse import parse_qsl
 
@@ -11,6 +11,8 @@ from fastapi import Body, Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from concurrent.futures import ThreadPoolExecutor
+import story as storygen
 
 load_dotenv()
 TOKEN = os.environ["BOT_TOKEN"]
@@ -44,7 +46,9 @@ BOT_USERNAME = ""
 # static/gifts.json: все NFT-подарки Telegram и их модели с редкостью (обновить: python tools/fetch_gifts.py).
 # Данные и картинки моделей: api.changes.tg / cdn.changes.tg. Условие API: видимая благодарность в приложении (строка в профиле).
 CATALOG = {g["name"]: g for g in json.load(open("static/gifts.json", encoding="utf-8"))}
-TON_STARS = 69  # ⭐ за 1 TON, поменяйте под курс
+TON_STARS = 90  # ⭐ за 1 TON; обновляется раз в сутки по курсу TON (CoinGecko) и STAR_USD
+STAR_USD = 0.015  # сколько стоит 1 звезда в долларах (средняя цена покупки)
+MARKET_EVERY = 24 * 3600  # как часто обновлять цены с Portals
 # Floor коллекций в TON (примерно, по маркетплейсам). Не указан — DEFAULT_FLOOR. Правьте под рынок и перезапускайте.
 DEFAULT_FLOOR = 4.5
 FLOORS = {
@@ -77,6 +81,8 @@ PREMIUM_WORDS = {"midas": 1.6, "gold": 1.35, "golden": 1.35, "diamond": 1.35, "p
                  "onyx": 1.25, "galaxy": 1.25, "cosmic": 1.25, "noir": 1.2, "ruby": 1.15, "emerald": 1.15, "sapphire": 1.15,
                  "crystal": 1.15, "neon": 1.15, "silver": 1.1}
 OVR = {}  # (коллекция, модель) -> ⭐, ручные цены из админки
+MARKET = {}  # (коллекция, модель) -> флор модели в TON с Portals
+CFLOOR = {}  # коллекция -> флор коллекции в TON с Portals
 
 
 def _jitter(gift, model):  # стабильный разброс 0.92..1.22 (одинаковый при каждом запуске)
@@ -96,9 +102,11 @@ def model_img(gift, model, size=256):  # лёгкое превью webp с на�
 
 def nft_value(gift, model):
     if model not in MODELS.get(gift, {}): raise HTTPException(404, "Нет такой модели")
-    return OVR.get((gift, model)) or formula_value(gift, model)
+    if (gift, model) in OVR: return OVR[(gift, model)]
+    ton = MARKET.get((gift, model))
+    return round(ton * TON_STARS) if ton else formula_value(gift, model)
 
-def floor_stars(gift): return round(FLOORS.get(gift, DEFAULT_FLOOR) * TON_STARS)
+def floor_stars(gift): return round((CFLOOR.get(gift) or FLOORS.get(gift, DEFAULT_FLOOR)) * TON_STARS)
 
 # ---------- база ----------
 db = sqlite3.connect("giftmafia_v2.db", check_same_thread=False)
@@ -116,6 +124,7 @@ CREATE TABLE IF NOT EXISTS tasks(id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT
 CREATE TABLE IF NOT EXISTS task_done(user_id INT, task_id INT, created INT, PRIMARY KEY(user_id, task_id));
 CREATE TABLE IF NOT EXISTS bot_started(user_id INTEGER PRIMARY KEY, created INT);
 CREATE TABLE IF NOT EXISTS nick(user_id INTEGER PRIMARY KEY, started INT DEFAULT 0, claims INT DEFAULT 0, earned INT DEFAULT 0);
+CREATE TABLE IF NOT EXISTS market(gift TEXT, model TEXT, ton REAL, PRIMARY KEY(gift, model));
 CREATE TABLE IF NOT EXISTS model_prices(gift TEXT, model TEXT, stars INT, PRIMARY KEY(gift, model));
 CREATE TABLE IF NOT EXISTS plinko(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, rows INT, risk TEXT, slot INT, mult REAL, payout INT, created INT);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
@@ -134,6 +143,11 @@ def changed(sql, *a):  # сколько строк обновлено (атом�
 
 
 OVR.update({(r["gift"], r["model"]): r["stars"] for r in db.execute("SELECT * FROM model_prices")})
+for r in db.execute("SELECT * FROM market"):
+    if r["model"]: MARKET[(r["gift"], r["model"])] = r["ton"]
+    else: CFLOOR[r["gift"]] = r["ton"]
+_ts = db.execute("SELECT v FROM meta WHERE k='ton_stars'").fetchone()
+if _ts: TON_STARS = float(_ts["v"])
 
 # ---------- настройки (правятся в админке) ----------
 SETTINGS_DEFAULT = {
@@ -218,10 +232,10 @@ THEMES = [  # тематические кейсы: (название, колле
 ]
 
 
-def build_cases():
+def build_cases(force=False):
     """Кейсы собираются из каталога: цена «красивая», у каждого кейса есть дешёвые призы, призы около цены и джекпоты.
     Веса подбираются так, чтобы средний возврат был CASE_RTP. Потом цены и веса можно править в админке."""
-    if (q1("SELECT v FROM meta WHERE k='economy'") or {}).get("v") == ECONOMY_VERSION: return
+    if not force and (q1("SELECT v FROM meta WHERE k='economy'") or {}).get("v") == ECONOMY_VERSION: return
     run("DELETE FROM prizes"); run("DELETE FROM cases")
     rng = random.Random(11)
     C = []  # (id, title, price, cat, items, rtp)
@@ -292,7 +306,9 @@ def add_win(uid, it, status, source="case", case_id=0):
     wid = run("INSERT INTO wins(user_id,case_id,kind,prize,gift,model,img,value,source,status,created) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
               uid, case_id, it["kind"], it["name"], it["gift"], it["model"], it["img"], it["stars"], source, status, int(time.time()))
     w = q1("SELECT * FROM wins WHERE id=?", wid)
-    if w["kind"] == "nft": w["story_url"] = story_url(wid)  # картинка для «Выложить в историю»
+    if w["kind"] == "nft":
+        w["story_url"] = story_url(wid)  # видео для «Выложить в историю», готовим заранее
+        _story_pool.submit(lambda: make_story(dict(w), "mp4" if storygen.has_ffmpeg() else "jpg"))
     return w
 
 
@@ -368,34 +384,59 @@ def put_nft(base, path, box, cx, cy):
     base.alpha_composite(sh); base.alpha_composite(im, (cx - im.width // 2, cy - im.height // 2))
 
 
-def story_image(w):  # сторис 1080x1920 из выигранного NFT
-    W, H = 1080, 1920
-    base = Image.new("RGBA", (W, H), "#151626")
-    base.paste((112, 96, 255, 255), (0, 0), glow(W, H, W // 2, 840, 560, 70))
-    d = ImageDraw.Draw(base)
-    d.text((W // 2, 150), "GiftMafia", font=font(54), fill="#f5f5f7", anchor="mm")
-    img = model_png(w["gift"], w["model"]) if w["gift"] else ""
-    if img: put_nft(base, img, 640, W // 2, 840)
-    d.text((W // 2, 1290), w["gift"] or w["prize"], font=font(84), fill="#f5f5f7", anchor="mm")
-    d.text((W // 2, 1390), w["model"] or "выигрыш в GiftMafia", font=font(44, False), fill="#a7a9c9", anchor="mm")
-    d.rounded_rectangle((W // 2 - 270, 1560, W // 2 + 270, 1660), 50, fill="#6c63ff")
-    d.text((W // 2, 1610), f"@{BOT_USERNAME or 'GiftMafia'}", font=font(40), fill="#ffffff", anchor="mm")
-    out = io.BytesIO(); base.convert("RGB").save(out, "JPEG", quality=90); return out.getvalue()
+# ---------- сторис и баннер ----------
+STORY_DIR = "static/cache/stories"; os.makedirs(STORY_DIR, exist_ok=True)
+_story_pool = ThreadPoolExecutor(max_workers=1)
+_story_locks = {}
 
 
-def make_banner():  # баннер для /start в стиле мини-аппа
-    W, H = 1280, 640
-    base = Image.new("RGBA", (W, H), "#151626")
-    base.paste((112, 96, 255, 255), (0, 0), glow(W, H, 930, 320, 330, 60))
+def _tier(gift, model):
+    pm = MODELS.get(gift, {}).get(model, 30)
+    return 3 if pm <= 5 else 2 if pm <= 10 else 1 if pm <= 20 else 0
+
+
+def make_story(w, ext):
+    """Готовит видео (.mp4) или картинку (.jpg) сторис для выигрыша и возвращает путь к файлу."""
+    path = f"{STORY_DIR}/{w['id']}_{story_sig(w['id'])}.{ext}"
+    with _story_locks.setdefault(w["id"], threading.Lock()):
+        if os.path.exists(path): return path
+        center = model_png(w["gift"], w["model"]) if w["gift"] else ""
+        if not center: raise HTTPException(404)
+        ps = q("SELECT gift,model FROM prizes WHERE kind='nft' AND case_id=? AND NOT (gift=? AND model=?) ORDER BY RANDOM() LIMIT 4", w["case_id"], w["gift"], w["model"])
+        if len(ps) < 2: ps = q("SELECT DISTINCT gift,model FROM prizes WHERE kind='nft' ORDER BY RANDOM() LIMIT 4")
+        sides = [x for x in (model_png(p["gift"], p["model"]) for p in ps) if x] or [center]
+        st = storygen.Story(center, sides, w["gift"], w["model"], w["value"], BOT_USERNAME, _tier(w["gift"], w["model"]))
+        tmp = f"{path}.tmp.{ext}"
+        st.video(tmp) if ext == "mp4" else st.image(tmp)
+        os.replace(tmp, path)
+        return path
+
+
+def make_banner():  # баннер 1280x720 для /start и приглашений
+    W, H = 1280, 720
+    base = Image.new("RGBA", (W, H)); d = ImageDraw.Draw(base)
+    top, bot = (35, 26, 86), (12, 13, 34)
+    for y in range(H): d.line([(0, y), (W, y)], fill=tuple(int(top[i] + (bot[i] - top[i]) * y / H) for i in range(3)))
+    rays = Image.new("RGBA", (W, H), (0, 0, 0, 0)); rd = ImageDraw.Draw(rays)
+    for i in range(24):
+        a, b = math.radians(i * 15), math.radians(i * 15 + 7)
+        rd.polygon([(1030, 380), (1030 + 1500 * math.cos(a), 380 + 1500 * math.sin(a)), (1030 + 1500 * math.cos(b), 380 + 1500 * math.sin(b))], fill=(122, 98, 255, 45))
+    base.alpha_composite(rays)
+    base.paste((139, 92, 255, 255), (0, 0), glow(W, H, 1030, 380, 280, 120))
+    ub = lambda s: ImageFont.truetype("static/fonts/Unbounded-ExtraBold.ttf", s)
+    mr = lambda s: ImageFont.truetype("static/fonts/Manrope-Bold.ttf", s)
     d = ImageDraw.Draw(base)
-    d.text((90, 210), "GiftMafia", font=font(96), fill="#f5f5f7", anchor="lm")
-    d.text((92, 310), "NFT-кейсы, мины и апгрейды", font=font(38, False), fill="#a7a9c9", anchor="lm")
-    d.text((92, 360), "Подарок дня — бесплатно", font=font(38, False), fill="#a7a9c9", anchor="lm")
-    d.rounded_rectangle((90, 430, 400, 510), 40, fill="#6c63ff")
-    d.text((245, 470), "Играть", font=font(32), fill="#ffffff", anchor="mm")
-    d.rounded_rectangle((740, 80, 1120, 560), 44, fill="#23243b", outline="#34365a", width=3)
-    img = model_png("Plush Pepe", CATALOG["Plush Pepe"]["models"][0][0]) if "Plush Pepe" in CATALOG else ""
-    if img: put_nft(base, img, 300, 930, 320)
+    d.text((80, 200), "Gift", font=ub(92), fill="#ffffff", anchor="ls")
+    d.text((80 + d.textlength("Gift", font=ub(92)), 200), "Mafia", font=ub(92), fill="#ffc83d", anchor="ls")
+    for k, line in enumerate(["NFT-кейсы Telegram", "Мины · Апгрейды · Плинко", "Подарок дня — бесплатно"]):
+        d.text((84, 290 + k * 58), line, font=mr(42), fill="#d6d8f5" if k else "#ffffff", anchor="ls")
+    d.rounded_rectangle((80, 520, 420, 610), 45, fill="#6c4dff")
+    d.text((250, 565), "Играть", font=ub(40), fill="#ffffff", anchor="mm")
+    pics = [("Plush Pepe", None), ("Durov's Cap", None), ("Precious Peach", None)]
+    for (g, _), (box, cx, cy) in zip(pics, [(210, 880, 200), (190, 1150, 545), (380, 1030, 380)]):
+        if g in CATALOG:
+            img = model_png(g, sorted(CATALOG[g]["models"], key=lambda x: x[1])[0][0])
+            if img: put_nft(base, img, box, cx, cy)
     base.convert("RGB").save("static/banner.jpg", quality=92)
 
 
@@ -432,7 +473,7 @@ def take_item(uid, wid):
 
 
 def story_sig(wid): return hmac.new(TOKEN.encode(), f"story{wid}".encode(), hashlib.sha256).hexdigest()[:16]
-def story_url(wid): return f"{WEBAPP_URL}/story/{wid}/{story_sig(wid)}.jpg"
+def story_url(wid): return f"{WEBAPP_URL}/story/{wid}/{story_sig(wid)}.{'mp4' if storygen.has_ffmpeg() else 'jpg'}"
 
 
 def admin(x_admin: str = Header("")):
@@ -479,6 +520,7 @@ async def lifespan(_):
     BOT_USERNAME = (await bot.get_me()).username
     await asyncio.to_thread(make_banner)
     warm = asyncio.create_task(asyncio.to_thread(warm_thumbs))
+    mk = asyncio.create_task(market_loop())
     t = asyncio.create_task(dp.start_polling(bot))
     yield
     t.cancel()
@@ -572,11 +614,14 @@ def sell(wid: int, uid: int = Depends(auth)):
     return {"amount": amount}
 
 
-@app.get("/story/{wid}/{sig}.jpg")
-def story_img(wid: int, sig: str):
+@app.get("/story/{wid}/{name}")
+def story_file(wid: int, name: str):
+    sig, _, ext = name.partition(".")
     w = q1("SELECT * FROM wins WHERE id=?", wid)
-    if not w or not hmac.compare_digest(sig, story_sig(wid)): raise HTTPException(404)
-    return Response(story_image(w), media_type="image/jpeg")
+    if ext not in ("mp4", "jpg") or not w or not hmac.compare_digest(sig, story_sig(wid)): raise HTTPException(404)
+    if ext == "mp4" and not storygen.has_ffmpeg(): raise HTTPException(404)
+    return FileResponse(make_story(w, ext), media_type="video/mp4" if ext == "mp4" else "image/jpeg",
+                        headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 @app.post("/api/win/{wid}/story")
@@ -586,10 +631,13 @@ def story(wid: int, uid: int = Depends(auth)):
     return {"ok": True}
 
 
-INVITE_TEXT = ("🎁 <b>Забирай NFT-подарки Telegram в GiftMafia!</b>\n\n"
-               "📦 Кейсы с настоящими NFT\n💣 Мины · 🚀 Апгрейды · 🔴 Плинко\n"
-               "🎉 Подарок дня — бесплатно каждые 24 часа\n⭐ Звёзды за задания и ник\n\n"
-               "👇 Жми кнопку и заходи по моей ссылке")
+INVITE_TEXT = ("🎁 <b>GiftMafia — NFT-подарки Telegram</b>\n\n"
+               "📦 Кейсы с настоящими NFT\n"
+               "💣 Мины и 🚀 апгрейды\n"
+               "🎯 Плинко\n"
+               "🎉 Подарок дня — бесплатно\n"
+               "⭐ Звёзды за задания\n\n"
+               "👇 Заходи по моей ссылке")
 
 
 @app.post("/api/invite/prepare")
@@ -597,8 +645,9 @@ async def invite_prepare(uid: int = Depends(auth)):
     """Готовое сообщение-приглашение: баннер, текст с эмодзи и кнопка с реферальной ссылкой."""
     link = f"https://t.me/{BOT_USERNAME}?startapp=r{uid}"
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎁 Открыть GiftMafia", url=link, style="primary")]])
-    banner = f"{WEBAPP_URL}/static/banner.jpg"
-    res = InlineQueryResultPhoto(id=f"inv{uid}", photo_url=banner, thumbnail_url=banner, caption=INVITE_TEXT, parse_mode="HTML", reply_markup=kb)
+    banner = f"{WEBAPP_URL}/static/banner.jpg?v={int(os.path.getmtime('static/banner.jpg')) if os.path.exists('static/banner.jpg') else 0}"
+    res = InlineQueryResultPhoto(id=f"inv{uid}", photo_url=banner, thumbnail_url=banner, photo_width=1280, photo_height=720,
+                                 caption=INVITE_TEXT, parse_mode="HTML", reply_markup=kb)
     pm = await bot.save_prepared_inline_message(user_id=uid, result=res, allow_user_chats=True, allow_group_chats=True, allow_channel_chats=True)
     return {"id": pm.id, "link": link}
 
@@ -894,9 +943,11 @@ def a_models(q: str = "", own: int = 0):
         for m, pm in c["models"]:
             if own and (g, m) not in OVR: continue
             if q and q not in f"{g} {m}".lower(): continue
-            out.append({"gift": g, "model": m, "perm": pm, "formula": formula_value(g, m), "price": OVR.get((g, m)), "img": model_img(g, m, 128)})
-            if len(out) >= 80: return {"items": out, "more": True, "own": len(OVR)}
-    return {"items": out, "more": False, "own": len(OVR)}
+            mk = MARKET.get((g, m))
+            out.append({"gift": g, "model": m, "perm": pm, "formula": formula_value(g, m), "price": OVR.get((g, m)),
+                        "market": round(mk * TON_STARS) if mk else None, "market_ton": mk, "img": model_img(g, m, 128)})
+            if len(out) >= 80: return {"items": out, "more": True, "own": len(OVR), "info": market_info()}
+    return {"items": out, "more": False, "own": len(OVR), "info": market_info()}
 
 
 @app.post("/api/admin/model_price", dependencies=[Depends(admin)])
@@ -912,21 +963,115 @@ def a_model_price(b: dict):
     return {"price": v}
 
 
-@app.post("/api/admin/case/{cid}/rebalance", dependencies=[Depends(admin)])
-def a_rebalance(cid: int):
-    """Подогнать шансы кейса под CASE_RTP после правки цен."""
+def rebalance_case(cid):
+    """Подогнать шансы кейса под CASE_RTP. Возвращает текст ошибки или ''."""
     c = q1("SELECT * FROM cases WHERE id=?", cid)
-    if not c or not c["price"]: raise HTTPException(400, "Только для платных кейсов")
+    if not c or not c["price"]: return "Только для платных кейсов"
     ps = q("SELECT * FROM prizes WHERE case_id=?", cid)
     if c["cat"] == "fifty" and len(ps) == 2:
         lose = [p for p in ps if p["kind"] == "stars"]; win = [p for p in ps if p["kind"] == "nft"]
-        if lose and win: run("UPDATE prizes SET stars=? WHERE id=?", max(1, round(2 * CASE_RTP * c["price"] - win[0]["stars"])), lose[0]["id"])
-        return {"ok": True}
+        if lose and win:
+            if not c["price"] * 1.1 <= win[0]["stars"] <= c["price"] * 1.6:  # NFT подорожал/подешевел - берём другой около x1.3
+                it = near(c["price"] * 1.3, random.Random(cid), spread=0.05)
+                run("UPDATE prizes SET name=?,gift=?,model=?,img=?,stars=? WHERE id=?", it["name"], it["gift"], it["model"], it["img"], it["stars"], win[0]["id"])
+                win[0]["stars"] = it["stars"]
+            run("UPDATE prizes SET stars=? WHERE id=?", max(1, round(2 * CASE_RTP * c["price"] - win[0]["stars"])), lose[0]["id"])
+        return ""
     vals = [p["stars"] for p in ps]
     if not vals or min(vals) >= c["price"] * CASE_RTP or max(vals) <= c["price"] * CASE_RTP:
-        raise HTTPException(400, "Нельзя подогнать: нужны призы дешевле и дороже цены кейса")
+        return "Нельзя подогнать: нужны призы дешевле и дороже цены кейса"
     for p, w in zip(ps, solve_weights(vals, c["price"] * CASE_RTP)): run("UPDATE prizes SET weight=? WHERE id=?", w, p["id"])
+    return ""
+
+
+@app.post("/api/admin/case/{cid}/rebalance", dependencies=[Depends(admin)])
+def a_rebalance(cid: int):
+    err = rebalance_case(cid)
+    if err: raise HTTPException(400, err)
     return {"ok": True}
+
+
+# ---------- цены с рынка (Portals) ----------
+PORTALS = "https://portal-market.com/api"
+_market_lock = threading.Lock()
+
+
+def _get_json(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 giftmafia"})
+    with urllib.request.urlopen(req, timeout=30) as r: return json.load(r)
+
+
+def _norm(name): return re.sub(r"[^a-z0-9]", "", name.lower().replace("’", "'"))
+
+
+def refresh_market():
+    """Флор каждой коллекции и модели с Portals, курс TON->⭐, затем пересчёт цен призов и шансов кейсов."""
+    global TON_STARS
+    with _market_lock:
+        try:
+            usd = _get_json("https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd")["the-open-network"]["usd"]
+            ton_stars = round(usd / STAR_USD, 1)
+        except Exception: ton_stars = TON_STARS
+        ours = {_norm(g): g for g in CATALOG}
+        cols, off = [], 0
+        while True:
+            page = _get_json(f"{PORTALS}/collections?limit=100&offset={off}")["collections"]
+            cols += page; off += 100
+            if len(page) < 100 or off > 2000: break
+        cfloor, short = {}, {}
+        for c in cols:
+            g = ours.get(_norm(c["name"]))
+            if not g: continue
+            short[c["short_name"]] = g
+            if c.get("floor_price"): cfloor[g] = float(c["floor_price"])
+        market, names = {}, list(short)
+        for i in range(0, len(names), 10):
+            data = _get_json(f"{PORTALS}/collections/filters?short_names={','.join(names[i:i + 10])}").get("collections", {})
+            for sn, v in data.items():
+                g = short.get(sn)
+                if not g: continue
+                mods = {_norm(m): m for m in MODELS[g]}
+                for m in v.get("models", []):
+                    our = mods.get(_norm(m["name"]))
+                    if our and m.get("floor_price"): market[(g, our)] = float(m["floor_price"])
+            time.sleep(0.3)
+        if not cfloor: return {"error": "Portals не ответил, цены не изменены"}
+        db.execute("DELETE FROM market")
+        db.executemany("INSERT INTO market(gift,model,ton) VALUES(?,?,?)", [(g, "", t) for g, t in cfloor.items()] + [(g, m, t) for (g, m), t in market.items()])
+        for k, v in (("ton_stars", ton_stars), ("market_updated", int(time.time()))):
+            db.execute("INSERT OR REPLACE INTO meta(k,v) VALUES(?,?)", (k, str(v)))
+        db.commit()
+        TON_STARS = ton_stars; CFLOOR.clear(); CFLOOR.update(cfloor); MARKET.clear(); MARKET.update(market)
+        formula_value.cache_clear(); CATALOG_CACHE.clear()
+        for p in q("SELECT id,gift,model FROM prizes WHERE kind='nft'"):
+            try: run("UPDATE prizes SET stars=?,img=? WHERE id=?", nft_value(p["gift"], p["model"]), model_img(p["gift"], p["model"]), p["id"])
+            except HTTPException: pass
+        if (q1("SELECT v FROM meta WHERE k='economy_market'") or {}).get("v") != ECONOMY_VERSION:
+            build_cases(force=True)  # первый раз с рыночными ценами - пересобрать кейсы (цены кейсов от рынка)
+            run("INSERT OR REPLACE INTO meta(k,v) VALUES('economy_market',?)", ECONOMY_VERSION)
+        bad = [c["title"] for c in q("SELECT id,title FROM cases WHERE price>0") if rebalance_case(c["id"])]
+        return {"ton_stars": ton_stars, "collections": len(cfloor), "models": len(market), "cases_not_rebalanced": bad}
+
+
+def market_info():
+    r = q1("SELECT v FROM meta WHERE k='market_updated'")
+    return {"ton_stars": TON_STARS, "star_usd": STAR_USD, "updated": int(r["v"]) if r else 0, "models": len(MARKET), "collections": len(CFLOOR)}
+
+
+async def market_loop():
+    while True:
+        try:
+            if time.time() - market_info()["updated"] > MARKET_EVERY - 600:
+                print("market:", await asyncio.to_thread(refresh_market))
+        except Exception as e: print("market error:", e)
+        await asyncio.sleep(3600)
+
+
+@app.post("/api/admin/market/refresh", dependencies=[Depends(admin)])
+async def a_market_refresh():
+    try: res = await asyncio.to_thread(refresh_market)
+    except Exception as e: raise HTTPException(502, f"Не удалось обновить: {e}")
+    return {**res, **market_info()}
 
 
 @app.get("/api/admin/tasks", dependencies=[Depends(admin)])

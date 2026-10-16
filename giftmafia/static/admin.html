@@ -120,11 +120,13 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
     $$('[data-a]',M).forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api(`win/${b.dataset.w}/${b.dataset.a}`,'POST');toast(b.dataset.a=='sent'?'Отмечено как отправленное':'Заявка отклонена');await load()}catch(e){toast(e.message);b.disabled=false}})}
   if(view=='tasks'){M.innerHTML='<p class="empty">Загрузка…</p>';renderTasksAdmin()}
   if(view=='prices'){M.innerHTML=`<h2>Цены моделей<small id="pinfo"></small></h2>
-      <p style="color:var(--mut);margin-bottom:12px">У каждой модели своя цена. Без своей цены работает формула: флор коллекции × редкость модели × наценка за «дорогое» название (Gold, Midas, Black…). Своя цена сразу применяется в кейсах, продаже и апгрейде. После правок нажмите «Подогнать шансы» у нужных кейсов.</p>
+      <p style="color:var(--mut);margin-bottom:10px">Цена модели: своя цена → флор модели на Portals (обновляется раз в сутки, шансы кейсов подгоняются автоматически) → формула, если модели нет в продаже. После своих правок нажмите «Подогнать шансы» у нужных кейсов.</p>
+      <div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><span id="mkinfo" style="flex:1;min-width:200px;color:var(--mut);font-size:14px"></span><button class="btn sm" id="mkGo">Обновить с Portals</button></div>
       <div class="price"><input class="inp" id="pq" style="flex:1;min-width:180px" placeholder="Поиск: коллекция или модель" value="${esc(PQ)}"><button class="chip ${POWN?'on':''}" id="pown">Только свои</button></div>
       <div class="card" style="padding:4px 16px"><div id="plist"><p class="empty">Загрузка…</p></div></div>`;
     let t;$('pq').oninput=e=>{clearTimeout(t);t=setTimeout(()=>{PQ=e.target.value;loadPrices()},300)};
     $('pown').onclick=()=>{POWN=POWN?0:1;$('pown').classList.toggle('on',!!POWN);loadPrices()};
+    $('mkGo').onclick=async()=>{const b=$('mkGo');b.disabled=true;b.textContent='Обновляю… ~30 сек';try{const r=await api('market/refresh','POST');toast(r.error||`Готово: ${num(r.models)} моделей, 1 TON = ${r.ton_stars} ⭐`);await loadPrices();D.p=await api('prizes')}catch(e){toast(e.message)}b.disabled=false;b.textContent='Обновить с Portals'};
     PR?renderPrices():0;loadPrices()}
   if(view=='cases'){const {cases,prizes}=D.p;
     M.innerHTML=`<h2>Кейсы и шансы<small>${cases.length} кейсов</small></h2>
@@ -142,10 +144,11 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
       act(api('prize','POST',{case_id:b.dataset.addto,kind:v('kind'),gift:v('gift'),model:v('model'),stars:v('stars')||0,weight:v('weight')||1}),'Приз добавлен')})}}
 async function loadPrices(){try{PR=await api(`models?q=${encodeURIComponent(PQ)}&own=${POWN}`);if(view=='prices')renderPrices()}catch(e){toast(e.message)}}
 function renderPrices(){const L=$('plist');if(!L||!PR)return;
-  $('pinfo').textContent=`своих цен: ${PR.own}`+(PR.more?' · первые 80':'');
+  $('pinfo').textContent=`своих цен: ${PR.own}`+(PR.more?' · первые 80':'');const I=PR.info||{};
+  $('mkinfo').innerHTML=`Курс: <b>1 TON = ${I.ton_stars} ⭐</b> (1 ⭐ = $${I.star_usd}) · Portals: ${num(I.models||0)} моделей · ${I.updated?'обновлено '+new Date(I.updated*1000).toLocaleString('ru-RU'):'ещё не обновлялось'}`;
   L.innerHTML=PR.items.map((x,i)=>`<div class="pz"><img src="${esc(x.img)}" alt="" loading="lazy"><div class="nm"><b>${esc(x.gift)} · ${esc(x.model)}</b>
-    <small>редкость ${(x.perm/10).toLocaleString('ru-RU')}% · формула ≈ ${num(x.formula)} ⭐${x.price?` · <span style="color:var(--gold)">своя ${num(x.price)} ⭐</span>`:''}</small></div>
-    <div class="pzc"><input class="inp n" type="number" min="1" placeholder="${x.formula}" value="${x.price||''}" data-mp="${i}" aria-label="Своя цена"><span class="pc">⭐</span>
+    <small>редкость ${(x.perm/10).toLocaleString('ru-RU')}% · ${x.market?`Portals ${num(x.market)} ⭐ (${(+x.market_ton).toLocaleString('ru-RU')} TON)`:`нет на Portals, формула ≈ ${num(x.formula)} ⭐`}${x.price?` · <span style="color:var(--gold)">своя ${num(x.price)} ⭐</span>`:''}</small></div>
+    <div class="pzc"><input class="inp n" type="number" min="1" placeholder="${x.market||x.formula}" value="${x.price||''}" data-mp="${i}" aria-label="Своя цена"><span class="pc">⭐</span>
     <button class="x" data-mr="${i}" aria-label="Сбросить на формулу" ${x.price?'':'disabled style="opacity:.3"'}>↺</button></div></div>`).join('')||'<p class="empty">Ничего не нашлось.</p>';
   const save=async(i,v)=>{const x=PR.items[i];try{const r=await api('model_price','POST',{gift:x.gift,model:x.model,stars:v});toast(v?`Цена: ${num(r.price)} ⭐`:'Цена сброшена на формулу');await loadPrices();D.p=await api('prizes')}catch(e){toast(e.message)}};
   $$('[data-mp]',L).forEach(inp=>inp.onchange=()=>save(+inp.dataset.mp,parseInt(inp.value)||0));
