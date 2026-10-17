@@ -411,14 +411,14 @@ body.maint>header,body.maint>main,body.maint>nav{display:none!important}
 .crk.fly svg path:first-child{animation:flame .12s linear infinite alternate}@keyframes flame{to{transform:scaleY(1.25) translateY(2px);transform-origin:32px 46px}}
 .crk.boom{opacity:0}
 .crm{position:absolute;left:0;right:0;top:22%;text-align:center;z-index:3;pointer-events:none}
-.crm b{display:block;font:800 48px/1 "Unbounded",system-ui;text-shadow:0 4px 24px #0009;font-variant-numeric:tabular-nums}.crm b.win{color:var(--ok)}.crm b.lose{color:var(--bad)}
+.crm b .dg{display:inline-block;width:.74em;text-align:center}.crm b{display:block;font:800 48px/1 "Unbounded",system-ui;text-shadow:0 4px 24px #0009;font-variant-numeric:tabular-nums}.crm b.win{color:var(--ok)}.crm b.lose{color:var(--bad)}
 .crm small{display:inline-flex;align-items:center;gap:4px;margin-top:8px;color:#d9daf0;font-weight:700;font-size:14px;padding:5px 12px;border-radius:999px;background:#0b0c1f80}
 .ga-up .gu-glow{position:absolute;inset:16px;border-radius:50%;background:radial-gradient(circle,#5a6cff88,transparent 65%);animation:pulse 2.4s ease-in-out infinite}
 .gu-arc{filter:drop-shadow(0 0 6px #3ee08f66)}
 .gu-pt{position:absolute;inset:0;animation:gupt 3.6s cubic-bezier(.15,.75,.2,1) infinite}.gu-pt i{position:absolute;left:50%;top:-3px;margin-left:-6px;border:6px solid transparent;border-top:11px solid #fff;filter:drop-shadow(0 2px 4px #000)}
 @keyframes gupt{0%{transform:rotate(150deg)}58%,100%{transform:rotate(870deg)}}
 .ga-up img{animation:float 3.2s ease-in-out infinite}
-.gu-up{position:absolute;left:4px;bottom:10px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,#8affc1,#2fcf80);color:#0b3a22;border:3px solid #1c2350;box-shadow:0 6px 14px -4px #3ee08f;animation:guup 3.6s ease-in-out infinite}
+.gu-up{position:absolute;left:50%;bottom:-8px;margin-left:-17px;width:34px!important;height:34px!important;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,#8affc1,#2fcf80);color:#0b3a22;border:3px solid #1c2350;box-shadow:0 6px 14px -4px #3ee08f;animation:guup 3.6s ease-in-out infinite}
 .gu-up svg{width:18px;height:18px}@keyframes guup{0%,56%{opacity:0;transform:scale(.3)}63%{opacity:1;transform:scale(1.18)}68%,90%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.8)}}
 .ga-up .gu-glow{animation:guglow 3.6s ease-in-out infinite}@keyframes guglow{0%,55%{opacity:.45;transform:scale(.9)}64%,88%{opacity:1;transform:scale(1.12);background:radial-gradient(circle,#3ee08f99,transparent 65%)}100%{opacity:.45;transform:scale(.9)}}
 .gauge .pc2 small{font-size:11px}.gauge .pc2 svg{width:30px;height:30px;transform:none;margin-bottom:2px}
@@ -431,8 +431,9 @@ body.maint>header,body.maint>main,body.maint>nav{display:none!important}
 .rkr b{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rkr span{display:flex;align-items:center;gap:3px;font-weight:800;font-size:14px;white-space:nowrap}
 .rkr em{font-style:normal;font-weight:800;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:3px;white-space:nowrap;min-width:64px;justify-content:flex-end}
 .rkr.st-won{border-color:#3ee08f55}.rkr.st-won em{color:var(--ok)}.rkr.st-lost{opacity:.55}.rkr.st-lost em{color:var(--bad)}.rkr.me{box-shadow:0 0 0 1.5px #8b6cff99}
-.avi{width:18px;height:18px;border-radius:50%;flex:none;display:grid;place-items:center;font:800 10px/1 Manrope;font-style:normal;color:#fff;background-size:cover;background-position:center}
+.avi{position:relative;overflow:hidden;width:18px;height:18px;border-radius:50%;flex:none;display:grid;place-items:center;font:800 10px/1 Manrope;font-style:normal;color:#fff;background-size:cover;background-position:center}
 .rkr .avi{width:30px;height:30px;font-size:13px}.lc{cursor:pointer}.rkr{cursor:pointer}
+.avi img,.ava.big img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:1}.ava.big{position:relative;overflow:hidden}
 .plh2{display:flex;align-items:center;gap:14px;margin-bottom:6px}.ava.big{width:64px;height:64px;font-size:26px;background-size:cover;background-position:center}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.ov.on,.sheet>div,body.ready main:not([hidden]),#winfx *{animation:none!important}}
 </style></head><body>
@@ -642,6 +643,7 @@ CaseView.prototype.q=function(s){return this.root.querySelector(s)};
 const preload=urls=>Promise.all([...new Set(urls)].filter(Boolean).map(u=>new Promise(r=>{const i=new Image();i.onload=i.onerror=r;i.src=u})));
 CaseView.prototype.render=function(){const c=this.c,me=this;
   this.root.innerHTML=`${inline_bar(this.inline,c)}
+  ${isFree(c)&&S.free_channel&&S.free_channel[0]?`<div class="card cond" style="margin-top:4px"><span class="tgi" style="width:42px;height:42px">${TGI}</span><div class="tt"><b>Условие: подписка на ${esc(S.free_channel[0])}</b><small>Без подписки подарок дня не откроется</small></div><button class="btn ghost" data-sub>Подписаться</button></div>`:''}
   <div class="panel"><div class="ph">${cover(c)}<h1>${esc(c.title)}</h1></div>
   <div class="reels" data-r></div>
   <button class="btn cta" data-go></button>
@@ -650,7 +652,7 @@ CaseView.prototype.render=function(){const c=this.c,me=this;
   ${isFree(c)?'<p class="maxw" style="justify-content:center">Подарок дня можно открыть раз в 24 часа</p>':''}</div>
   <h2>Что может выпасть<small>${c.prizes.length}</small></h2>
   <div class="grid3">${c.prizes.map(p=>`<div class="pc ${p.kind=='stars'?'ts':'t'+tierV(p.stars,c.price||5)}"><div class="pi">${pic(p)}</div><b>${title(p)}</b><em>${p.kind=='stars'?price(p.stars):price(p.stars)}</em></div>`).join('')}</div>`;
-  const x=this.q('[data-x]');if(x)x.onclick=closeCase;
+  const x=this.q('[data-x]');if(x)x.onclick=closeCase;const sb=this.q('[data-sub]');if(sb)sb.onclick=()=>tg.openTelegramLink(S.free_channel[1]);
   this.q('[data-go]').onclick=()=>this.go();
   $$('[data-n]',this.root).forEach(b=>b.onclick=()=>{if(me.spinning)return;me.mult=+b.dataset.n;$$('[data-n]',me.root).forEach(z=>z.classList.toggle('on',z==b));me.build(me.mult);me.refresh()});
   this.q('[data-fast]').onclick=e=>{fast=!fast;save();e.currentTarget.classList.toggle('on',fast)};
@@ -812,11 +814,11 @@ function confetti(main){confetti.stop&&confetti.stop();if(matchMedia('(prefers-r
     if(k<3.4)requestAnimationFrame(f);else x.clearRect(0,0,W,H)})(t0)}
 
 /* ---------- аватарки и статистика игрока ---------- */
-const avHtml=(name,photo,i)=>photo?`<i class="avi" style="background-image:url('${esc(photo)}')"></i>`:`<i class="avi" style="background:${AV[(i||0)%5]}">${esc((name||'?')[0])}</i>`;
+const avHtml=(name,uid,i)=>`<i class="avi" style="background:${AV[(i||0)%5]}">${esc((name||'?')[0])}${uid?`<img src="/ava/${uid}" alt="" loading="lazy" onerror="this.remove()">`:''}</i>`;
 document.addEventListener('click',e=>{const t=e.target.closest('[data-pl]');if(t&&t.dataset.pl&&t.dataset.pl!='undefined'){hap();openPlayer(+t.dataset.pl)}});
 async function openPlayer(id){sheet('<p class="empty" style="text-align:center">Загрузка…</p>');let d;try{d=await api('player/'+id)}catch(e){closeSheet();return toast(e.message)}
   const b=d.best,fc=d.fav_case&&S.cases.find(c=>c.id==d.fav_case.id),fimg=fc&&fc.prizes.filter(p=>p.kind=='nft').sort((a,b)=>b.stars-a.stars)[0],wr=d.games?Math.round(d.wins/d.games*100):0;
-  sheet(`<div class="plh2">${d.photo?`<div class="ava big" style="background-image:url('${esc(d.photo)}')"></div>`:`<div class="ava big">${esc((d.name||'?')[0])}</div>`}<div><h4 style="margin:0">${esc(d.name)}${d.me?' <small style="color:var(--mut);font:700 14px Manrope">(вы)</small>':''}</h4><p style="margin:4px 0 0">Статистика игрока</p></div></div>
+  sheet(`<div class="plh2"><div class="ava big">${esc((d.name||'?')[0])}<img src="/ava/${d.id}" alt="" onerror="this.remove()"></div><div><h4 style="margin:0">${esc(d.name)}${d.me?' <small style="color:var(--mut);font:700 14px Manrope">(вы)</small>':''}</h4><p style="margin:4px 0 0">Статистика игрока</p></div></div>
    <div class="stg">
     <div class="stt sbest">${b?(b.kind=='stars'?COIN:`<img src="${esc(imgOf(b,256))}" alt="">`):COIN}<div><small>Лучший выигрыш</small>${b?`<b>${price(b.value)}</b><span class="nm">${b.kind=='stars'?'Звёзды на баланс':esc(b.gift)+' · '+esc(b.model)}</span>`:'<b>—</b><span class="nm" style="color:var(--mut)">Пока без выигрышей</span>'}</div></div>
     <div class="stt"><small>Игр сыграно</small><b>${num(d.games)}</b><em>кейсы и игры</em></div>
@@ -829,7 +831,7 @@ async function openPlayer(id){sheet('<p class="empty" style="text-align:center">
 /* ---------- live ---------- */
 const AV=['#7a5af0','#4f9dff','#e05ce2','#3ee08f','#ff8a3d'];
 async function loadLive(){try{const l=await api('live');
-  setHTML($('live'),l.length?`<div class="ltag"><span>LIVE</span><i></i></div>`+l.map((x,i)=>`<div class="lc t${x.kind=='stars'?0:tierV(x.value,300)}" data-pl="${x.uid}" role="button" tabindex="0">${x.kind=='stars'?COIN:`<img src="${esc(imgOf(x,128))}" alt="" loading="lazy">`}<div><small>${avHtml(x.who,x.photo,i)}${esc(x.who||'Игрок')}</small><b>${x.kind=='stars'?price(x.value):price(x.value)}</b></div></div>`).join(''):'')}catch(e){}}
+  setHTML($('live'),l.length?`<div class="ltag"><span>LIVE</span><i></i></div>`+l.map((x,i)=>`<div class="lc t${x.kind=='stars'?0:tierV(x.value,300)}" data-pl="${x.uid}" role="button" tabindex="0">${x.kind=='stars'?COIN:`<img src="${esc(imgOf(x,128))}" alt="" loading="lazy">`}<div><small>${avHtml(x.who,x.uid,i)}${esc(x.who||'Игрок')}</small><b>${x.kind=='stars'?price(x.value):price(x.value)}</b></div></div>`).join(''):'')}catch(e){}}
 
 /* ---------- мины ---------- */
 const M={mode:'bal',bet:100,bombs:3,auto:false,sel:new Set(),gift:null,g:null,busy:false};
@@ -943,7 +945,7 @@ const rocketSvg=id=>ROCKET_SVG.replaceAll('_ID','_'+id);
 const GAMES=[
  {k:'crash',t:'Ракетка',d:'Ракета летит — множитель растёт. Успей забрать до взрыва',c:'gc-crash',btn:'gold',art:()=>`<div class="ga-crash"><svg class="ga-curve" viewBox="0 0 200 120" preserveAspectRatio="none"><path d="M0 118 C70 116 120 90 190 14" fill="none" stroke="url(#gcl)" stroke-width="5" stroke-linecap="round"/><path d="M0 118 C70 116 120 90 190 14 L190 120 L0 120z" fill="url(#gcf)" opacity=".35"/><defs><linearGradient id="gcl"><stop offset="0" stop-color="#ffb020"/><stop offset="1" stop-color="#ff4f9a"/></linearGradient><linearGradient id="gcf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></linearGradient></defs></svg><div class="ga-rk">${rocketSvg('lobby')}</div><b class="ga-x">x2,45</b></div>`},
  {k:'mines',t:'Мины',d:'Открывай клетки, собирай кристаллы и не попадись на мину',c:'gc-mines',btn:'green',art:()=>`<div class="ga-mines">${[GEM,0,GEM,0,BOMB,GEM,GEM,0,0].map((x,i)=>`<i class="${x===BOMB?'b':x?'g':''}">${x||''}</i>`).join('')}</div>`},
- {k:'upgrade',t:'Апгрейд',d:'Улучши подарок до дорогого NFT одним нажатием',c:'gc-up',btn:'blue',art:()=>`<div class="ga-up"><span class="gu-glow"></span><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#ffffff1a" stroke-width="10"/><circle class="gu-arc" cx="60" cy="60" r="50" fill="none" stroke="url(#gug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="190 400" transform="rotate(-90 60 60)"/><defs><linearGradient id="gug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg><span class="gu-pt"><i></i></span><img src="${th('Plush Pepe','Cozy Galaxy',256)}" alt=""><em class="gu-up">${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'}</em></div>`},
+ {k:'upgrade',t:'Апгрейд',d:'Улучши подарок до дорогого NFT одним нажатием',c:'gc-up',btn:'blue',art:()=>`<div class="ga-up"><span class="gu-glow"></span><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#ffffff1a" stroke-width="10"/><circle class="gu-arc" cx="60" cy="60" r="50" fill="none" stroke="url(#gug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="190 400" transform="rotate(-90 60 60)"/><defs><linearGradient id="gug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg><span class="gu-pt"><i></i></span><img src="${th('Plush Pepe','Cozy Galaxy',256)}" alt=""><em class="gu-up">${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg>'}</em></div>`},
  {k:'plinko',t:'Плинко',d:'Кидай шарики и лови множители до x1000',c:'gc-plinko',btn:'pink',art:()=>`<div class="ga-pl">${[1,2,3,4,5].map(r=>`<p>${'<i></i>'.repeat(r+1)}</p>`).join('')}<span class="ball"></span><div class="sl">${['#ffc83d','#c04df0','#5a6cff','#3d45a6','#5a6cff','#c04df0','#ffc83d'].map(c=>`<em style="background:${c}"></em>`).join('')}</div></div>`}];
 let GSEL=null;
 function renderLobby(){setHTML($('glob'),`<h2>Игры<small>${GAMES.length} игры</small></h2>`+GAMES.map(g=>`<button class="gcard ${g.c}" data-game="${g.k}">${g.isNew?'<span class="gnew">NEW</span>':''}
@@ -959,7 +961,8 @@ const SPD=()=>S?.crash?.speed||.09;
 const fx2=m=>'x'+m.toFixed(2).replace('.',',');
 const rkNow=()=>Date.now()/1000+K.off;
 function rkInfo(){const st=K.st;if(!st)return null;const r=st.round,now=rkNow(),ph=r.phase=='crash'?'crash':now<r.fly_start?'bet':'fly';
-  const m=ph=='crash'?r.crash:ph=='fly'?Math.min(S?.crash?.max||1000,Math.exp(SPD()*(now-r.fly_start))):1;
+  let m=ph=='crash'?r.crash:ph=='fly'?Math.min(S?.crash?.max||1000,Math.exp(SPD()*(now-r.fly_start))):1;
+  if(ph=='fly'){if(K.mr==r.id&&m<K.mm)m=K.mm;K.mr=r.id;K.mm=m}/* в полёте множитель только растёт */
   const cur=st.mine.find(b=>b.round==r.id),next=st.mine.find(b=>b.round>r.id);return {r,ph,m,cur,next,now}}
 function renderCrash(){const el=$('g-crash');if(!el||!S)return;
   el.innerHTML=`<div class="crb"><canvas id="crc" aria-label="Полёт ракеты"></canvas><div class="crk" id="crk">${rocketSvg('game')}</div>
@@ -1003,7 +1006,7 @@ function crPaint(){const I=rkInfo(),xel=$('crx'),s=$('crs'),pb=$('crp'),b=$('kGo
   crDraw(m,ph=='fly',ph!='bet');
   $('crid').textContent='Раунд #'+r.id;
   const left=Math.max(0,r.fly_start-I.now),bs=K.st.bet_sec||8;
-  xel.className=ph=='crash'?'lose':cur&&cur.status=='won'?'win':'';xel.textContent=ph=='bet'?Math.ceil(left)+' с':fx2(m);
+  xel.className=ph=='crash'?'lose':cur&&cur.status=='won'?'win':'';const txt=ph=='bet'?Math.ceil(left)+' с':fx2(m);if(xel._t!==txt){xel._t=txt;xel.innerHTML=[...txt].map(c=>/\d/.test(c)?`<span class="dg">${c}</span>`:c).join('')}
   pb.style.display=ph=='bet'?'':'none';pb.firstChild.style.width=(100-left/bs*100)+'%';
   s.innerHTML=ph=='bet'?'Приём ставок — взлёт через '+Math.ceil(left)+' с':ph=='fly'?(cur&&cur.status=='won'?`Вы забрали ${fx2(cur.mult)} · +${price(cur.payout)}`:cur?'Летим! Забирайте вовремя':'Ракета в полёте'):`Ракета взорвалась на ${fx2(r.crash)}`;
   if(!b)return;
@@ -1015,10 +1018,11 @@ function crPaint(){const I=rkInfo(),xel=$('crx'),s=$('crs'),pb=$('crp'),b=$('kGo
 function crList(){const st=K.st;if(!st||!$('rkp'))return;
   $('crh').innerHTML=st.history.map(h=>`<span style="--sc:${h<2?'#3d45a6':h<10?'#8b5cff':'#ffc83d'};color:${h>=10?'#3a2600':'#fff'}">${fx2(h)}</span>`).join('');
   $('crc2').innerHTML=`${st.count} · ${price(st.sum)}`;
-  $('rkp').innerHTML=st.players.map((p,i)=>`<div class="rkr ${p.me?'me':''} st-${p.status}" data-pl="${p.uid}" role="button" tabindex="0">${avHtml(p.name,p.photo,i)}<b>${esc(p.name)}${p.me?' (вы)':''}</b>
+  $('rkp').innerHTML=st.players.map((p,i)=>`<div class="rkr ${p.me?'me':''} st-${p.status}" data-pl="${p.uid}" role="button" tabindex="0">${avHtml(p.name,p.uid,i)}<b>${esc(p.name)}${p.me?' (вы)':''}</b>
     <span>${p.gift?'🎁 ':''}${price(p.bet)}</span><em>${p.status=='won'?`${fx2(p.mult)} · +${price(p.payout)}`:p.status=='lost'?'—':p.auto?'авто '+fx2(p.auto):'в игре'}</em></div>`).join('')||'<p class="empty">Ставок пока нет — будьте первым</p>'}
-async function crSync(){try{const st=await api('rk/state');K.off=st.round.now-Date.now()/1000;K.st=st;S.balance=st.balance;setBal(st.balance);crList();crPaint()}catch(e){}}
-function crTick(){clearTimeout(K.poll);if(GSEL!='crash'||tab!='games')return;crSync().finally(()=>{const I=rkInfo();K.poll=setTimeout(crTick,I&&I.ph=='fly'?500:1000)})}
+async function crSync(){try{const t0=Date.now()/1000,st=await api('rk/state'),t1=Date.now()/1000,off=st.round.now-(t0+t1)/2;
+  K.off=K.offSet&&Math.abs(off-K.off)<1.5?K.off*.85+off*.15:off;K.offSet=1;/* сглаживаем разницу часов */K.st=st;S.balance=st.balance;setBal(st.balance);crList();crPaint()}catch(e){}}
+function crTick(){clearTimeout(K.poll);if(GSEL!='crash'||tab!='games')return;crSync().finally(()=>{const I=rkInfo();K.poll=setTimeout(crTick,I&&I.ph=='fly'?250:1000)})}
 function crLoop(){if(GSEL!='crash'||!$('crc')){K.raf=0;return}crPaint();K.raf=requestAnimationFrame(crLoop)}
 async function crBet(){if(K.busy)return;const body={};
   if(K.auto){const a=parseFloat(K.auto);if(!(a>=1.01))return toast('Автовывод от x1,01');body.auto=a}

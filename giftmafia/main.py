@@ -1148,6 +1148,30 @@ def user_stats(uid):
             "deposits": q1("SELECT COALESCE(SUM(stars),0) n FROM payments WHERE user_id=? AND status='paid'", uid)["n"]}
 
 
+AVA_DIR = "static/cache/ava"; os.makedirs(AVA_DIR, exist_ok=True)
+
+
+@app.get("/ava/{pid}")
+async def ava(pid: int):
+    """Аватарка игрока через Bot API (фото из initData - svg-заглушки t.me, в ленте они белые). Кеш на диске на сутки."""
+    path, none = f"{AVA_DIR}/{pid}.jpg", f"{AVA_DIR}/{pid}.none"
+    for p in (path, none):
+        if os.path.exists(p) and time.time() - os.path.getmtime(p) < 86400:
+            if p == none: raise HTTPException(404)
+            return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
+    if not q1("SELECT 1 FROM users WHERE id=?", pid): raise HTTPException(404)
+    try:
+        ph = await bot.get_user_profile_photos(pid, limit=1)
+        if not ph.photos: raise ValueError("no photo")
+        size = min(ph.photos[0], key=lambda x: abs(x.width - 160))  # маленькая версия ~160px
+        f = await bot.get_file(size.file_id)
+        data = await asyncio.to_thread(lambda: urllib.request.urlopen(f"https://api.telegram.org/file/bot{TOKEN}/{f.file_path}", timeout=15).read())
+        _save(path, data)
+    except Exception:
+        open(none, "w").close(); raise HTTPException(404)
+    return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/api/player/{pid}")
 def player(pid: int, uid: int = Depends(auth)):
     """Публичная статистика игрока (без пополнений и баланса)."""
