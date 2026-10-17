@@ -39,6 +39,11 @@ CELLS = 25
 TOPUP_MIN, TOPUP_MAX = 50, 10000  # пополнение на любую сумму в этих пределах, ⭐
 PLINKO_RTP = 0.95  # средний возврат плинко
 PLINKO_MAX_BET = 10000
+MIN_BET = 50       # минимальная ставка звёздами в играх (мины, плинко, апгрейд, ракетка)
+CRASH_EDGE = 0.96  # ракетка: множитель краша = EDGE / (1 - U) - средний возврат 96%
+CRASH_SPEED = 0.09  # рост множителя: m(t) = e^(SPEED * t), t в секундах (x2 за ~7.7 с, x10 за ~25 с)
+CRASH_MAX = 1000.0  # максимальный множитель ракетки
+CRASH_MAX_WIN = 250000  # максимум выплаты за раунд ракетки, ⭐
 
 bot = Bot(TOKEN)
 
@@ -250,6 +255,8 @@ CREATE TABLE IF NOT EXISTS cm_reports(id INTEGER PRIMARY KEY AUTOINCREMENT, user
   created INT, decided INT DEFAULT 0, moderator INT DEFAULT 0, mod_msg INT DEFAULT 0);
 CREATE INDEX IF NOT EXISTS cm_user ON cm_reports(user_id, status);
 CREATE TABLE IF NOT EXISTS cm_files(uid TEXT PRIMARY KEY, created INT);
+CREATE TABLE IF NOT EXISTS crash(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, gift TEXT DEFAULT '', crash REAL, auto REAL DEFAULT 0,
+  seed TEXT, started REAL, status TEXT DEFAULT 'live', mult REAL DEFAULT 0, payout INT DEFAULT 0, created INT);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
 """)
@@ -758,7 +765,8 @@ def state(uid: int = Depends(auth)):
             "refs": q1("SELECT COUNT(*) n FROM users WHERE ref_by=?", uid)["n"], "ref_earned": u["ref_earned"],
             "ref_bonus": REF_BONUS, "ref_percent": REF_PERCENT, "uid": uid, "need": FRIENDS_REQUIRED, "bot": BOT_USERNAME,
             "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX,
-            "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET,
+            "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "min_bet": MIN_BET,
+            "crash": {"speed": CRASH_SPEED, "max": CRASH_MAX, "max_win": CRASH_MAX_WIN}, "crash_live": crash_live(uid),
             "free_channel": chat_ref(setting("free_channel")), "ton_stars": TON_STARS,
             "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
 
@@ -1395,7 +1403,7 @@ def mines_start(b: dict = Body(...), uid: int = Depends(auth)):
     if b.get("win_id"): bet = take_item(uid, int(b["win_id"]))["value"]
     else:
         bet = int(b.get("bet", 0))
-        if bet < 1: raise HTTPException(400, "Ставка от 1 ⭐")
+        if bet < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")
         charge(uid, bet)
     field = sorted(secrets.SystemRandom().sample(range(CELLS), bombs))
     gid = run("INSERT INTO mines(user_id,bet,bombs,field,seed,created) VALUES(?,?,?,?,?,?)", uid, bet, bombs, json.dumps(field), secrets.token_hex(16), int(time.time()))
@@ -1537,7 +1545,7 @@ def plinko(b: dict = Body(...), uid: int = Depends(auth)):
     rows, risk = int(b.get("rows", 12)), b.get("risk", "mid")
     if rows not in PLINKO or risk not in PLINKO[rows]: raise HTTPException(400, "Неверные настройки")
     bet = int(b.get("bet", 0))
-    if not 1 <= bet <= PLINKO_MAX_BET: raise HTTPException(400, f"Ставка от 1 до {PLINKO_MAX_BET} ⭐")
+    if not MIN_BET <= bet <= PLINKO_MAX_BET: raise HTTPException(400, f"Ставка от {MIN_BET} до {PLINKO_MAX_BET} ⭐")
     charge(uid, bet)
     rnd = secrets.SystemRandom()
     path = [rnd.randrange(2) for _ in range(rows)]
@@ -1548,6 +1556,80 @@ def plinko(b: dict = Body(...), uid: int = Depends(auth)):
     return {"path": path, "slot": slot, "mult": mult, "payout": payout, "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
 
 
+# ---------- ракетка (crash) ----------
+# Точка краша выбирается на сервере при старте (виден только её хеш), множитель растёт как e^(SPEED*t) по серверному времени.
+# Клиент анимирует сам и раз в полсекунды спрашивает статус; забрать можно, пока множитель не дошёл до точки краша.
+def crash_mult(g, t=None):
+    return round(min(CRASH_MAX, math.exp(CRASH_SPEED * max(0.0, (t or time.time()) - g["started"]))), 2)
+
+
+def crash_view(g):
+    v = {"id": g["id"], "bet": g["bet"], "gift": g["gift"], "auto": g["auto"], "started": g["started"], "now": time.time(), "status": g["status"],
+         "mult": g["mult"], "payout": g["payout"], "hash": hashlib.sha256(f"{g['seed']}:{g['crash']:.2f}".encode()).hexdigest()}
+    if g["status"] != "live": v.update(crash=g["crash"], seed=g["seed"])
+    return v
+
+
+def crash_settle(g):
+    """Закрыть раунд, если пора: автовывод сработал или ракета улетела. Возвращает свежую запись."""
+    if g["status"] != "live": return g
+    now = time.time(); m = crash_mult(g, now)
+    if g["auto"] and g["auto"] < g["crash"] and m >= g["auto"]:
+        pay = min(CRASH_MAX_WIN, int(g["bet"] * g["auto"]))
+        if changed("UPDATE crash SET status='won', mult=?, payout=? WHERE id=? AND status='live'", g["auto"], pay, g["id"]):
+            credit(g["user_id"], pay); log_bet(g["user_id"], "crash", g["bet"], pay, g["id"])
+    elif m >= g["crash"]:
+        if changed("UPDATE crash SET status='lost', mult=? WHERE id=? AND status='live'", g["crash"], g["id"]): log_bet(g["user_id"], "crash", g["bet"], 0, g["id"])
+    return q1("SELECT * FROM crash WHERE id=?", g["id"])
+
+
+def crash_live(uid):
+    g = q1("SELECT * FROM crash WHERE user_id=? AND status='live' ORDER BY id DESC LIMIT 1", uid)
+    return crash_view(crash_settle(g)) if g else None
+
+
+@app.post("/api/crash/start")
+def crash_start(b: dict = Body(...), uid: int = Depends(auth)):
+    g = q1("SELECT * FROM crash WHERE user_id=? AND status='live' ORDER BY id DESC LIMIT 1", uid)
+    if g and crash_settle(g)["status"] == "live": raise HTTPException(400, "Сначала закончите текущий полёт")
+    auto = float(b.get("auto") or 0)
+    if auto and not 1.01 <= auto <= CRASH_MAX: raise HTTPException(400, "Автовывод от x1.01")
+    gift = ""
+    if b.get("win_id"): w = take_item(uid, int(b["win_id"])); bet, gift = w["value"], w["prize"]
+    else:
+        bet = int(b.get("bet", 0))
+        if bet < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")
+        charge(uid, bet)
+    u = secrets.SystemRandom().random()
+    point = max(1.0, min(CRASH_MAX, math.floor(CRASH_EDGE / (1 - u) * 100) / 100))
+    gid = run("INSERT INTO crash(user_id,bet,gift,crash,auto,seed,started,created) VALUES(?,?,?,?,?,?,?,?)",
+              uid, bet, gift, point, auto, secrets.token_hex(16), time.time() + 1.0, int(time.time()))  # 1 с на отсчёт перед стартом
+    return crash_view(q1("SELECT * FROM crash WHERE id=?", gid))
+
+
+@app.get("/api/crash/{gid}")
+def crash_state(gid: int, uid: int = Depends(auth)):
+    g = q1("SELECT * FROM crash WHERE id=? AND user_id=?", gid, uid)
+    if not g: raise HTTPException(404, "Нет такого полёта")
+    return crash_view(crash_settle(g))
+
+
+@app.post("/api/crash/{gid}/cashout")
+def crash_cashout(gid: int, uid: int = Depends(auth)):
+    g = q1("SELECT * FROM crash WHERE id=? AND user_id=?", gid, uid)
+    if not g: raise HTTPException(404, "Нет такого полёта")
+    g = crash_settle(g)
+    if g["status"] == "live":
+        m = crash_mult(g)
+        if time.time() < g["started"]: raise HTTPException(400, "Ракета ещё не взлетела")
+        if m < g["crash"]:
+            pay = min(CRASH_MAX_WIN, int(g["bet"] * m))
+            if changed("UPDATE crash SET status='won', mult=?, payout=? WHERE id=? AND status='live'", m, pay, gid):
+                credit(uid, pay); log_bet(uid, "crash", g["bet"], pay, gid)
+        g = crash_settle(q1("SELECT * FROM crash WHERE id=?", gid))
+    return {**crash_view(g), "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
+
+
 # ---------- апгрейд ----------
 @app.post("/api/upgrade")
 def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
@@ -1556,6 +1638,7 @@ def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
     target = nft_value(gift, model)
     src = int(b["stars"]) if not b.get("win_id") else own_win(int(b["win_id"]), uid)["value"]
     if src < 1: raise HTTPException(400, "Выберите, что улучшать")
+    if not b.get("win_id") and src < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")
     if src >= target: raise HTTPException(400, "Цель должна быть дороже ставки")
     chance = min(UPGRADE_MAX_CHANCE, src / target * UPGRADE_EDGE)
     if b.get("win_id"): take_item(uid, int(b["win_id"]))

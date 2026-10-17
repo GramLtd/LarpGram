@@ -370,6 +370,49 @@ body.maint>header,body.maint>main,body.maint>nav{display:none!important}
 #maint h1{font:800 28px/1.15 "Unbounded",system-ui;margin:14px 0 10px}#maint p{color:#c9cbe4;font-weight:600}
 .mt-until{display:inline-flex;margin-top:14px;padding:9px 16px;border-radius:999px;background:#ffffff10;border:1px solid #ffffff1f;font-weight:800}
 #maint .btn{margin-top:22px}#maint .mt-sm{color:var(--mut);font-size:13px;margin-top:12px}
+/* лобби игр */
+#glob h2{margin-top:6px}
+.gcard{position:relative;display:block;width:100%;min-height:178px;margin-top:12px;padding:20px 18px 18px;border-radius:28px;text-align:left;overflow:hidden;border:1px solid #ffffff1c;
+  box-shadow:inset 0 1px 0 #ffffff1f,0 14px 34px -18px #000;transition:transform .16s ease}
+.gcard:active{transform:scale(.98)}
+.gc-crash{background:radial-gradient(90% 120% at 100% 30%,#ff7a4547,transparent 60%),radial-gradient(70% 90% at 0 0,#8b5cff33,transparent 60%),linear-gradient(160deg,#352256,#1c1b3c)}
+.gc-mines{background:radial-gradient(90% 120% at 100% 40%,#3ee08f33,transparent 60%),radial-gradient(70% 90% at 0 0,#4f7bff26,transparent 60%),linear-gradient(160deg,#1e3348,#1b1c3a)}
+.gc-up{background:radial-gradient(90% 120% at 100% 40%,#5a6cff4d,transparent 60%),radial-gradient(70% 90% at 0 100%,#3ee08f1f,transparent 60%),linear-gradient(160deg,#262a66,#1b1c3a)}
+.gc-plinko{background:radial-gradient(90% 120% at 100% 40%,#e05ce240,transparent 60%),radial-gradient(70% 90% at 0 0,#8b5cff33,transparent 60%),linear-gradient(160deg,#3b2160,#1c1b3c)}
+.gtx{position:relative;z-index:2;width:60%}
+.gcard h3{font:800 31px/1 "Unbounded",system-ui;letter-spacing:-.03em;transform:skewX(-7deg);transform-origin:left;-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:6px;filter:drop-shadow(0 4px 10px #0006)}
+.gc-crash h3{background-image:linear-gradient(180deg,#ffe07a,#ff8a3d)}.gc-mines h3{background-image:linear-gradient(180deg,#b8ffe0,#3ee08f)}
+.gc-up h3{background-image:linear-gradient(180deg,#c9d4ff,#6c8cff)}.gc-plinko h3{background-image:linear-gradient(180deg,#ffc6f4,#e05ce2)}
+.gcard p{color:#d9daf0;font-weight:700;font-size:14.5px;line-height:1.35;margin:10px 0 14px}
+.gplay{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 18px;border-radius:999px;font:800 15px "Manrope",system-ui;letter-spacing:.02em;text-transform:uppercase;box-shadow:inset 0 1px 0 #ffffff55,0 8px 20px -8px #000a}
+.gplay svg{width:18px;height:18px}
+.gplay.gold{background:linear-gradient(180deg,#ffe07a,#f5a623);color:#3a2600}.gplay.green{background:linear-gradient(180deg,#8affc1,#2fcf80);color:#0b3a22}
+.gplay.blue{background:linear-gradient(90deg,#4f7bff,#8b5cff);color:#fff}.gplay.pink{background:linear-gradient(90deg,#e05ce2,#ff5a8a);color:#fff}
+.gart{position:absolute;right:0;top:0;bottom:0;width:44%;display:grid;place-items:center;z-index:1}
+.gnew{position:absolute;top:14px;right:14px;z-index:3;padding:4px 10px;border-radius:8px;background:linear-gradient(90deg,#ff5a6e,#ff3d8b);font:800 12px "Unbounded";letter-spacing:.06em;transform:rotate(8deg);box-shadow:0 6px 14px -4px #ff3d6b}
+.ga-crash{position:relative;width:100%;height:100%}.ga-curve{position:absolute;left:0;right:6%;top:18%;bottom:12%;width:94%;height:70%}
+.ga-rk{position:absolute;right:4%;top:6%;width:62px;height:62px;transform:rotate(45deg);animation:gafly 2.6s ease-in-out infinite;filter:drop-shadow(0 8px 14px #ff7a4566)}.ga-rk svg{width:100%;height:100%}
+@keyframes gafly{50%{transform:rotate(45deg) translate(0,-6px)}}
+.ga-x{position:absolute;left:14%;top:30%;font:800 22px "Unbounded";color:#ffc83d;text-shadow:0 2px 10px #ff8a3d88}
+.ga-mines{display:grid;grid-template-columns:repeat(3,36px);gap:6px;transform:rotate(-8deg)}
+.ga-mines i{width:36px;height:36px;border-radius:10px;background:linear-gradient(180deg,#3a3c5c,#2c2d48);box-shadow:inset 0 1px 0 #ffffff1c,0 3px 0 #1a1b2e;display:grid;place-items:center}
+.ga-mines i svg{width:70%;height:70%}.ga-mines i.g{background:linear-gradient(180deg,#1f6b55,#174a3e)}.ga-mines i.b{background:linear-gradient(180deg,#8c2c3f,#4a1d2b)}
+.ga-up{position:relative;width:118px;height:118px}.ga-up svg{position:absolute;inset:0}.ga-up img{position:absolute;left:25px;top:22px;width:68px;height:68px;object-fit:contain;filter:drop-shadow(0 6px 10px #000a)}
+.ga-up b{position:absolute;left:0;right:0;bottom:-6px;text-align:center;font:800 16px "Unbounded";color:#3ee08f}
+.ga-pl{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px}.ga-pl p{display:flex;gap:10px;margin:0}.ga-pl p i{width:6px;height:6px;border-radius:50%;background:#c9cbf0}
+.ga-pl .ball{position:absolute;top:-14px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3c4,#ff5a6e);box-shadow:0 0 10px #ff5a6e;animation:gaball 2.4s ease-in infinite}
+@keyframes gaball{0%{transform:translate(0,0)}25%{transform:translate(-8px,22px)}50%{transform:translate(6px,44px)}75%{transform:translate(-4px,66px)}100%{transform:translate(10px,86px);opacity:0}}
+.ga-pl .sl{display:flex;gap:3px;margin-top:6px}.ga-pl .sl em{width:14px;height:10px;border-radius:3px}
+.gtop[hidden]{display:none}.gtop{display:flex;align-items:center;gap:12px;margin:6px 0 2px}.gtop h3{font:800 22px "Unbounded",system-ui}
+/* ракетка */
+.crb{position:relative;height:270px;margin:12px -4px 0;border-radius:24px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(circle at 70% 10%,#ff7a4522,transparent 55%),radial-gradient(circle at 20% 90%,#5b46d433,transparent 60%),linear-gradient(180deg,#1d1f40,#14152c)}
+.crb canvas{position:absolute;inset:0;width:100%;height:100%}
+.crk{position:absolute;left:0;top:0;width:44px;height:44px;z-index:2;transition:opacity .3s;will-change:transform}.crk svg{width:100%;height:100%;filter:drop-shadow(0 6px 12px #ff7a4588)}
+.crk.fly svg path:first-child{animation:flame .12s linear infinite alternate}@keyframes flame{to{transform:scaleY(1.25) translateY(2px);transform-origin:32px 46px}}
+.crk.boom{opacity:0}
+.crm{position:absolute;left:0;right:0;top:22%;text-align:center;z-index:3;pointer-events:none}
+.crm b{display:block;font:800 48px/1 "Unbounded",system-ui;text-shadow:0 4px 24px #0009;font-variant-numeric:tabular-nums}.crm b.win{color:var(--ok)}.crm b.lose{color:var(--bad)}
+.crm small{display:inline-flex;align-items:center;gap:4px;margin-top:8px;color:#d9daf0;font-weight:700;font-size:14px;padding:5px 12px;border-radius:999px;background:#0b0c1f80}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.ov.on,.sheet>div,body.ready main:not([hidden]),#winfx *{animation:none!important}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -385,8 +428,10 @@ body.maint>header,body.maint>main,body.maint>nav{display:none!important}
 </header>
 
 <main id="v-games" hidden>
-  <div class="gsw glass"><i class="lens" aria-hidden="true"></i><button class="on" data-g="mines"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="14" r="7"/><path d="M15.5 9.5 18 7M18 7l1.5-1.5M18 7h2M18 7V5"/></svg>Мины</button><button data-g="upgrade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Апгрейд</button><button data-g="plinko"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1.4"/><circle cx="8" cy="10" r="1.4"/><circle cx="16" cy="10" r="1.4"/><circle cx="4" cy="15" r="1.4"/><circle cx="12" cy="15" r="1.4"/><circle cx="20" cy="15" r="1.4"/><path d="M3 20h18"/></svg>Плинко</button></div>
-  <section id="g-mines"></section>
+  <div id="glob"></div>
+  <div class="gtop" id="gtop" hidden><button class="x" id="gback" aria-label="Все игры"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h3 id="gtt"></h3></div>
+  <section id="g-crash" hidden></section>
+  <section id="g-mines" hidden></section>
   <section id="g-upgrade" hidden></section>
   <section id="g-plinko" hidden></section>
 </main>
@@ -523,7 +568,7 @@ addEventListener('resize',()=>$$('.glass').forEach(moveLens));
 function setCur(c){CUR=c;try{localStorage.gmCur=c}catch(e){}hap();if(S)setBal(S.balance);
   $('chips').innerHTML='';renderChips();renderCases();if(CV&&!CV.spinning){const sc=$('ovCase').scrollTop;CV.render();$('ovCase').scrollTop=sc}
   if(BV&&!BV.spinning)BV.render();if(!U.busy)renderUpgrade();if(!M.busy)renderMines();$('profIn')._h='';renderProfile();loadLive();if(catOn())renderCat();if(!plBusy()&&!$('g-plinko').hidden)renderPlinko();$('nickBox')._h='';renderNick();$('taskList')._h='';renderTasks();load()}
-function setTab(t){tab=t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));moveLens($$('.tabs')[0]);if(t=='games')requestAnimationFrame(()=>moveLens($('v-games').querySelector('.gsw')));
+function setTab(t){tab=t;$$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));moveLens($$('.tabs')[0]);if(t=='games')openGame(GSEL);
   ['games','cases','earn','bonus'].forEach(k=>$('v-'+k).hidden=k!=t);scrollTo(0,0);if(t=='bonus')renderBonus();if(t=='earn'){renderEarn();requestAnimationFrame(()=>moveLens($('esw')))}}
 $$('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
 
@@ -751,7 +796,7 @@ async function loadLive(){try{const l=await api('live');
   setHTML($('live'),l.length?`<div class="ltag"><span>LIVE</span><i></i></div>`+l.map((x,i)=>`<div class="lc t${x.kind=='stars'?0:tierV(x.value,300)}">${x.kind=='stars'?COIN:`<img src="${esc(imgOf(x,128))}" alt="" loading="lazy">`}<div><small><i style="background:${AV[i%5]}">${esc((x.who||'?')[0])}</i>${esc(x.who||'Игрок')}</small><b>${x.kind=='stars'?price(x.value):price(x.value)}</b></div></div>`).join(''):'')}catch(e){}}
 
 /* ---------- мины ---------- */
-const M={mode:'bal',bet:10,bombs:3,auto:false,sel:new Set(),gift:null,g:null,busy:false};
+const M={mode:'bal',bet:100,bombs:3,auto:false,sel:new Set(),gift:null,g:null,busy:false};
 function mMult(b,k){let m=1;for(let i=0;i<k;i++)m*=(25-i)/(25-b-i);return k?Math.round(m*(S?.mines_edge||.96)*100)/100:1}
 const fmtM=m=>'×'+m.toFixed(2).replace('.',',');
 function renderMines(){M.prev=M.shown||new Set();M.shown=new Set();const el=$('g-mines'),g=M.g,live=g&&g.status=='live',k=g?g.opened.length:0,b=g?g.bombs:M.bombs;
@@ -774,7 +819,7 @@ function renderMines(){M.prev=M.shown||new Set();M.shown=new Set();const el=$('g
   $$('[data-m]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.mode=x.dataset.m;renderMines()});
   $$('[data-a]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.auto=x.dataset.a=='1';M.sel.clear();renderMines()});
   $$('[data-bm]',el).forEach(x=>x.onclick=()=>{if(lk)return;M.bombs=Math.min(24,Math.max(1,M.bombs+ +x.dataset.bm));[...M.sel].forEach(i=>M.sel.size>25-M.bombs&&M.sel.delete(i));renderMines()});
-  $$('[data-b]',el).forEach(x=>x.onclick=()=>{if(lk)return;const v=betVal();M.bet=x.dataset.b=='h'?Math.max(1,v/2|0):x.dataset.b=='d'?v*2:Math.max(1,S.balance);
+  $$('[data-b]',el).forEach(x=>x.onclick=()=>{if(lk)return;const v=betVal();M.bet=x.dataset.b=='h'?Math.max(MINB(),v/2|0):x.dataset.b=='d'?v*2:Math.max(MINB(),S.balance);
     M.bet=Math.min(M.bet,Math.max(1,S.balance));renderMines()});
   const bi=$('mBet');if(bi)bi.oninput=()=>{M.bet=Math.max(0,fromCur(bi.value));updMults()};
   const gs=$('mGift');if(gs)gs.onclick=()=>{if(!lk)pickInv(w=>{M.gift=w;renderMines()})};
@@ -800,7 +845,7 @@ function cellClick(i){const g=M.g;
 async function startMines(){if(M.busy)return;
   const body={bombs:M.bombs};
   if(M.mode=='gift'){if(!M.gift)return pickInv(w=>{M.gift=w;renderMines()});body.win_id=M.gift.id}
-  else{body.bet=betVal();if(S.balance<body.bet)return openTop(body.bet-S.balance)}
+  else{body.bet=betVal();if(body.bet<MINB())return toast('Минимальная ставка '+price(MINB()));if(S.balance<body.bet)return openTop(body.bet-S.balance)}
   M.busy=true;try{M.g=await api('mines/start','POST',body);if(M.mode=='gift')M.gift=null;else{S.balance-=body.bet;setBal(S.balance)}
     hap();M.busy=false;renderMines();
     if(M.auto){M.busy=true;renderMines();for(const i of [...M.sel]){if(M.g.status!='live')break;await openCell(i,true);await new Promise(r=>setTimeout(r,fast?120:380))}
@@ -836,7 +881,7 @@ function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
   $('uSrc').onclick=()=>{if(U.busy)return;if(U.src.kind=='stars')return;pickInv(w=>{U.src={...w,kind:'nft'};U.res=null;renderUpgrade()})};
   $('uTgt').onclick=()=>{if(!U.busy)openCatalog(p=>{U.target=p;U.res=null;renderUpgrade()})};
   $$('[data-us]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;U.res=null;if(b.dataset.us=='stars')U.src={kind:'stars',value:Math.max(1,Math.min(100,S.balance||100))};else{U.src={kind:'gift',value:0};pickInv(w=>{U.src={...w,kind:'nft'};renderUpgrade()})}renderUpgrade()});
-  $$('[data-ub]',el).forEach(b=>b.onclick=()=>{const v=U.src.value;U.src.value=Math.max(1,b.dataset.ub=='h'?v/2|0:b.dataset.ub=='d'?v*2:S.balance);U.res=null;renderUpgrade()});
+  $$('[data-ub]',el).forEach(b=>b.onclick=()=>{const v=U.src.value;U.src.value=Math.max(MINB(),b.dataset.ub=='h'?v/2|0:b.dataset.ub=='d'?v*2:S.balance);U.res=null;renderUpgrade()});
   const bi=$('uBet');if(bi)bi.onchange=()=>{U.src.value=Math.max(1,fromCur(bi.value));U.res=null;renderUpgrade()};
   $$('[data-k]',el).forEach(b=>b.onclick=()=>{if(!U.src.value)return toast('Сначала выберите, что улучшаем');U.target=nearest(U.src.value*+b.dataset.k);U.res=null;renderUpgrade()});
   $('uGo').onclick=doUpgrade}
@@ -844,6 +889,7 @@ function allModels(){if(allModels.c)return allModels.c;return allModels.c=CAT.fl
 function nearest(v){const a=allModels().filter(p=>p.value>U.src.value);if(!a.length)return null;
   const best=a.reduce((b,p)=>Math.abs(Math.log(p.value/v))<Math.abs(Math.log(b.value/v))?p:b);const close=a.filter(p=>p.value>=best.value*.97&&p.value<=best.value*1.03);return close[Math.random()*close.length|0]}
 async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
+  if(U.src.kind=='stars'&&U.src.value<MINB())return toast('Минимальная ставка '+price(MINB()));
   if(U.src.kind=='stars'&&S.balance<U.src.value)return openTop(U.src.value-S.balance);
   U.busy=true;U.res=null;renderUpgrade();
   try{const r=await api('upgrade','POST',U.src.kind=='stars'?{stars:U.src.value,gift:U.target.gift,model:U.target.model}:{win_id:U.src.id,gift:U.target.gift,model:U.target.model});
@@ -855,11 +901,87 @@ async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
     U.busy=false;renderUpgrade();await load();
     if(r.ok)showWins([r.win]);else toast('Не повезло — попробуйте ещё')}
   catch(e){U.busy=false;toast(e.message);renderUpgrade()}}
-$$('#v-games .gsw button').forEach(b=>b.onclick=()=>{$$('#v-games .gsw button').forEach(x=>x.classList.toggle('on',x==b));moveLens($('v-games').querySelector('.gsw'));
-  ['mines','upgrade','plinko'].forEach(g=>$('g-'+g).hidden=b.dataset.g!=g);if(b.dataset.g=='plinko')renderPlinko()});
+/* ---------- лобби игр ---------- */
+const MINB=()=>S?.min_bet||50;
+const ROCKET_SVG='<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="rkB_ID" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#c9cfff"/></linearGradient><linearGradient id="rkF_ID" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b9dff"/><stop offset="1" stop-color="#6a3ff0"/></linearGradient><linearGradient id="rkX_ID" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3a0"/><stop offset=".5" stop-color="#ffb020"/><stop offset="1" stop-color="#ff4f6e" stop-opacity="0"/></linearGradient></defs><path d="M27 46h10l-5 16z" fill="url(#rkX_ID)"/><path d="M22 38l-9 8 2-13 9-4zM42 38l9 8-2-13-9-4z" fill="url(#rkF_ID)"/><path d="M32 2c9 8 12 20 10 38H22C20 22 23 10 32 2z" fill="url(#rkB_ID)"/><path d="M32 2c4 4 7 9 8.6 15H23.4C25 11 28 6 32 2z" fill="url(#rkF_ID)"/><circle cx="32" cy="25" r="5.5" fill="#4f9dff" stroke="#2a2c80" stroke-width="2.4"/><circle cx="30.4" cy="23.4" r="1.6" fill="#fff" opacity=".8"/><path d="M26 40h12v4H26z" fill="url(#rkF_ID)"/></svg>';
+const rocketSvg=id=>ROCKET_SVG.replaceAll('_ID','_'+id);
+const GAMES=[
+ {k:'crash',t:'Ракетка',d:'Ракета летит — множитель растёт. Успей забрать до взрыва',c:'gc-crash',btn:'gold',art:()=>`<div class="ga-crash"><svg class="ga-curve" viewBox="0 0 200 120" preserveAspectRatio="none"><path d="M0 118 C70 116 120 90 190 14" fill="none" stroke="url(#gcl)" stroke-width="5" stroke-linecap="round"/><path d="M0 118 C70 116 120 90 190 14 L190 120 L0 120z" fill="url(#gcf)" opacity=".35"/><defs><linearGradient id="gcl"><stop offset="0" stop-color="#ffb020"/><stop offset="1" stop-color="#ff4f9a"/></linearGradient><linearGradient id="gcf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></linearGradient></defs></svg><div class="ga-rk">${rocketSvg('lobby')}</div><b class="ga-x">x2,45</b></div>`,isNew:true},
+ {k:'mines',t:'Мины',d:'Открывай клетки, собирай кристаллы и не попадись на мину',c:'gc-mines',btn:'green',art:()=>`<div class="ga-mines">${[GEM,0,GEM,0,BOMB,GEM,GEM,0,0].map((x,i)=>`<i class="${x===BOMB?'b':x?'g':''}">${x||''}</i>`).join('')}</div>`},
+ {k:'upgrade',t:'Апгрейд',d:'Улучши подарок до дорогого NFT — шанс до 80%',c:'gc-up',btn:'blue',art:()=>`<div class="ga-up"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#ffffff1a" stroke-width="10"/><circle cx="60" cy="60" r="50" fill="none" stroke="url(#gug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="190 400" transform="rotate(-90 60 60)"/><defs><linearGradient id="gug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg><img src="${th('Plush Pepe','Cozy Galaxy',256)}" alt=""><b>60%</b></div>`},
+ {k:'plinko',t:'Плинко',d:'Кидай шарики и лови множители до x1000',c:'gc-plinko',btn:'pink',art:()=>`<div class="ga-pl">${[1,2,3,4,5].map(r=>`<p>${'<i></i>'.repeat(r+1)}</p>`).join('')}<span class="ball"></span><div class="sl">${['#ffc83d','#c04df0','#5a6cff','#3d45a6','#5a6cff','#c04df0','#ffc83d'].map(c=>`<em style="background:${c}"></em>`).join('')}</div></div>`}];
+let GSEL=null;
+function renderLobby(){setHTML($('glob'),`<h2>Игры<small>${GAMES.length} игры</small></h2>`+GAMES.map(g=>`<button class="gcard ${g.c}" data-game="${g.k}">${g.isNew?'<span class="gnew">NEW</span>':''}
+  <div class="gtx"><h3>${g.t}</h3><p>${g.d}</p><span class="gplay ${g.btn}">Играть ${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>'}</span></div>
+  <div class="gart">${g.art()}</div></button>`).join(''));
+  $$('#glob [data-game]').forEach(b=>b.onclick=()=>{hap();openGame(b.dataset.game)})}
+function openGame(k){GSEL=k;$('glob').hidden=!!k;$('gtop').hidden=!k;['mines','upgrade','plinko','crash'].forEach(g=>$('g-'+g).hidden=g!=k);
+  if(k){$('gtt').textContent=GAMES.find(g=>g.k==k).t;scrollTo(0,0);if(k=='plinko')renderPlinko();if(k=='crash')renderCrash();if(k=='mines')renderMines();if(k=='upgrade')renderUpgrade()}else renderLobby()}
+
+/* ---------- ракетка ---------- */
+const K={mode:'bal',bet:100,auto:'',gift:null,g:null,off:0,raf:0,poll:0,hist:[],busy:false,stars:null,boom:0};
+const cMult=g=>{const t=Date.now()/1000+K.off-g.started;return Math.min(S?.crash?.max||1000,Math.exp((S?.crash?.speed||.09)*Math.max(0,t)))};
+const fx2=m=>'x'+m.toFixed(2).replace('.',',');
+function renderCrash(){const el=$('g-crash');if(!el||!S)return;const g=K.g,live=g&&g.status=='live';
+  el.innerHTML=`<div class="crb"><canvas id="crc" aria-label="Полёт ракеты"></canvas><div class="crk" id="crk">${rocketSvg('game')}</div>
+    <div class="crm" id="crm"><b id="crx">x1,00</b><small id="crs">Сделайте ставку и запускайте</small></div></div>
+  <div class="plh" id="crh">${K.hist.map(h=>`<span style="--sc:${h<2?'#3d45a6':h<10?'#8b5cff':'#ffc83d'};color:${h>=10?'#3a2600':'#fff'}">${fx2(h)}</span>`).join('')}</div>
+  <div class="box seg"><button data-km="bal" class="${K.mode=='bal'?'on':''}">Балансом</button><button data-km="gift" class="${K.mode=='gift'?'on':''}">Подарком</button></div>
+  ${K.mode=='bal'?`<div class="box"><div class="bet">${CI()}<input id="kBet" inputmode="decimal" value="${inCur(K.bet)}" ${live?'disabled':''} aria-label="Ставка"></div><button class="sb" data-kb="h">½</button><button class="sb" data-kb="d">2×</button><button class="sb" data-kb="max" style="color:#fff">МАКС</button></div>`
+   :`<div class="box"><button class="gsel" id="kGift">${K.gift?`<img src="${esc(imgOf(K.gift,128))}" alt=""><span style="min-width:0"><b>${title(K.gift)}</b><small>${price(K.gift.value)}</small></span>`:'<span style="color:var(--mut);padding:12px 6px">Выберите подарок из инвентаря</span>'}</button></div>`}
+  <div class="box"><div class="bet" style="font-size:18px"><span style="color:var(--mut);font:700 14px Manrope;white-space:nowrap">Автовывод x</span><input id="kAuto" inputmode="decimal" placeholder="нет" value="${esc(K.auto)}" ${live?'disabled':''} aria-label="Автовывод"></div>${[1.5,2,5].map(a=>`<button class="sb" data-ka="${a}">${String(a).replace('.',',')}</button>`).join('')}</div>
+  <button class="btn" id="kGo" style="margin-top:12px"></button>
+  <p class="maxw" style="justify-content:center;text-align:center">Мин. ставка ${price(MINB())} · выигрыш = ставка × множитель${K.mode=='gift'?' · подарок ставится по оценке, выигрыш в '+(CUR=='gram'?'GRAM':'⭐'):''}</p>`;
+  const bi=$('kBet');if(bi)bi.oninput=()=>{K.bet=Math.max(0,fromCur(bi.value))};
+  $$('[data-kb]',el).forEach(b=>b.onclick=()=>{if(live)return;const v=Math.max(MINB(),K.bet);K.bet=b.dataset.kb=='h'?Math.max(MINB(),v/2|0):b.dataset.kb=='d'?v*2:Math.max(MINB(),S.balance);renderCrash()});
+  $$('[data-km]',el).forEach(b=>b.onclick=()=>{if(live)return;K.mode=b.dataset.km;renderCrash()});
+  $$('[data-ka]',el).forEach(b=>b.onclick=()=>{if(live)return;K.auto=b.dataset.ka;renderCrash()});
+  const ai=$('kAuto');ai.oninput=()=>{K.auto=ai.value.replace(',','.').replace(/[^\d.]/g,'')};
+  const gs=$('kGift');if(gs)gs.onclick=()=>{if(!live)pickInv(w=>{K.gift=w;renderCrash()})};
+  crLayout();crButton();crText();if(live&&!K.raf)K.raf=requestAnimationFrame(crLoop)}
+function crButton(){const b=$('kGo');if(!b)return;const g=K.g,live=g&&g.status=='live';
+  if(live){const pre=Date.now()/1000+K.off<g.started;b.className='btn green';b.disabled=pre||K.busy;b.innerHTML=pre?'Взлёт…':`Забрать ${price(Math.floor(g.bet*cMult(g)))}`;b.onclick=crCash}
+  else{b.className='btn';b.disabled=K.busy;b.innerHTML=K.mode=='gift'&&!K.gift?'Выберите подарок':'Запустить ракету';b.onclick=crStart}}
+function crLayout(){const cv=$('crc');if(!cv)return;const W=cv.clientWidth,H=cv.clientHeight,d=Math.min(2,devicePixelRatio||1);cv.width=W*d;cv.height=H*d;cv.getContext('2d').setTransform(d,0,0,d,0,0);
+  if(!K.stars)K.stars=[...Array(40)].map(()=>[Math.random(),Math.random(),Math.random()*1.4+.3]);crDraw(K.g&&K.g.status!='live'?K.g.mult||K.g.crash:1,K.g&&K.g.status=='live')}
+function crDraw(m,live){const cv=$('crc');if(!cv)return;const x=cv.getContext('2d'),W=cv.clientWidth,H=cv.clientHeight,t=performance.now()/1000;x.clearRect(0,0,W,H);
+  const sp=live?Math.min(3,1+Math.log(m)):0;for(const s of K.stars){const yy=((s[1]*H)+t*20*sp*s[2])%H;x.fillStyle=`rgba(255,255,255,${.25+.35*s[2]/1.7})`;x.fillRect(s[0]*W,yy,s[2],s[2])}
+  const pad=26,mx=Math.max(2,m*1.15),lm=Math.log(mx),ts=Math.log(m)/(S?.crash?.speed||.09),tw=Math.max(8,ts*1.15);
+  x.strokeStyle='#ffffff12';x.lineWidth=1;x.font='700 11px Manrope,system-ui';x.fillStyle='#9fa2cc';
+  const ys=v=>H-pad-((v-1)/(mx-1))*(H-pad*2),grid=[1.5,2,3,5,10,20,50,100,200,500].filter(v=>v<mx),gs=grid.length>4?grid.filter((v,i)=>i%Math.ceil(grid.length/4)==0||i==grid.length-1):grid;
+  for(const v of gs){const y=ys(v);x.beginPath();x.moveTo(pad,y);x.lineTo(W-8,y);x.stroke();x.fillText(fx2(v).replace(',00',''),6,y-3)}
+  const P=[];for(let i=0;i<=60;i++){const tt=ts*i/60,mm=Math.exp((S?.crash?.speed||.09)*tt);P.push([pad+(tt/tw)*(W-pad-16),ys(mm)])}
+  const gr=x.createLinearGradient(0,0,W,0);gr.addColorStop(0,'#ffb020');gr.addColorStop(1,K.boom?'#ff5a6e':'#ff4f9a');
+  x.beginPath();P.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.lineTo(P.at(-1)[0],H-pad);x.lineTo(pad,H-pad);x.closePath();const fg=x.createLinearGradient(0,0,0,H);fg.addColorStop(0,'#ff7a4555');fg.addColorStop(1,'#ff7a4500');x.fillStyle=fg;x.fill();
+  x.beginPath();P.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.strokeStyle=gr;x.lineWidth=4;x.lineCap='round';x.shadowColor='#ff7a45';x.shadowBlur=12;x.stroke();x.shadowBlur=0;
+  const [ex,ey]=P.at(-1),[px,py]=P.at(-4)||P[0],ang=Math.atan2(ey-py,ex-px)*180/Math.PI+90,rk=$('crk');
+  if(rk){rk.style.transform=`translate(${ex-22}px,${ey-22}px) rotate(${Math.max(20,Math.min(88,ang))}deg)`;rk.classList.toggle('fly',!!live);rk.classList.toggle('boom',!!K.boom)}
+  if(K.boom){const k=Math.min(1,(performance.now()-K.boom)/600);for(let i=0;i<14;i++){const a=i/14*6.283,r=10+k*46;x.globalAlpha=1-k;x.fillStyle=i%2?'#ffc83d':'#ff5a6e';x.beginPath();x.arc(ex+Math.cos(a)*r,ey+Math.sin(a)*r,4*(1-k)+1,0,6.283);x.fill()}x.globalAlpha=1}}
+function crText(){const g=K.g;if(!g)return;const live=g.status=='live',pre=live&&Date.now()/1000+K.off<g.started,m=live?cMult(g):(g.mult||g.crash||1);
+  const xel=$('crx'),s=$('crs');if(xel){xel.textContent=fx2(m);xel.className=live?'':g.status=='won'?'win':'lose'}
+  if(s)s.innerHTML=pre?`Взлёт через ${Math.ceil(g.started-(Date.now()/1000+K.off))}…`:live?(g.auto?`Автовывод на ${fx2(+g.auto)}`:'Летим! Забирайте вовремя'):g.status=='won'?`Вы забрали ${fx2(g.mult)} · +${price(g.payout)}`:`Ракета взорвалась на ${fx2(g.crash)}`;
+  return m}
+function crLoop(){const g=K.g;if(!g||!$('crc')){K.raf=0;return}const live=g.status=='live',m=crText();crDraw(m,live);
+  if(live)crButton();K.raf=(live||(K.boom&&performance.now()-K.boom<700))?requestAnimationFrame(crLoop):0}
+async function crStart(){if(K.busy)return;const body={};
+  if(K.auto){const a=parseFloat(K.auto);if(!(a>=1.01))return toast('Автовывод от x1,01');body.auto=a}
+  if(K.mode=='gift'){if(!K.gift)return pickInv(w=>{K.gift=w;renderCrash()});body.win_id=K.gift.id}
+  else{body.bet=Math.round(K.bet);if(body.bet<MINB())return toast('Минимальная ставка '+price(MINB()));if(S.balance<body.bet)return openTop(body.bet-S.balance)}
+  K.busy=true;crButton();
+  try{const g=await api('crash/start','POST',body);K.off=g.now-Date.now()/1000;K.g=g;K.boom=0;if(K.mode=='gift')K.gift=null;else{S.balance-=body.bet;setBal(S.balance)}
+    hap('medium');K.busy=false;renderCrash();crPoll()}catch(e){K.busy=false;toast(e.message);hap('err');renderCrash()}}
+function crPoll(){clearTimeout(K.poll);if(!K.g||K.g.status!='live')return;
+  K.poll=setTimeout(async()=>{try{const g=await api('crash/'+K.g.id);if(g.status!='live')crEnd(g);else crPoll()}catch(e){crPoll()}},450)}
+async function crCash(){if(K.busy||!K.g)return;K.busy=true;crButton();try{const g=await api(`crash/${K.g.id}/cashout`,'POST');crEnd(g)}catch(e){toast(e.message)}K.busy=false;crButton()}
+function crEnd(g){clearTimeout(K.poll);const was=K.g&&K.g.status=='live';K.g=g;if(!was){renderCrash();return}K.hist.unshift(g.crash);K.hist=K.hist.slice(0,10);
+  if(g.status=='won'){sfx.win();hap('ok');toast(`Выигрыш ${fx2(g.mult)}: +${price(g.payout)}`)}else{K.boom=performance.now();sfx.lose();hap('err')}
+  renderCrash();if(!K.raf)K.raf=requestAnimationFrame(crLoop);setTimeout(load,300)}
+addEventListener('resize',()=>{if(GSEL=='crash')crLayout()});
+
+$('gback').onclick=()=>{hap();openGame(null)};
 
 /* ---------- плинко ---------- */
-const P={bet:10,risk:'mid',rows:12,balls:[],flash:{},hitAt:{},hist:[],geo:null,raf:0,inflight:0};
+const P={bet:100,risk:'mid',rows:12,balls:[],flash:{},hitAt:{},hist:[],geo:null,raf:0,inflight:0};
 const RISK=[['low','Низкий'],['mid','Средний'],['high','Высокий']];
 const plTable=()=>(S?.plinko?.[P.rows]||S?.plinko?.[String(P.rows)]||{})[P.risk]||[];
 const MCOL=[[0.5,'#2c3070','#b9bcf0'],[1,'#3d45a6','#fff'],[2,'#5a6cff','#fff'],[5,'#8b5cff','#fff'],[15,'#c04df0','#fff'],[50,'#ff4f9a','#fff'],[200,'#ff7a45','#fff'],[1e9,'#ffc83d','#3a2600']];
@@ -878,7 +1000,7 @@ function renderPlinko(){const el=$('g-plinko');if(!el||!S||plBusy())return;const
   <button class="btn" id="pGo" style="margin-top:12px">Бросить шар</button>
   <p class="maxw" style="justify-content:center">Шар падает случайно, выигрыш = ставка × множитель ячейки</p>`;
   const bi=$('pBet');bi.oninput=()=>{P.bet=Math.max(0,fromCur(bi.value))};
-  $$('[data-pb]',el).forEach(b=>b.onclick=()=>{const v=Math.max(1,P.bet);P.bet=b.dataset.pb=='h'?Math.max(1,v/2|0):b.dataset.pb=='d'?v*2:Math.max(1,S.balance);
+  $$('[data-pb]',el).forEach(b=>b.onclick=()=>{const v=Math.max(1,P.bet);P.bet=b.dataset.pb=='h'?Math.max(MINB(),v/2|0):b.dataset.pb=='d'?v*2:Math.max(MINB(),S.balance);
     P.bet=Math.min(P.bet,S.plinko_max||10000);bi.value=inCur(P.bet)});
   $$('[data-pr]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.risk=b.dataset.pr;renderPlinko()});
   $$('[data-pn]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.rows=+b.dataset.pn;renderPlinko()});
@@ -917,7 +1039,7 @@ function land(b){const g=P.geo;P.hitAt[b.res.slot]=performance.now();
   if(h)h.innerHTML=P.hist.map(x=>`<span style="--sc:${mCol(x.m)[1]};color:${mCol(x.m)[2]}">${fmtX(x.m)}</span>`).join('');
   if(!plBusy()&&!P.balls.length)setTimeout(()=>{if(!plBusy())load()},400)}
 async function drop(){if(!P.geo)plLayout();const bet=P.bet|0;
-  if(bet<1)return toast('Введите ставку');if(S.balance<bet)return openTop(bet-S.balance);if(P.balls.length+P.inflight>=12)return;
+  if(bet<MINB())return toast('Минимальная ставка '+price(MINB()));if(S.balance<bet)return openTop(bet-S.balance);if(P.balls.length+P.inflight>=12)return;
   S.balance-=bet;setBal(S.balance);P.inflight++;hap();
   try{const r=await api('plinko','POST',{bet,rows:P.rows,risk:P.risk});P.inflight--;
     P.balls.push({path:r.path,res:r,t0:performance.now()+PSEG(),hit:-1,x:P.geo.W/2,y:-10,tr:[]});if(!P.raf)P.raf=requestAnimationFrame(plLoop)}
@@ -949,7 +1071,7 @@ function renderCat(){const total=CAT.reduce((a,g)=>a+g.models.length,0);
 let PT='inv',ST=null;
 function openProfile(tabp){if(tabp)PT=tabp;$('ovProf').classList.add('on');document.body.style.overflow='hidden';renderProfile();loadStats();try{tg.BackButton.show()}catch(e){}}
 async function loadStats(){try{ST=await api('me/stats');renderProfile()}catch(e){}}
-const GNAME={case:'Кейсы',mines:'Мины',plinko:'Плинко',upgrade:'Апгрейд',free:'Подарок дня'};
+const GNAME={crash:'Ракетка',case:'Кейсы',mines:'Мины',plinko:'Плинко',upgrade:'Апгрейд',free:'Подарок дня'};
 const GICO={case:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/></svg>',
   mines:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="14" r="7"/><path d="M15.5 9.5 18 7"/></svg>',
   plinko:'<svg viewBox="0 0 24 24" fill="#fff"><circle cx="12" cy="5" r="1.8"/><circle cx="8" cy="10" r="1.8"/><circle cx="16" cy="10" r="1.8"/><circle cx="4" cy="15" r="1.8"/><circle cx="12" cy="15" r="1.8"/><circle cx="20" cy="15" r="1.8"/></svg>',
@@ -1090,7 +1212,7 @@ async function load(){S=await api('state');left=S.free_in;freeBadge();if(S.ton_s
   const u=tg.initDataUnsafe?.user;if(u){const a=$('ava');if(u.photo_url)a.style.backgroundImage=`url('${u.photo_url}')`;else a.textContent=(u.first_name||'?')[0]}
   if(M.g==null&&S.mines)M.g=S.mines;
   if(!$('chips').children.length)renderChips();
-  renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();if(!$('g-plinko').hidden)renderPlinko();renderProfile();
+  renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();if(!$('g-plinko').hidden)renderPlinko();if(GSEL=='crash'&&!(K.g&&K.g.status=='live'))renderCrash();if(!GSEL)renderLobby();if(S.crash_live&&!K.g){K.g=S.crash_live;K.off=S.crash_live.now-Date.now()/1000;crPoll()}renderProfile();
   if(tab=='bonus'&&!(BV&&BV.spinning))renderBonus();else renderTasks();renderNick();renderCm();
   $('rb').innerHTML='+'+price(S.ref_bonus);$('rbh').innerHTML='+'+price(S.ref_bonus);$('rph').textContent=S.ref_percent+'%';$('rp').textContent=S.ref_percent+'%';$('rn').textContent=S.refs;$('re').parentElement.innerHTML=`<span id="re">${price(S.ref_earned)}</span>`;
   if(CV){CV.c=S.cases.find(c=>c.id==CV.c.id)||CV.c;CV.refresh()}

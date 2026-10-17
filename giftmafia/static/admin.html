@@ -182,7 +182,7 @@ function renderPrices(){const L=$('plist');if(!L||!PR)return;
 let DP='week',DM='deposits',DD=null;
 const METRIC={users:['Новые пользователи',''],deposits:['Пополнения',' ⭐'],turnover:['Оборот ставок',' ⭐'],ggr:['Доход (ставки − выплаты)',' ⭐']};
 const METH={stars:'Звёзды',ton:'GRAM (TON Connect)',xrocket:'xRocket',gift:'Подарки'};
-const GAME={case:'Кейсы',free:'Подарок дня',mines:'Мины',plinko:'Плинко',upgrade:'Апгрейд'};
+const GAME={crash:'Ракетка',case:'Кейсы',free:'Подарок дня',mines:'Мины',plinko:'Плинко',upgrade:'Апгрейд'};
 async function renderDash(){const M=$('main');
   M.innerHTML=`<h2>Дашборд<small id="dper"></small></h2><div class="chips">${[['day','День'],['week','Неделя'],['month','Месяц'],['year','Год']].map(([k,t])=>`<button class="chip ${DP==k?'on':''}" data-p="${k}">${t}</button>`).join('')}</div><div id="dash"><p class="empty">Загрузка…</p></div>`;
   $$('[data-p]',M).forEach(b=>b.onclick=()=>{DP=b.dataset.p;renderDash()});
