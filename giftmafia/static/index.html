@@ -190,8 +190,8 @@ body.kb .tabs{transform:translateY(140%);opacity:0;pointer-events:none}
 .task .tt{flex:1;min-width:0}.task .tt b{display:block;font-size:15px;line-height:1.25}.task .tt small{display:flex;align-items:center;gap:3px;color:var(--gold);font-weight:800}
 .task .btn{width:auto;height:40px;padding:0 16px;font-size:14px;flex:none}
 .task.done{opacity:.6}
-.cond{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px}.cond .tt{flex:1;min-width:0;font-size:14px}.cond .tt b{display:block}.cond .tt small{color:var(--mut)}
-.cond .btn{width:auto;height:40px;padding:0 16px;font-size:14px}
+.cond{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:12px;padding:14px}.cond .tt{flex:1;min-width:0;font-size:14px}.cond .tt b{display:block}.cond .tt small{color:var(--mut)}
+.cond .btn{width:100%;height:44px;padding:0 16px;font-size:15px}
 /* каталог */
 .coll{position:relative;min-width:0;border-radius:20px;padding:8px 8px 10px;background:linear-gradient(180deg,#2a2c55,#1d1e3d);border:1px solid var(--line);text-align:left}
 .coll .pi{aspect-ratio:1;display:grid;place-items:center}.coll img{width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 6px 8px #0008)}
@@ -270,7 +270,7 @@ img{opacity:0;transition:opacity .35s ease}img.ld{opacity:1}
 @keyframes pulse{50%{opacity:.85;transform:scale(1.08)}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @media(max-width:420px){h2{font-size:21px}.logo{font-size:19px}.bal .ch{display:none}.bal{height:42px;font-size:16px;padding-right:12px}.bal .ic{width:30px;height:30px}.btn.sm{height:42px;padding:0 13px;font-size:14px}.ava{width:42px;height:42px}.top{gap:6px}.btn.sm.plus{width:42px!important}}
-@media(max-width:375px){.logo .full{display:none}.logo .short{display:inline}}
+@media(max-width:375px){.gbar{gap:2px}.gbar .ib{width:34px}.gbar .ib svg{width:22px;height:22px}.mu{padding:0 9px;font-size:14px}.mu small{font-size:11px}.logo .full{display:none}.logo .short{display:inline}}
 /* анимации */
 .btn{position:relative;overflow:hidden;isolation:isolate}
 .btn:not(.ghost):not(:disabled):after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;z-index:-1;background:linear-gradient(105deg,transparent,#ffffff45,transparent);transform:skewX(-20deg);animation:shine 4.8s ease-in-out infinite;pointer-events:none}
@@ -343,7 +343,7 @@ h2{animation:rise .45s ease both}
 .giftpay{text-align:center;padding:22px 18px}.giftpay img{width:120px;height:120px;object-fit:contain;filter:drop-shadow(0 12px 18px #000a)}
 .giftpay h3{margin:6px 0 8px}.giftpay ol{text-align:left;color:#d9daf0;margin:12px 0 0;padding-left:22px;display:grid;gap:6px}
 .soon{color:var(--mut);text-align:center;padding:26px 10px}
-.tagw{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--gold);font-weight:800}
+.tagw{white-space:nowrap;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--gold);font-weight:800}
 /* комментарии */
 #esw{margin-top:6px}
 .cmh{text-align:center;padding:22px 18px 20px;margin-top:12px;background:radial-gradient(120% 80% at 50% 0,#ff4f7a40,transparent 60%),radial-gradient(90% 70% at 100% 100%,#4f9dff26,transparent 60%),linear-gradient(180deg,#26284f,#1b1c3a);border-color:#ff5a6e40}
@@ -352,7 +352,7 @@ h2{animation:rise .45s ease both}
 .cmh h3{font:800 26px/1.1 "Unbounded",system-ui;margin:4px 0 8px}.cmu{display:flex;align-items:baseline;justify-content:center;gap:8px;color:#d9daf0;font-weight:800}
 .cmu b{font:800 34px "Unbounded",system-ui;color:var(--gold);display:inline-flex;align-items:center;gap:6px}.cmu b .st{width:28px;height:28px}
 .cmh p{color:#c9cbe4;margin-top:10px}
-.cmst{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}.cmst small{display:block;color:var(--mut);font-size:12px}.cmst b{display:flex;justify-content:center;align-items:center;gap:4px;font:800 18px "Unbounded",system-ui;margin-top:4px;white-space:nowrap}
+.cmst{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;text-align:center}.cmst small{display:flex;align-items:flex-end;justify-content:center;min-height:2.5em;line-height:1.25;color:var(--mut);font-size:12px}.cmst b{display:flex;justify-content:center;align-items:center;gap:4px;font:800 18px "Unbounded",system-ui;margin-top:4px;white-space:nowrap}
 .cmp{grid-column:1/-1;height:8px;border-radius:9px;background:#ffffff12;overflow:hidden;margin-top:6px}.cmp i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#ffc83d,#ff8a3d);transition:width .6s ease}
 .cmpl{grid-column:1/-1;color:var(--mut);font-size:12px}
 .cmr .line b{color:var(--gold);font:800 18px "Unbounded",system-ui}
@@ -769,7 +769,7 @@ let nickEnd=0;
 function renderNick(){const n=S?.nick;if(!n)return;const r=n.rewards,mx=Math.max(...r),st=!!n.started,ready=st&&!n.ready_in;
   if(st)nickEnd=Date.now()+(n.ready_in||0)*1000;
   const s1=st?'Выполнено':'Текущий',s2=!st?'Ждёт':ready?'Готово':'Идёт',s3=ready?'Текущий':'Ждёт';
-  setHTML($('nickBox'),`<div class="card nk"><div class="nkh"><span class="tgi">${TGI}</span><div><b>Поставь в ник<em>${esc(n.tag)}</em></b><small>3 этапа · на баланс</small><span class="upto">до ${price(mx)} в день</span></div></div>
+  setHTML($('nickBox'),`<div class="card nk"><div class="nkh"><span class="tgi">${TGI}</span><div><b>Поставь в ник<em>${esc(n.tag)}</em></b><small style="display:block">3 этапа · на баланс</small><span class="upto">до ${price(mx)} в день</span></div></div>
     <p class="mut">Награда в день зависит от уровня в Telegram</p>
     <div class="lv">${[['0',r[0]],['1–4',r[1]],['5–9',r[2]],['10+',r[3]]].map(([l,v])=>`<div><b>${price(v)}</b><span class="sh">${l}</span></div>`).join('')}</div></div>
   <h2>Этапы</h2>
@@ -920,7 +920,7 @@ function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
    <div class="gauge ${U.res||''}" id="gauge"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="none" stroke="#ffffff12" stroke-width="10"/>
     <circle cx="60" cy="60" r="54" fill="none" stroke="url(#ug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*ch} ${C}"/>
     <defs><linearGradient id="ug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg>
-    <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2">${(ch*100).toFixed(ch<.1?2:1).replace('.',',')}%<small>шанс</small></div></div>
+    <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2">${U.target?(ch*100).toFixed(ch<.1?2:1).replace('.',',')+'%':'—'}<small>шанс</small></div></div>
    <button id="uTgt" style="min-width:0">${slotHtml(U.target,'<b style="font-size:28px">+</b><small>Выбрать NFT</small>')}</button></div>
   <div class="box seg" style="margin-top:14px"><button data-us="stars" class="${U.src.kind=='stars'?'on':''}">Звёздами</button><button data-us="gift" class="${U.src.kind!='stars'?'on':''}">Подарком</button></div>
   ${U.src.kind=='stars'?`<div class="box"><div class="bet">${CI()}<input id="uBet" inputmode="decimal" value="${inCur(U.src.value)}" aria-label="Сумма"></div><button class="sb" data-ub="h">½</button><button class="sb" data-ub="d">2×</button><button class="sb" data-ub="max" style="color:#fff">МАКС</button></div>`:''}
@@ -1134,7 +1134,7 @@ function openCatalog(onPick){catPick=onPick||null;catColl=null;catQ='';$('ovCat'
 function closeCat(){if(catColl&&!catQ){catColl=null;renderCat();return}$('ovCat').classList.remove('on');afterClose()}
 function renderCat(){const total=CAT.reduce((a,g)=>a+g.models.length,0);
   $('catIn').innerHTML=`<div class="bar"><button class="x" id="catX" aria-label="Назад">${IC.x}</button><h3>${catColl?esc(catColl.name):catPick?'Выберите цель':'Все NFT'}</h3></div>
-  <input class="inp" id="catQ" placeholder="Поиск: ${CAT.length} коллекций, ${num(total)} моделей" value="${esc(catQ)}" autocomplete="off">
+  <input class="inp" id="catQ" placeholder="${catColl?`Поиск по ${catColl.models.length} моделям ${esc(catColl.name)}`:`Поиск: ${CAT.length} коллекций, ${num(total)} моделей`}" value="${esc(catQ)}" autocomplete="off">
   <div id="catList" style="margin-top:12px"></div>`;
   $('catX').onclick=closeCat;const qi=$('catQ');qi.oninput=()=>{catQ=qi.value.trim().toLowerCase();list()};list();
   function list(){const L=$('catList');
@@ -1191,7 +1191,7 @@ function renderProfile(){if(!$('ovProf').classList.contains('on'))return;const u
   if($('prTop'))$('prTop').onclick=()=>openTop();
   $$('#profIn [data-a]').forEach(b=>b.onclick=()=>act_(b.dataset.a,+b.dataset.w,b))}
 function closeProf(){$('ovProf').classList.remove('on');afterClose()}
-function invCard(w){const st={sent:'Отправлен',requested:'⏳ Вывод в течение 24 ч'}[w.status];let body='';
+function invCard(w){const st={sent:'Отправлен',requested:'⏳ Вывод до 24 ч'}[w.status];let body='';
   if(w.status=='locked'){const s=w.story_at>0,fr=w.shares;
     body=`<ul><li class="${s?'ok':''}">Сторис</li><li class="${fr>=S.need?'ok':''}">Друзьям ${fr}/${S.need}</li></ul>
     <button class="btn ghost" data-a="story" data-w="${w.id}">${s?'Сторис ещё раз':'В сторис'}</button>
