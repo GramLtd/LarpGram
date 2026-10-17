@@ -271,6 +271,7 @@ CREATE TABLE IF NOT EXISTS withdrawals(id INTEGER PRIMARY KEY AUTOINCREMENT, use
   status TEXT DEFAULT 'requested', reason TEXT DEFAULT '', created INT, decided INT DEFAULT 0);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
+CREATE TABLE IF NOT EXISTS avia(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, mode INT, events TEXT, landed INT, mult REAL, payout INT, src_win INT DEFAULT 0, seed TEXT, created INT);
 CREATE TABLE IF NOT EXISTS wx_msgs(wd INT, chat_id INT, msg_id INT, html TEXT DEFAULT '', PRIMARY KEY(wd, chat_id));
 CREATE TABLE IF NOT EXISTS balance_log(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, amount INT, balance INT, note TEXT DEFAULT '', created INT);
 CREATE TABLE IF NOT EXISTS wd_msgs(win_id INT, chat_id INT, msg_id INT, html TEXT DEFAULT '', PRIMARY KEY(win_id, chat_id));
@@ -807,7 +808,8 @@ def state(uid: int = Depends(auth)):
             "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "min_bet": MIN_BET, "game_max_bet": GAME_MAX_BET, "gift_bet_max": GIFT_BET_MAX,
             "crash": {"speed": CRASH_SPEED, "max": CRASH_MAX, "max_win": CRASH_MAX_WIN},
             "free_channel": chat_ref(setting("free_channel")), "ton_stars": TON_STARS,
-            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE, "upgrade_edge": UPGRADE_EDGE, "wd": wd_cfg()}
+            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE, "upgrade_edge": UPGRADE_EDGE, "wd": wd_cfg(),
+            "avia": {str(k): round(m["land"], 3) for k, m in AVIA_MODES.items()}}
 
 
 CATALOG_CACHE = {}
@@ -1638,6 +1640,60 @@ def live_game(gid, uid):
     g = q1("SELECT * FROM mines WHERE id=? AND user_id=? AND status='live'", gid, uid)
     if not g: raise HTTPException(404, "Игра уже закончилась")
     return g
+
+
+# ---------- авиа ----------
+# Самолёт собирает пикапы: +доля ставки, множитель, ракета (÷2). В конце посадка на авианосец:
+# села - выплата ставка × итог, промах - ставка сгорает. Шанс посадки по скорости подобран так, что
+# средний возврат = AVIA_RTP (Монте-Карло 400 тыс. полётов на режим, см. tests в README). Итог ограничен AVIA_CAP.
+AVIA_RTP, AVIA_CAP = 0.95, 250
+AVIA_MODES = {
+    1: dict(n=(4, 6), T=(.64, .07, .29), A=((.1, .4), (.2, .3), (.5, .2), (1, .1)), M=((2, 1),), land=.63),
+    2: dict(n=(5, 7), T=(.6, .1, .3), A=((.1, .35), (.2, .3), (.5, .22), (1, .13)), M=((2, .8), (3, .2)), land=.485),
+    3: dict(n=(6, 8), T=(.56, .13, .31), A=((.1, .3), (.2, .3), (.5, .25), (1, .15)), M=((2, .65), (3, .25), (4, .1)), land=.33),
+    4: dict(n=(7, 9), T=(.52, .16, .32), A=((.1, .3), (.2, .28), (.5, .26), (1, .16)), M=((2, .5), (3, .28), (4, .14), (5, .08)), land=.19)}
+
+
+def _pick(r, ws):
+    x = r.random() * sum(w for _, w in ws)
+    for v, w in ws:
+        x -= w
+        if x <= 0: return v
+    return ws[-1][0]
+
+
+def avia_flight(mode, r):
+    """Полёт: список пикапов и итоговый множитель (до посадки)."""
+    c, v, ev = AVIA_MODES[mode], 1.0, []
+    for _ in range(r.randint(*c["n"])):
+        t = _pick(r, list(zip("amr", c["T"])))
+        if t == "a": x = _pick(r, c["A"]); v += x
+        elif t == "m": x = _pick(r, c["M"]); v *= x
+        else: x = 2; v /= 2
+        ev.append({"k": t, "x": x, "v": round(min(v, AVIA_CAP), 4)})
+    return ev, min(v, AVIA_CAP)
+
+
+@app.post("/api/avia/play")
+def avia_play(b: dict = Body(...), uid: int = Depends(auth)):
+    mode = int(b.get("mode") or 2)
+    if mode not in AVIA_MODES: raise HTTPException(400, "Выберите скорость")
+    src = 0
+    if b.get("win_id"): w = take_item(uid, int(b["win_id"]), GIFT_BET_MAX); bet, src = w["value"], w["id"]
+    else:
+        bet = int(b.get("bet", 0))
+        if not MIN_BET <= bet <= GAME_MAX_BET: raise HTTPException(400, f"Ставка от {MIN_BET} до {GAME_MAX_BET:,} ⭐".replace(",", " "))
+        charge(uid, bet)
+    seed = secrets.token_hex(16); r = random.Random(seed)
+    ev, v = avia_flight(mode, r)
+    landed = r.random() < AVIA_MODES[mode]["land"]
+    payout = min(CRASH_MAX_WIN, int(bet * v)) if landed else 0
+    gid = run("INSERT INTO avia(user_id,bet,mode,events,landed,mult,payout,src_win,seed,created) VALUES(?,?,?,?,?,?,?,?,?,?)",
+              uid, bet, mode, json.dumps(ev), int(landed), round(v, 4), payout, src, seed, int(time.time()))
+    if payout: credit(uid, payout)
+    log_bet(uid, "avia", bet, payout, gid)
+    return {"id": gid, "bet": bet, "mode": mode, "events": ev, "landed": landed, "mult": round(v, 4), "payout": payout,
+            "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
 
 
 @app.post("/api/mines/start")
