@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id I
 """)
 
 
-for t, c, d in [("crash", "round_id", "INT DEFAULT 0"), ("users", "last_seen", "INT DEFAULT 0"), ("users", "utm", "TEXT DEFAULT ''"), ("users", "free_notified", "INT DEFAULT 0"),
+for t, c, d in [("users", "photo", "TEXT DEFAULT ''"), ("crash", "round_id", "INT DEFAULT 0"), ("users", "last_seen", "INT DEFAULT 0"), ("users", "utm", "TEXT DEFAULT ''"), ("users", "free_notified", "INT DEFAULT 0"),
                 ("bot_started", "utm", "TEXT DEFAULT ''")]:
     try: db.execute(f"ALTER TABLE {t} ADD COLUMN {c} {d}")
     except sqlite3.OperationalError: pass
@@ -641,7 +641,9 @@ def auth(x_init: str = Header("")):
         if ref: credit(ref, REF_BONUS, True)
     if setting("maint_on") == "1" and not maint_allowed(u): raise HTTPException(503, detail=maint_info())
     now = int(time.time())
-    db.execute("UPDATE users SET last_seen=?, username=?, name=? WHERE id=? AND last_seen<?", (now, u.get("username"), u.get("first_name"), u["id"], now - 60)); db.commit()
+    photo = u.get("photo_url") or ""
+    photo = photo if photo.startswith("https://") else ""  # аватарка из данных Telegram (для ленты и списков игроков)
+    db.execute("UPDATE users SET last_seen=?, username=?, name=?, photo=? WHERE id=? AND last_seen<?", (now, u.get("username"), u.get("first_name"), photo, u["id"], now - 60)); db.commit()
     return u["id"]
 
 
@@ -828,7 +830,7 @@ def buy(case_id: int, n: int = 1, uid: int = Depends(auth)):
 
 @app.get("/api/live")
 def live(uid: int = Depends(auth)):
-    return q("SELECT w.kind,w.prize,w.gift,w.model,w.img,w.value,substr(u.name,1,12) AS who FROM wins w JOIN users u ON u.id=w.user_id "
+    return q("SELECT w.kind,w.prize,w.gift,w.model,w.img,w.value,substr(u.name,1,12) AS who,u.id AS uid,u.photo FROM wins w JOIN users u ON u.id=w.user_id "
              "WHERE w.source!='mines' ORDER BY w.id DESC LIMIT 20")
 
 
@@ -1144,6 +1146,15 @@ def user_stats(uid):
     fc = q1("SELECT c.id, c.title, COUNT(*) n FROM bets b JOIN cases c ON c.id=b.ref WHERE b.user_id=? AND b.game IN('case','free') GROUP BY c.id ORDER BY n DESC LIMIT 1", uid)
     return {**r, "best": best, "fav_game": fav and fav["game"], "fav_case": fc,
             "deposits": q1("SELECT COALESCE(SUM(stars),0) n FROM payments WHERE user_id=? AND status='paid'", uid)["n"]}
+
+
+@app.get("/api/player/{pid}")
+def player(pid: int, uid: int = Depends(auth)):
+    """Публичная статистика игрока (без пополнений и баланса)."""
+    u = q1("SELECT id,name,photo FROM users WHERE id=?", pid)
+    if not u: raise HTTPException(404, "Игрок не найден")
+    st = user_stats(pid); st.pop("deposits", None)
+    return {"id": u["id"], "name": (u["name"] or "Игрок")[:24], "photo": u["photo"] or "", "me": pid == uid, **st}
 
 
 @app.get("/api/me/stats")
@@ -1613,7 +1624,8 @@ def rk_settle(r):
 
 def rk_bet_view(b, uid):
     return {"id": b["id"], "me": b["user_id"] == uid, "name": (b.get("name") or "Игрок")[:14], "bet": b["bet"], "gift": b["gift"], "auto": b["auto"],
-            "status": b["status"], "mult": b["mult"], "payout": b["payout"], "round": b["round_id"]}
+            "status": b["status"], "mult": b["mult"], "payout": b["payout"], "round": b["round_id"],
+            "uid": b["user_id"], "photo": b.get("photo") or ""}
 
 
 @app.get("/api/rk/state")
@@ -1624,8 +1636,8 @@ def rk_state(uid: int = Depends(auth)):
     rv = {"id": r["id"], "phase": ph, "bet_start": r["bet_start"], "fly_start": r["fly_start"], "now": now,
           "hash": hashlib.sha256(f"{r['seed']}:{r['crash']:.2f}".encode()).hexdigest()}
     if ph == "crash": rv.update(crash=r["crash"], seed=r["seed"], end_at=r["end_at"])
-    bets = q("SELECT c.*, u.name FROM crash c LEFT JOIN users u ON u.id=c.user_id WHERE c.round_id=? ORDER BY c.bet DESC LIMIT 40", r["id"])
-    mine = q("SELECT c.*, u.name FROM crash c LEFT JOIN users u ON u.id=c.user_id WHERE c.user_id=? AND c.round_id>=? ORDER BY c.round_id", uid, r["id"])
+    bets = q("SELECT c.*, u.name, u.photo FROM crash c LEFT JOIN users u ON u.id=c.user_id WHERE c.round_id=? ORDER BY c.bet DESC LIMIT 40", r["id"])
+    mine = q("SELECT c.*, u.name, u.photo FROM crash c LEFT JOIN users u ON u.id=c.user_id WHERE c.user_id=? AND c.round_id>=? ORDER BY c.round_id", uid, r["id"])
     agg = q1("SELECT COUNT(*) n, COALESCE(SUM(bet),0) s FROM crash WHERE round_id=?", r["id"])
     return {"round": rv, "players": [rk_bet_view(b, uid) for b in bets], "count": agg["n"], "sum": agg["s"],
             "mine": [rk_bet_view(b, uid) for b in mine], "history": [x["crash"] for x in q("SELECT crash FROM rk_rounds WHERE end_at<=? ORDER BY id DESC LIMIT 14", now)],
