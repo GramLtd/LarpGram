@@ -255,6 +255,7 @@ CREATE TABLE IF NOT EXISTS cm_reports(id INTEGER PRIMARY KEY AUTOINCREMENT, user
   created INT, decided INT DEFAULT 0, moderator INT DEFAULT 0, mod_msg INT DEFAULT 0);
 CREATE INDEX IF NOT EXISTS cm_user ON cm_reports(user_id, status);
 CREATE TABLE IF NOT EXISTS cm_files(uid TEXT PRIMARY KEY, created INT);
+CREATE TABLE IF NOT EXISTS rk_rounds(id INTEGER PRIMARY KEY AUTOINCREMENT, crash REAL, seed TEXT, bet_start REAL, fly_start REAL, end_at REAL);
 CREATE TABLE IF NOT EXISTS crash(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, gift TEXT DEFAULT '', crash REAL, auto REAL DEFAULT 0,
   seed TEXT, started REAL, status TEXT DEFAULT 'live', mult REAL DEFAULT 0, payout INT DEFAULT 0, created INT);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
@@ -262,10 +263,11 @@ CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id I
 """)
 
 
-for t, c, d in [("users", "last_seen", "INT DEFAULT 0"), ("users", "utm", "TEXT DEFAULT ''"), ("users", "free_notified", "INT DEFAULT 0"),
+for t, c, d in [("crash", "round_id", "INT DEFAULT 0"), ("users", "last_seen", "INT DEFAULT 0"), ("users", "utm", "TEXT DEFAULT ''"), ("users", "free_notified", "INT DEFAULT 0"),
                 ("bot_started", "utm", "TEXT DEFAULT ''")]:
     try: db.execute(f"ALTER TABLE {t} ADD COLUMN {c} {d}")
     except sqlite3.OperationalError: pass
+db.execute("CREATE INDEX IF NOT EXISTS crash_round ON crash(round_id, user_id)")
 
 
 def q(sql, *a): return [dict(r) for r in db.execute(sql, a).fetchall()]
@@ -766,7 +768,7 @@ def state(uid: int = Depends(auth)):
             "ref_bonus": REF_BONUS, "ref_percent": REF_PERCENT, "uid": uid, "need": FRIENDS_REQUIRED, "bot": BOT_USERNAME,
             "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX,
             "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "min_bet": MIN_BET,
-            "crash": {"speed": CRASH_SPEED, "max": CRASH_MAX, "max_win": CRASH_MAX_WIN}, "crash_live": crash_live(uid),
+            "crash": {"speed": CRASH_SPEED, "max": CRASH_MAX, "max_win": CRASH_MAX_WIN},
             "free_channel": chat_ref(setting("free_channel")), "ton_stars": TON_STARS,
             "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
 
@@ -1556,42 +1558,85 @@ def plinko(b: dict = Body(...), uid: int = Depends(auth)):
     return {"path": path, "slot": slot, "mult": mult, "payout": payout, "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
 
 
-# ---------- ракетка (crash) ----------
-# Точка краша выбирается на сервере при старте (виден только её хеш), множитель растёт как e^(SPEED*t) по серверному времени.
-# Клиент анимирует сам и раз в полсекунды спрашивает статус; забрать можно, пока множитель не дошёл до точки краша.
-def crash_mult(g, t=None):
-    return round(min(CRASH_MAX, math.exp(CRASH_SPEED * max(0.0, (t or time.time()) - g["started"]))), 2)
+# ---------- ракетка: общая лайв-игра с раундами ----------
+# Раунд: приём ставок RK_BET_SEC -> полёт (множитель e^(SPEED*t) по серверному времени) -> взрыв -> пауза RK_PAUSE -> следующий.
+# Раунды создаются лениво, когда кто-то смотрит игру; точка взрыва выбирается при создании раунда (виден только хеш до взрыва).
+# Ставка, сделанная во время полёта, уходит в следующий раунд. Автовывод и проигрыши закрываются при любом запросе состояния.
+RK_BET_SEC, RK_PAUSE = 8.0, 3.5
+_rk_lock = threading.Lock()
 
 
-def crash_view(g):
-    v = {"id": g["id"], "bet": g["bet"], "gift": g["gift"], "auto": g["auto"], "started": g["started"], "now": time.time(), "status": g["status"],
-         "mult": g["mult"], "payout": g["payout"], "hash": hashlib.sha256(f"{g['seed']}:{g['crash']:.2f}".encode()).hexdigest()}
-    if g["status"] != "live": v.update(crash=g["crash"], seed=g["seed"])
-    return v
+def rk_new(start):
+    u = secrets.SystemRandom().random()
+    point = max(1.0, min(CRASH_MAX, math.floor(CRASH_EDGE / (1 - u) * 100) / 100))
+    fly = start + RK_BET_SEC
+    rid = run("INSERT INTO rk_rounds(crash,seed,bet_start,fly_start,end_at) VALUES(?,?,?,?,?)", point, secrets.token_hex(16), start, fly, fly + math.log(point) / CRASH_SPEED)
+    return q1("SELECT * FROM rk_rounds WHERE id=?", rid)
 
 
-def crash_settle(g):
-    """Закрыть раунд, если пора: автовывод сработал или ракета улетела. Возвращает свежую запись."""
-    if g["status"] != "live": return g
-    now = time.time(); m = crash_mult(g, now)
-    if g["auto"] and g["auto"] < g["crash"] and m >= g["auto"]:
-        pay = min(CRASH_MAX_WIN, int(g["bet"] * g["auto"]))
-        if changed("UPDATE crash SET status='won', mult=?, payout=? WHERE id=? AND status='live'", g["auto"], pay, g["id"]):
-            credit(g["user_id"], pay); log_bet(g["user_id"], "crash", g["bet"], pay, g["id"])
-    elif m >= g["crash"]:
-        if changed("UPDATE crash SET status='lost', mult=? WHERE id=? AND status='live'", g["crash"], g["id"]): log_bet(g["user_id"], "crash", g["bet"], 0, g["id"])
-    return q1("SELECT * FROM crash WHERE id=?", g["id"])
+def rk_current():
+    """Текущий раунд (создаёт новый, если прошлый закончился)."""
+    now = time.time()
+    with _rk_lock:
+        r = q1("SELECT * FROM rk_rounds WHERE bet_start<=? ORDER BY id DESC LIMIT 1", now)
+        if r and now < r["end_at"] + RK_PAUSE: return r
+        nxt = q1("SELECT * FROM rk_rounds WHERE id>? ORDER BY id LIMIT 1", r["id"] if r else 0)
+        if nxt: return nxt
+        return rk_new(now)
 
 
-def crash_live(uid):
-    g = q1("SELECT * FROM crash WHERE user_id=? AND status='live' ORDER BY id DESC LIMIT 1", uid)
-    return crash_view(crash_settle(g)) if g else None
+def rk_next(r):
+    with _rk_lock:
+        return q1("SELECT * FROM rk_rounds WHERE id>? ORDER BY id LIMIT 1", r["id"]) or rk_new(r["end_at"] + RK_PAUSE)
 
 
-@app.post("/api/crash/start")
-def crash_start(b: dict = Body(...), uid: int = Depends(auth)):
-    g = q1("SELECT * FROM crash WHERE user_id=? AND status='live' ORDER BY id DESC LIMIT 1", uid)
-    if g and crash_settle(g)["status"] == "live": raise HTTPException(400, "Сначала закончите текущий полёт")
+def rk_phase(r, now=None):
+    now = now or time.time()
+    return "bet" if now < r["fly_start"] else "fly" if now < r["end_at"] else "crash"
+
+
+def rk_mult(r, now=None):
+    return round(min(CRASH_MAX, math.exp(CRASH_SPEED * max(0.0, (now or time.time()) - r["fly_start"]))), 2)
+
+
+def rk_settle(r):
+    """Автовыводы, которые уже сработали, и проигрыши после взрыва."""
+    now = time.time(); m = rk_mult(r, now)
+    for b in q("SELECT * FROM crash WHERE round_id=? AND status='live'", r["id"]):
+        if b["auto"] and b["auto"] < r["crash"] and (m >= b["auto"] or now >= r["end_at"]) and now >= r["fly_start"]:
+            pay = min(CRASH_MAX_WIN, int(b["bet"] * b["auto"]))
+            if changed("UPDATE crash SET status='won', mult=?, payout=? WHERE id=? AND status='live'", b["auto"], pay, b["id"]):
+                credit(b["user_id"], pay); log_bet(b["user_id"], "crash", b["bet"], pay, b["id"])
+        elif now >= r["end_at"]:
+            if changed("UPDATE crash SET status='lost', mult=? WHERE id=? AND status='live'", r["crash"], b["id"]): log_bet(b["user_id"], "crash", b["bet"], 0, b["id"])
+
+
+def rk_bet_view(b, uid):
+    return {"id": b["id"], "me": b["user_id"] == uid, "name": (b.get("name") or "Игрок")[:14], "bet": b["bet"], "gift": b["gift"], "auto": b["auto"],
+            "status": b["status"], "mult": b["mult"], "payout": b["payout"], "round": b["round_id"]}
+
+
+@app.get("/api/rk/state")
+def rk_state(uid: int = Depends(auth)):
+    r = rk_current(); rk_settle(r); now = time.time(); ph = rk_phase(r, now)
+    prev = q1("SELECT * FROM rk_rounds WHERE id<? ORDER BY id DESC LIMIT 1", r["id"])
+    if prev: rk_settle(prev)
+    rv = {"id": r["id"], "phase": ph, "bet_start": r["bet_start"], "fly_start": r["fly_start"], "now": now,
+          "hash": hashlib.sha256(f"{r['seed']}:{r['crash']:.2f}".encode()).hexdigest()}
+    if ph == "crash": rv.update(crash=r["crash"], seed=r["seed"], end_at=r["end_at"])
+    bets = q("SELECT c.*, u.name FROM crash c LEFT JOIN users u ON u.id=c.user_id WHERE c.round_id=? ORDER BY c.bet DESC LIMIT 40", r["id"])
+    mine = q("SELECT c.*, u.name FROM crash c LEFT JOIN users u ON u.id=c.user_id WHERE c.user_id=? AND c.round_id>=? ORDER BY c.round_id", uid, r["id"])
+    agg = q1("SELECT COUNT(*) n, COALESCE(SUM(bet),0) s FROM crash WHERE round_id=?", r["id"])
+    return {"round": rv, "players": [rk_bet_view(b, uid) for b in bets], "count": agg["n"], "sum": agg["s"],
+            "mine": [rk_bet_view(b, uid) for b in mine], "history": [x["crash"] for x in q("SELECT crash FROM rk_rounds WHERE end_at<=? ORDER BY id DESC LIMIT 14", now)],
+            "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"], "bet_sec": RK_BET_SEC, "pause": RK_PAUSE}
+
+
+@app.post("/api/rk/bet")
+def rk_bet(b: dict = Body(...), uid: int = Depends(auth)):
+    r = rk_current()
+    target = r if rk_phase(r) == "bet" else rk_next(r)  # во время полёта - на следующий раунд
+    if q1("SELECT 1 FROM crash WHERE user_id=? AND round_id=?", uid, target["id"]): raise HTTPException(400, "Ставка на этот раунд уже сделана")
     auto = float(b.get("auto") or 0)
     if auto and not 1.01 <= auto <= CRASH_MAX: raise HTTPException(400, "Автовывод от x1.01")
     gift = ""
@@ -1600,34 +1645,20 @@ def crash_start(b: dict = Body(...), uid: int = Depends(auth)):
         bet = int(b.get("bet", 0))
         if bet < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")
         charge(uid, bet)
-    u = secrets.SystemRandom().random()
-    point = max(1.0, min(CRASH_MAX, math.floor(CRASH_EDGE / (1 - u) * 100) / 100))
-    gid = run("INSERT INTO crash(user_id,bet,gift,crash,auto,seed,started,created) VALUES(?,?,?,?,?,?,?,?)",
-              uid, bet, gift, point, auto, secrets.token_hex(16), time.time() + 1.0, int(time.time()))  # 1 с на отсчёт перед стартом
-    return crash_view(q1("SELECT * FROM crash WHERE id=?", gid))
+    run("INSERT INTO crash(user_id,round_id,bet,gift,auto,status,created) VALUES(?,?,?,?,?,'live',?)", uid, target["id"], bet, gift, auto, int(time.time()))
+    return {"round": target["id"], "next": target["id"] != r["id"], "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
 
 
-@app.get("/api/crash/{gid}")
-def crash_state(gid: int, uid: int = Depends(auth)):
-    g = q1("SELECT * FROM crash WHERE id=? AND user_id=?", gid, uid)
-    if not g: raise HTTPException(404, "Нет такого полёта")
-    return crash_view(crash_settle(g))
-
-
-@app.post("/api/crash/{gid}/cashout")
-def crash_cashout(gid: int, uid: int = Depends(auth)):
-    g = q1("SELECT * FROM crash WHERE id=? AND user_id=?", gid, uid)
-    if not g: raise HTTPException(404, "Нет такого полёта")
-    g = crash_settle(g)
-    if g["status"] == "live":
-        m = crash_mult(g)
-        if time.time() < g["started"]: raise HTTPException(400, "Ракета ещё не взлетела")
-        if m < g["crash"]:
-            pay = min(CRASH_MAX_WIN, int(g["bet"] * m))
-            if changed("UPDATE crash SET status='won', mult=?, payout=? WHERE id=? AND status='live'", m, pay, gid):
-                credit(uid, pay); log_bet(uid, "crash", g["bet"], pay, gid)
-        g = crash_settle(q1("SELECT * FROM crash WHERE id=?", gid))
-    return {**crash_view(g), "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
+@app.post("/api/rk/cashout")
+def rk_cashout(uid: int = Depends(auth)):
+    r = rk_current(); now = time.time()
+    b = q1("SELECT * FROM crash WHERE user_id=? AND round_id=? AND status='live'", uid, r["id"])
+    if not b: raise HTTPException(400, "Нет активной ставки в этом раунде")
+    if rk_phase(r, now) != "fly": rk_settle(r); raise HTTPException(400, "Ракета ещё не взлетела" if now < r["fly_start"] else "Не успели — ракета взорвалась")
+    m = rk_mult(r, now); pay = min(CRASH_MAX_WIN, int(b["bet"] * m))
+    if changed("UPDATE crash SET status='won', mult=?, payout=? WHERE id=? AND status='live'", m, pay, b["id"]):
+        credit(uid, pay); log_bet(uid, "crash", b["bet"], pay, b["id"])
+    return {"mult": m, "payout": pay, "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
 
 
 # ---------- апгрейд ----------

@@ -413,6 +413,23 @@ body.maint>header,body.maint>main,body.maint>nav{display:none!important}
 .crm{position:absolute;left:0;right:0;top:22%;text-align:center;z-index:3;pointer-events:none}
 .crm b{display:block;font:800 48px/1 "Unbounded",system-ui;text-shadow:0 4px 24px #0009;font-variant-numeric:tabular-nums}.crm b.win{color:var(--ok)}.crm b.lose{color:var(--bad)}
 .crm small{display:inline-flex;align-items:center;gap:4px;margin-top:8px;color:#d9daf0;font-weight:700;font-size:14px;padding:5px 12px;border-radius:999px;background:#0b0c1f80}
+.ga-up .gu-glow{position:absolute;inset:16px;border-radius:50%;background:radial-gradient(circle,#5a6cff88,transparent 65%);animation:pulse 2.4s ease-in-out infinite}
+.gu-arc{stroke-dashoffset:314;animation:guarc 3.2s cubic-bezier(.5,.1,.3,1) infinite}@keyframes guarc{0%{stroke-dashoffset:314}55%,75%{stroke-dashoffset:96}100%{stroke-dashoffset:314}}
+.gu-pt{position:absolute;inset:0;animation:gupt 3.2s cubic-bezier(.2,.8,.2,1) infinite}.gu-pt i{position:absolute;left:50%;top:-3px;margin-left:-6px;border:6px solid transparent;border-top:11px solid #fff;filter:drop-shadow(0 2px 4px #000)}
+@keyframes gupt{0%{transform:rotate(0)}60%{transform:rotate(620deg)}100%{transform:rotate(720deg)}}
+.ga-up img{animation:float 3.2s ease-in-out infinite}
+.gu-up{position:absolute;right:-4px;bottom:4px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,#8affc1,#2fcf80);color:#0b3a22;box-shadow:0 6px 14px -4px #3ee08f;animation:guup 1.6s ease-in-out infinite}
+.gu-up svg{width:18px;height:18px}@keyframes guup{50%{transform:translateY(-6px)}}
+.gauge .pc2 small{font-size:11px}.gauge .pc2 svg{width:30px;height:30px;transform:none;margin-bottom:2px}
+/* ракетка: лайв */
+.crp{width:140px;height:5px;margin:10px auto 0;border-radius:9px;background:#ffffff1f;overflow:hidden}.crp i{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,#ffb020,#ff4f9a);transition:width .2s linear}
+.crid{position:absolute;right:12px;top:10px;z-index:3;font:700 12px Manrope;color:var(--mut)}
+.rkp{display:grid;gap:6px}
+.rkr{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:linear-gradient(180deg,#24264d,#1b1c3a);border:1px solid var(--line)}
+.rkr i{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;font:800 13px Manrope;font-style:normal;color:#fff}
+.rkr b{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rkr span{display:flex;align-items:center;gap:3px;font-weight:800;font-size:14px;white-space:nowrap}
+.rkr em{font-style:normal;font-weight:800;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:3px;white-space:nowrap;min-width:64px;justify-content:flex-end}
+.rkr.st-won{border-color:#3ee08f55}.rkr.st-won em{color:var(--ok)}.rkr.st-lost{opacity:.55}.rkr.st-lost em{color:var(--bad)}.rkr.me{box-shadow:0 0 0 1.5px #8b6cff99}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.ov.on,.sheet>div,body.ready main:not([hidden]),#winfx *{animation:none!important}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -628,7 +645,7 @@ CaseView.prototype.render=function(){const c=this.c,me=this;
     <button class="rb ${fast?'on':''}" data-fast aria-label="Быстрое открытие">${IC.bolt}</button><button class="rb" data-fair aria-label="Честная игра">${IC.shield}</button><button class="rb" data-snd aria-label="Звук">${sound?IC.snd:IC.mute}</button></div>
   ${isFree(c)?'<p class="maxw" style="justify-content:center">Подарок дня можно открыть раз в 24 часа</p>':''}</div>
   <h2>Что может выпасть<small>${c.prizes.length}</small></h2>
-  <div class="grid3">${c.prizes.map(p=>`<div class="pc ${p.kind=='stars'?'ts':'t'+tierV(p.stars,c.price||5)}"><span class="ch">${pct(p,c)}</span><div class="pi">${pic(p)}</div><b>${title(p)}</b><em>${p.kind=='stars'?price(p.stars):price(p.stars)}</em></div>`).join('')}</div>`;
+  <div class="grid3">${c.prizes.map(p=>`<div class="pc ${p.kind=='stars'?'ts':'t'+tierV(p.stars,c.price||5)}"><div class="pi">${pic(p)}</div><b>${title(p)}</b><em>${p.kind=='stars'?price(p.stars):price(p.stars)}</em></div>`).join('')}</div>`;
   const x=this.q('[data-x]');if(x)x.onclick=closeCase;
   this.q('[data-go]').onclick=()=>this.go();
   $$('[data-n]',this.root).forEach(b=>b.onclick=()=>{if(me.spinning)return;me.mult=+b.dataset.n;$$('[data-n]',me.root).forEach(z=>z.classList.toggle('on',z==b));me.build(me.mult);me.refresh()});
@@ -767,7 +784,7 @@ function winFx(nft,sum){const best=[...nft].sort((a,b)=>b.value-a.value)[0],rest
   $('wfIn').innerHTML=`<div class="wf-st"><div class="wf-rays"></div><div class="wf-glow"></div><img class="wf-img" src="${esc(imgOf(best,512))}" alt=""></div>
   <div class="wf-t">${nft.length>1?'Вы выиграли '+nft.length+' NFT':'Поздравляем!'}</div>
   <div class="wf-n">${esc(best.gift)}</div>
-  <div class="wf-m">${esc(best.model)}${pm!=null?`<span class="wf-r">${RAR[tier]} · ${(pm/10).toLocaleString('ru-RU')}%</span>`:''}</div>
+  <div class="wf-m">${esc(best.model)}${pm!=null?`<span class="wf-r">${RAR[tier]}</span>`:''}</div>
   <div class="wf-v">${price(best.value)}</div>
   ${rest.length||sum?`<div class="wf-more">${rest.map(w=>`<div>${pic(w,128)}${esc(w.gift)} · ${price(w.value)}</div>`).join('')}${sum?`<div>${COIN}+${price(sum)} на баланс</div>`:''}</div>`:''}
   ${nft.some(w=>w.status=='locked')?'<p class="wf-note">Чтобы вывести подарок дня, выполните задания в профиле.</p>':''}
@@ -866,18 +883,17 @@ function upChance(){if(!U.target)return 0;const s=U.src.value;return s>=U.target
 function slotHtml(p,empty){if(!p||(p.kind=='gift'&&!p.id))return `<div class="slot">${p?'<b style="font-size:28px">+</b><small>Выбрать подарок</small>':empty}</div>`;
   return `<div class="slot full ${p.kind=='stars'?'ts':'t'+(p.pm!=null?tierP(p.pm):tierV(p.value,300))}">${pic(p)}<b>${p.kind=='stars'?'Звёзды':esc(p.gift)}</b>${p.model?`<small>${esc(p.model)}</small>`:''}<em>${p.kind=='stars'?price(p.value):price(p.value)}</em></div>`}
 function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
-  el.innerHTML=`<h2>Апгрейд<small>до ${Math.round((S?.upgrade_max||.8)*100)}%</small></h2>
-  <div class="upw"><button id="uSrc" style="min-width:0">${slotHtml(U.src,'Что улучшаем')}</button>
+  el.innerHTML=`  <div class="upw"><button id="uSrc" style="min-width:0">${slotHtml(U.src,'Что улучшаем')}</button>
    <div class="gauge ${U.res||''}" id="gauge"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="none" stroke="#ffffff12" stroke-width="10"/>
     <circle cx="60" cy="60" r="54" fill="none" stroke="url(#ug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*ch} ${C}"/>
     <defs><linearGradient id="ug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg>
-    <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2">${(ch*100).toFixed(ch<.1?2:1).replace('.',',')}%<small>шанс</small></div></div>
+    <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg><small>${U.res=='win'?'Успех':U.res=='lose'?'Мимо':'шкала шанса'}</small></div></div>
    <button id="uTgt" style="min-width:0">${slotHtml(U.target,'<b style="font-size:28px">+</b><small>Выбрать NFT</small>')}</button></div>
   <div class="box seg" style="margin-top:14px"><button data-us="stars" class="${U.src.kind=='stars'?'on':''}">Звёздами</button><button data-us="gift" class="${U.src.kind!='stars'?'on':''}">Подарком</button></div>
   ${U.src.kind=='stars'?`<div class="box"><div class="bet">${CI()}<input id="uBet" inputmode="decimal" value="${inCur(U.src.value)}" aria-label="Сумма"></div><button class="sb" data-ub="h">½</button><button class="sb" data-ub="d">2×</button><button class="sb" data-ub="max" style="color:#fff">МАКС</button></div>`:''}
   <div class="ks">${[1.5,2,3,5,10].map(k=>`<button data-k="${k}">x${k}</button>`).join('')}</div>
   <button class="btn" id="uGo" style="margin-top:12px" ${!U.target||!ch||U.busy?'disabled':''}>${U.src.kind=='gift'&&!U.src.id?'Выберите подарок':U.target?(ch?'Улучшить':'Цель дешевле ставки'):'Выберите цель'}</button>
-  <p class="maxw" style="justify-content:center">Шанс = ставка / цена цели × ${S?.upgrade_edge||.9}</p>`;
+  <p class="maxw" style="justify-content:center;text-align:center">Чем ближе ставка к цене цели, тем полнее шкала и выше шанс</p>`;
   $('uSrc').onclick=()=>{if(U.busy)return;if(U.src.kind=='stars')return;pickInv(w=>{U.src={...w,kind:'nft'};U.res=null;renderUpgrade()})};
   $('uTgt').onclick=()=>{if(!U.busy)openCatalog(p=>{U.target=p;U.res=null;renderUpgrade()})};
   $$('[data-us]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;U.res=null;if(b.dataset.us=='stars')U.src={kind:'stars',value:Math.max(1,Math.min(100,S.balance||100))};else{U.src={kind:'gift',value:0};pickInv(w=>{U.src={...w,kind:'nft'};renderUpgrade()})}renderUpgrade()});
@@ -906,9 +922,9 @@ const MINB=()=>S?.min_bet||50;
 const ROCKET_SVG='<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="rkB_ID" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#c9cfff"/></linearGradient><linearGradient id="rkF_ID" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b9dff"/><stop offset="1" stop-color="#6a3ff0"/></linearGradient><linearGradient id="rkX_ID" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3a0"/><stop offset=".5" stop-color="#ffb020"/><stop offset="1" stop-color="#ff4f6e" stop-opacity="0"/></linearGradient></defs><path d="M27 46h10l-5 16z" fill="url(#rkX_ID)"/><path d="M22 38l-9 8 2-13 9-4zM42 38l9 8-2-13-9-4z" fill="url(#rkF_ID)"/><path d="M32 2c9 8 12 20 10 38H22C20 22 23 10 32 2z" fill="url(#rkB_ID)"/><path d="M32 2c4 4 7 9 8.6 15H23.4C25 11 28 6 32 2z" fill="url(#rkF_ID)"/><circle cx="32" cy="25" r="5.5" fill="#4f9dff" stroke="#2a2c80" stroke-width="2.4"/><circle cx="30.4" cy="23.4" r="1.6" fill="#fff" opacity=".8"/><path d="M26 40h12v4H26z" fill="url(#rkF_ID)"/></svg>';
 const rocketSvg=id=>ROCKET_SVG.replaceAll('_ID','_'+id);
 const GAMES=[
- {k:'crash',t:'Ракетка',d:'Ракета летит — множитель растёт. Успей забрать до взрыва',c:'gc-crash',btn:'gold',art:()=>`<div class="ga-crash"><svg class="ga-curve" viewBox="0 0 200 120" preserveAspectRatio="none"><path d="M0 118 C70 116 120 90 190 14" fill="none" stroke="url(#gcl)" stroke-width="5" stroke-linecap="round"/><path d="M0 118 C70 116 120 90 190 14 L190 120 L0 120z" fill="url(#gcf)" opacity=".35"/><defs><linearGradient id="gcl"><stop offset="0" stop-color="#ffb020"/><stop offset="1" stop-color="#ff4f9a"/></linearGradient><linearGradient id="gcf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></linearGradient></defs></svg><div class="ga-rk">${rocketSvg('lobby')}</div><b class="ga-x">x2,45</b></div>`,isNew:true},
+ {k:'crash',t:'Ракетка',d:'Ракета летит — множитель растёт. Успей забрать до взрыва',c:'gc-crash',btn:'gold',art:()=>`<div class="ga-crash"><svg class="ga-curve" viewBox="0 0 200 120" preserveAspectRatio="none"><path d="M0 118 C70 116 120 90 190 14" fill="none" stroke="url(#gcl)" stroke-width="5" stroke-linecap="round"/><path d="M0 118 C70 116 120 90 190 14 L190 120 L0 120z" fill="url(#gcf)" opacity=".35"/><defs><linearGradient id="gcl"><stop offset="0" stop-color="#ffb020"/><stop offset="1" stop-color="#ff4f9a"/></linearGradient><linearGradient id="gcf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a45"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></linearGradient></defs></svg><div class="ga-rk">${rocketSvg('lobby')}</div><b class="ga-x">x2,45</b></div>`},
  {k:'mines',t:'Мины',d:'Открывай клетки, собирай кристаллы и не попадись на мину',c:'gc-mines',btn:'green',art:()=>`<div class="ga-mines">${[GEM,0,GEM,0,BOMB,GEM,GEM,0,0].map((x,i)=>`<i class="${x===BOMB?'b':x?'g':''}">${x||''}</i>`).join('')}</div>`},
- {k:'upgrade',t:'Апгрейд',d:'Улучши подарок до дорогого NFT — шанс до 80%',c:'gc-up',btn:'blue',art:()=>`<div class="ga-up"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#ffffff1a" stroke-width="10"/><circle cx="60" cy="60" r="50" fill="none" stroke="url(#gug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="190 400" transform="rotate(-90 60 60)"/><defs><linearGradient id="gug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg><img src="${th('Plush Pepe','Cozy Galaxy',256)}" alt=""><b>60%</b></div>`},
+ {k:'upgrade',t:'Апгрейд',d:'Улучши подарок до дорогого NFT одним нажатием',c:'gc-up',btn:'blue',art:()=>`<div class="ga-up"><span class="gu-glow"></span><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#ffffff1a" stroke-width="10"/><circle class="gu-arc" cx="60" cy="60" r="50" fill="none" stroke="url(#gug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="314" transform="rotate(-90 60 60)"/><defs><linearGradient id="gug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg><span class="gu-pt"><i></i></span><img src="${th('Plush Pepe','Cozy Galaxy',256)}" alt=""><em class="gu-up">${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'}</em></div>`},
  {k:'plinko',t:'Плинко',d:'Кидай шарики и лови множители до x1000',c:'gc-plinko',btn:'pink',art:()=>`<div class="ga-pl">${[1,2,3,4,5].map(r=>`<p>${'<i></i>'.repeat(r+1)}</p>`).join('')}<span class="ball"></span><div class="sl">${['#ffc83d','#c04df0','#5a6cff','#3d45a6','#5a6cff','#c04df0','#ffc83d'].map(c=>`<em style="background:${c}"></em>`).join('')}</div></div>`}];
 let GSEL=null;
 function renderLobby(){setHTML($('glob'),`<h2>Игры<small>${GAMES.length} игры</small></h2>`+GAMES.map(g=>`<button class="gcard ${g.c}" data-game="${g.k}">${g.isNew?'<span class="gnew">NEW</span>':''}
@@ -916,67 +932,86 @@ function renderLobby(){setHTML($('glob'),`<h2>Игры<small>${GAMES.length} и�
   <div class="gart">${g.art()}</div></button>`).join(''));
   $$('#glob [data-game]').forEach(b=>b.onclick=()=>{hap();openGame(b.dataset.game)})}
 function openGame(k){GSEL=k;$('glob').hidden=!!k;$('gtop').hidden=!k;['mines','upgrade','plinko','crash'].forEach(g=>$('g-'+g).hidden=g!=k);
-  if(k){$('gtt').textContent=GAMES.find(g=>g.k==k).t;scrollTo(0,0);if(k=='plinko')renderPlinko();if(k=='crash')renderCrash();if(k=='mines')renderMines();if(k=='upgrade')renderUpgrade()}else renderLobby()}
+  if(k){$('gtt').textContent=GAMES.find(g=>g.k==k).t;scrollTo(0,0);if(k=='plinko')renderPlinko();if(k=='crash'){renderCrash();crTick()}if(k=='mines')renderMines();if(k=='upgrade')renderUpgrade()}else renderLobby()}
 
-/* ---------- ракетка ---------- */
-const K={mode:'bal',bet:100,auto:'',gift:null,g:null,off:0,raf:0,poll:0,hist:[],busy:false,stars:null,boom:0};
-const cMult=g=>{const t=Date.now()/1000+K.off-g.started;return Math.min(S?.crash?.max||1000,Math.exp((S?.crash?.speed||.09)*Math.max(0,t)))};
+/* ---------- ракетка: лайв-раунды ---------- */
+const K={mode:'bal',bet:100,auto:'',gift:null,st:null,off:0,raf:0,poll:0,busy:false,stars:null,boom:0,boomR:0};
+const SPD=()=>S?.crash?.speed||.09;
 const fx2=m=>'x'+m.toFixed(2).replace('.',',');
-function renderCrash(){const el=$('g-crash');if(!el||!S)return;const g=K.g,live=g&&g.status=='live';
+const rkNow=()=>Date.now()/1000+K.off;
+function rkInfo(){const st=K.st;if(!st)return null;const r=st.round,now=rkNow(),ph=r.phase=='crash'?'crash':now<r.fly_start?'bet':'fly';
+  const m=ph=='crash'?r.crash:ph=='fly'?Math.min(S?.crash?.max||1000,Math.exp(SPD()*(now-r.fly_start))):1;
+  const cur=st.mine.find(b=>b.round==r.id),next=st.mine.find(b=>b.round>r.id);return {r,ph,m,cur,next,now}}
+function renderCrash(){const el=$('g-crash');if(!el||!S)return;
   el.innerHTML=`<div class="crb"><canvas id="crc" aria-label="Полёт ракеты"></canvas><div class="crk" id="crk">${rocketSvg('game')}</div>
-    <div class="crm" id="crm"><b id="crx">x1,00</b><small id="crs">Сделайте ставку и запускайте</small></div></div>
-  <div class="plh" id="crh">${K.hist.map(h=>`<span style="--sc:${h<2?'#3d45a6':h<10?'#8b5cff':'#ffc83d'};color:${h>=10?'#3a2600':'#fff'}">${fx2(h)}</span>`).join('')}</div>
+    <div class="crm"><b id="crx">x1,00</b><small id="crs">Подключаемся к раунду…</small><div class="crp" id="crp"><i></i></div></div><span class="crid" id="crid"></span></div>
+  <div class="plh" id="crh"></div>
   <div class="box seg"><button data-km="bal" class="${K.mode=='bal'?'on':''}">Балансом</button><button data-km="gift" class="${K.mode=='gift'?'on':''}">Подарком</button></div>
-  ${K.mode=='bal'?`<div class="box"><div class="bet">${CI()}<input id="kBet" inputmode="decimal" value="${inCur(K.bet)}" ${live?'disabled':''} aria-label="Ставка"></div><button class="sb" data-kb="h">½</button><button class="sb" data-kb="d">2×</button><button class="sb" data-kb="max" style="color:#fff">МАКС</button></div>`
+  ${K.mode=='bal'?`<div class="box"><div class="bet">${CI()}<input id="kBet" inputmode="decimal" value="${inCur(K.bet)}" aria-label="Ставка"></div><button class="sb" data-kb="h">½</button><button class="sb" data-kb="d">2×</button><button class="sb" data-kb="max" style="color:#fff">МАКС</button></div>`
    :`<div class="box"><button class="gsel" id="kGift">${K.gift?`<img src="${esc(imgOf(K.gift,128))}" alt=""><span style="min-width:0"><b>${title(K.gift)}</b><small>${price(K.gift.value)}</small></span>`:'<span style="color:var(--mut);padding:12px 6px">Выберите подарок из инвентаря</span>'}</button></div>`}
-  <div class="box"><div class="bet" style="font-size:18px"><span style="color:var(--mut);font:700 14px Manrope;white-space:nowrap">Автовывод x</span><input id="kAuto" inputmode="decimal" placeholder="нет" value="${esc(K.auto)}" ${live?'disabled':''} aria-label="Автовывод"></div>${[1.5,2,5].map(a=>`<button class="sb" data-ka="${a}">${String(a).replace('.',',')}</button>`).join('')}</div>
+  <div class="box"><div class="bet" style="font-size:18px"><span style="color:var(--mut);font:700 14px Manrope;white-space:nowrap">Автовывод x</span><input id="kAuto" inputmode="decimal" placeholder="нет" value="${esc(K.auto)}" aria-label="Автовывод"></div>${[1.5,2,5].map(a=>`<button class="sb" data-ka="${a}">${String(a).replace('.',',')}</button>`).join('')}</div>
   <button class="btn" id="kGo" style="margin-top:12px"></button>
-  <p class="maxw" style="justify-content:center;text-align:center">Мин. ставка ${price(MINB())} · выигрыш = ставка × множитель${K.mode=='gift'?' · подарок ставится по оценке, выигрыш в '+(CUR=='gram'?'GRAM':'⭐'):''}</p>`;
+  <p class="maxw" style="justify-content:center;text-align:center">Мин. ставка ${price(MINB())} · выигрыш = ставка × множитель</p>
+  <h2 style="margin-top:20px">Игроки раунда<small id="crc2"></small></h2><div class="rkp" id="rkp"></div>`;
   const bi=$('kBet');if(bi)bi.oninput=()=>{K.bet=Math.max(0,fromCur(bi.value))};
-  $$('[data-kb]',el).forEach(b=>b.onclick=()=>{if(live)return;const v=Math.max(MINB(),K.bet);K.bet=b.dataset.kb=='h'?Math.max(MINB(),v/2|0):b.dataset.kb=='d'?v*2:Math.max(MINB(),S.balance);renderCrash()});
-  $$('[data-km]',el).forEach(b=>b.onclick=()=>{if(live)return;K.mode=b.dataset.km;renderCrash()});
-  $$('[data-ka]',el).forEach(b=>b.onclick=()=>{if(live)return;K.auto=b.dataset.ka;renderCrash()});
+  $$('[data-kb]',el).forEach(b=>b.onclick=()=>{const v=Math.max(MINB(),K.bet);K.bet=b.dataset.kb=='h'?Math.max(MINB(),v/2|0):b.dataset.kb=='d'?v*2:Math.max(MINB(),S.balance);$('kBet').value=inCur(K.bet)});
+  $$('[data-km]',el).forEach(b=>b.onclick=()=>{K.mode=b.dataset.km;renderCrash()});
+  $$('[data-ka]',el).forEach(b=>b.onclick=()=>{K.auto=b.dataset.ka;$('kAuto').value=K.auto});
   const ai=$('kAuto');ai.oninput=()=>{K.auto=ai.value.replace(',','.').replace(/[^\d.]/g,'')};
-  const gs=$('kGift');if(gs)gs.onclick=()=>{if(!live)pickInv(w=>{K.gift=w;renderCrash()})};
-  crLayout();crButton();crText();if(live&&!K.raf)K.raf=requestAnimationFrame(crLoop)}
-function crButton(){const b=$('kGo');if(!b)return;const g=K.g,live=g&&g.status=='live';
-  if(live){const pre=Date.now()/1000+K.off<g.started;b.className='btn green';b.disabled=pre||K.busy;b.innerHTML=pre?'Взлёт…':`Забрать ${price(Math.floor(g.bet*cMult(g)))}`;b.onclick=crCash}
-  else{b.className='btn';b.disabled=K.busy;b.innerHTML=K.mode=='gift'&&!K.gift?'Выберите подарок':'Запустить ракету';b.onclick=crStart}}
+  const gs=$('kGift');if(gs)gs.onclick=()=>pickInv(w=>{K.gift=w;renderCrash()});
+  crLayout();crPaint();if(!K.raf)K.raf=requestAnimationFrame(crLoop)}
 function crLayout(){const cv=$('crc');if(!cv)return;const W=cv.clientWidth,H=cv.clientHeight,d=Math.min(2,devicePixelRatio||1);cv.width=W*d;cv.height=H*d;cv.getContext('2d').setTransform(d,0,0,d,0,0);
-  if(!K.stars)K.stars=[...Array(40)].map(()=>[Math.random(),Math.random(),Math.random()*1.4+.3]);crDraw(K.g&&K.g.status!='live'?K.g.mult||K.g.crash:1,K.g&&K.g.status=='live')}
-function crDraw(m,live){const cv=$('crc');if(!cv)return;const x=cv.getContext('2d'),W=cv.clientWidth,H=cv.clientHeight,t=performance.now()/1000;x.clearRect(0,0,W,H);
-  const sp=live?Math.min(3,1+Math.log(m)):0;for(const s of K.stars){const yy=((s[1]*H)+t*20*sp*s[2])%H;x.fillStyle=`rgba(255,255,255,${.25+.35*s[2]/1.7})`;x.fillRect(s[0]*W,yy,s[2],s[2])}
-  const pad=26,mx=Math.max(2,m*1.15),lm=Math.log(mx),ts=Math.log(m)/(S?.crash?.speed||.09),tw=Math.max(8,ts*1.15);
+  if(!K.stars)K.stars=[...Array(40)].map(()=>[Math.random(),Math.random(),Math.random()*1.4+.3])}
+function crDraw(m,live,show){const cv=$('crc');if(!cv)return;const x=cv.getContext('2d'),W=cv.clientWidth,H=cv.clientHeight,t=performance.now()/1000;x.clearRect(0,0,W,H);
+  const sp=live?Math.min(3,1+Math.log(m)):.15;for(const s of K.stars||[]){const yy=((s[1]*H)+t*20*sp*s[2])%H;x.fillStyle=`rgba(255,255,255,${.25+.35*s[2]/1.7})`;x.fillRect(s[0]*W,yy,s[2],s[2])}
+  const rk=$('crk');if(!show){if(rk)rk.style.opacity=0;return}
+  const pad=26,mx=Math.max(2,m*1.15),ts=Math.log(m)/SPD(),tw=Math.max(8,ts*1.15),ys=v=>H-pad-((v-1)/(mx-1))*(H-pad*2);
   x.strokeStyle='#ffffff12';x.lineWidth=1;x.font='700 11px Manrope,system-ui';x.fillStyle='#9fa2cc';
-  const ys=v=>H-pad-((v-1)/(mx-1))*(H-pad*2),grid=[1.5,2,3,5,10,20,50,100,200,500].filter(v=>v<mx),gs=grid.length>4?grid.filter((v,i)=>i%Math.ceil(grid.length/4)==0||i==grid.length-1):grid;
+  const grid=[1.5,2,3,5,10,20,50,100,200,500].filter(v=>v<mx),gs=grid.length>4?grid.filter((v,i)=>i%Math.ceil(grid.length/4)==0||i==grid.length-1):grid;
   for(const v of gs){const y=ys(v);x.beginPath();x.moveTo(pad,y);x.lineTo(W-8,y);x.stroke();x.fillText(fx2(v).replace(',00',''),6,y-3)}
-  const P=[];for(let i=0;i<=60;i++){const tt=ts*i/60,mm=Math.exp((S?.crash?.speed||.09)*tt);P.push([pad+(tt/tw)*(W-pad-16),ys(mm)])}
+  const P=[];for(let i=0;i<=60;i++){const tt=ts*i/60;P.push([pad+(tt/tw)*(W-pad-16),ys(Math.exp(SPD()*tt))])}
   const gr=x.createLinearGradient(0,0,W,0);gr.addColorStop(0,'#ffb020');gr.addColorStop(1,K.boom?'#ff5a6e':'#ff4f9a');
   x.beginPath();P.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.lineTo(P.at(-1)[0],H-pad);x.lineTo(pad,H-pad);x.closePath();const fg=x.createLinearGradient(0,0,0,H);fg.addColorStop(0,'#ff7a4555');fg.addColorStop(1,'#ff7a4500');x.fillStyle=fg;x.fill();
   x.beginPath();P.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.strokeStyle=gr;x.lineWidth=4;x.lineCap='round';x.shadowColor='#ff7a45';x.shadowBlur=12;x.stroke();x.shadowBlur=0;
-  const [ex,ey]=P.at(-1),[px,py]=P.at(-4)||P[0],ang=Math.atan2(ey-py,ex-px)*180/Math.PI+90,rk=$('crk');
-  if(rk){rk.style.transform=`translate(${ex-22}px,${ey-22}px) rotate(${Math.max(20,Math.min(88,ang))}deg)`;rk.classList.toggle('fly',!!live);rk.classList.toggle('boom',!!K.boom)}
-  if(K.boom){const k=Math.min(1,(performance.now()-K.boom)/600);for(let i=0;i<14;i++){const a=i/14*6.283,r=10+k*46;x.globalAlpha=1-k;x.fillStyle=i%2?'#ffc83d':'#ff5a6e';x.beginPath();x.arc(ex+Math.cos(a)*r,ey+Math.sin(a)*r,4*(1-k)+1,0,6.283);x.fill()}x.globalAlpha=1}}
-function crText(){const g=K.g;if(!g)return;const live=g.status=='live',pre=live&&Date.now()/1000+K.off<g.started,m=live?cMult(g):(g.mult||g.crash||1);
-  const xel=$('crx'),s=$('crs');if(xel){xel.textContent=fx2(m);xel.className=live?'':g.status=='won'?'win':'lose'}
-  if(s)s.innerHTML=pre?`Взлёт через ${Math.ceil(g.started-(Date.now()/1000+K.off))}…`:live?(g.auto?`Автовывод на ${fx2(+g.auto)}`:'Летим! Забирайте вовремя'):g.status=='won'?`Вы забрали ${fx2(g.mult)} · +${price(g.payout)}`:`Ракета взорвалась на ${fx2(g.crash)}`;
-  return m}
-function crLoop(){const g=K.g;if(!g||!$('crc')){K.raf=0;return}const live=g.status=='live',m=crText();crDraw(m,live);
-  if(live)crButton();K.raf=(live||(K.boom&&performance.now()-K.boom<700))?requestAnimationFrame(crLoop):0}
-async function crStart(){if(K.busy)return;const body={};
+  const [ex,ey]=P.at(-1),[px,py]=P.at(-4)||P[0],ang=Math.atan2(ey-py,ex-px)*180/Math.PI+90;
+  if(rk){rk.style.opacity=K.boom?0:1;rk.style.transform=`translate(${ex-22}px,${ey-22}px) rotate(${Math.max(20,Math.min(88,ang))}deg)`;rk.classList.toggle('fly',!!live)}
+  if(K.boom){const k=Math.min(1,(performance.now()-K.boom)/650);for(let i=0;i<16;i++){const a=i/16*6.283,r=10+k*50;x.globalAlpha=1-k;x.fillStyle=i%2?'#ffc83d':'#ff5a6e';x.beginPath();x.arc(ex+Math.cos(a)*r,ey+Math.sin(a)*r,4*(1-k)+1,0,6.283);x.fill()}x.globalAlpha=1}}
+function crPaint(){const I=rkInfo(),xel=$('crx'),s=$('crs'),pb=$('crp'),b=$('kGo');if(!xel)return;
+  if(!I){crDraw(1,false,false);return}
+  const {r,ph,m,cur,next}=I;
+  if(ph=='crash'&&K.boomR!=r.id){K.boomR=r.id;K.boom=performance.now();if(cur&&cur.status=='lost'){sfx.lose();hap('err')}}
+  if(ph!='crash'&&K.boom&&performance.now()-K.boom>900)K.boom=0;
+  crDraw(m,ph=='fly',ph!='bet');
+  $('crid').textContent='Раунд #'+r.id;
+  const left=Math.max(0,r.fly_start-I.now),bs=K.st.bet_sec||8;
+  xel.className=ph=='crash'?'lose':cur&&cur.status=='won'?'win':'';xel.textContent=ph=='bet'?Math.ceil(left)+' с':fx2(m);
+  pb.style.display=ph=='bet'?'':'none';pb.firstChild.style.width=(100-left/bs*100)+'%';
+  s.innerHTML=ph=='bet'?'Приём ставок — взлёт через '+Math.ceil(left)+' с':ph=='fly'?(cur&&cur.status=='won'?`Вы забрали ${fx2(cur.mult)} · +${price(cur.payout)}`:cur?'Летим! Забирайте вовремя':'Ракета в полёте'):`Ракета взорвалась на ${fx2(r.crash)}`;
+  if(!b)return;
+  if(cur&&cur.status=='live'&&ph=='fly'){b.className='btn green';b.disabled=K.busy;b.innerHTML=`Забрать ${price(Math.floor(cur.bet*m))}`;b.onclick=crCash}
+  else if(cur&&ph=='bet'){b.className='btn';b.disabled=true;b.innerHTML='Ставка принята — ждём взлёт'}
+  else if(next){b.className='btn';b.disabled=true;b.innerHTML='Ставка на следующий раунд принята'}
+  else{b.className='btn';b.disabled=K.busy||(K.mode=='gift'&&!K.gift);b.onclick=crBet;
+    b.innerHTML=K.mode=='gift'&&!K.gift?'Выберите подарок':ph=='bet'?'Поставить'+(K.mode=='bal'?' '+price(K.bet):''):'Поставить на следующий раунд'}}
+function crList(){const st=K.st;if(!st||!$('rkp'))return;
+  $('crh').innerHTML=st.history.map(h=>`<span style="--sc:${h<2?'#3d45a6':h<10?'#8b5cff':'#ffc83d'};color:${h>=10?'#3a2600':'#fff'}">${fx2(h)}</span>`).join('');
+  $('crc2').innerHTML=`${st.count} · ${price(st.sum)}`;
+  $('rkp').innerHTML=st.players.map((p,i)=>`<div class="rkr ${p.me?'me':''} st-${p.status}"><i style="background:${AV[i%5]}">${esc((p.name||'?')[0])}</i><b>${esc(p.name)}${p.me?' (вы)':''}</b>
+    <span>${p.gift?'🎁 ':''}${price(p.bet)}</span><em>${p.status=='won'?`${fx2(p.mult)} · +${price(p.payout)}`:p.status=='lost'?'—':p.auto?'авто '+fx2(p.auto):'в игре'}</em></div>`).join('')||'<p class="empty">Ставок пока нет — будьте первым</p>'}
+async function crSync(){try{const st=await api('rk/state');K.off=st.round.now-Date.now()/1000;K.st=st;S.balance=st.balance;setBal(st.balance);crList();crPaint()}catch(e){}}
+function crTick(){clearTimeout(K.poll);if(GSEL!='crash'||tab!='games')return;crSync().finally(()=>{const I=rkInfo();K.poll=setTimeout(crTick,I&&I.ph=='fly'?500:1000)})}
+function crLoop(){if(GSEL!='crash'||!$('crc')){K.raf=0;return}crPaint();K.raf=requestAnimationFrame(crLoop)}
+async function crBet(){if(K.busy)return;const body={};
   if(K.auto){const a=parseFloat(K.auto);if(!(a>=1.01))return toast('Автовывод от x1,01');body.auto=a}
   if(K.mode=='gift'){if(!K.gift)return pickInv(w=>{K.gift=w;renderCrash()});body.win_id=K.gift.id}
   else{body.bet=Math.round(K.bet);if(body.bet<MINB())return toast('Минимальная ставка '+price(MINB()));if(S.balance<body.bet)return openTop(body.bet-S.balance)}
-  K.busy=true;crButton();
-  try{const g=await api('crash/start','POST',body);K.off=g.now-Date.now()/1000;K.g=g;K.boom=0;if(K.mode=='gift')K.gift=null;else{S.balance-=body.bet;setBal(S.balance)}
-    hap('medium');K.busy=false;renderCrash();crPoll()}catch(e){K.busy=false;toast(e.message);hap('err');renderCrash()}}
-function crPoll(){clearTimeout(K.poll);if(!K.g||K.g.status!='live')return;
-  K.poll=setTimeout(async()=>{try{const g=await api('crash/'+K.g.id);if(g.status!='live')crEnd(g);else crPoll()}catch(e){crPoll()}},450)}
-async function crCash(){if(K.busy||!K.g)return;K.busy=true;crButton();try{const g=await api(`crash/${K.g.id}/cashout`,'POST');crEnd(g)}catch(e){toast(e.message)}K.busy=false;crButton()}
-function crEnd(g){clearTimeout(K.poll);const was=K.g&&K.g.status=='live';K.g=g;if(!was){renderCrash();return}K.hist.unshift(g.crash);K.hist=K.hist.slice(0,10);
-  if(g.status=='won'){sfx.win();hap('ok');toast(`Выигрыш ${fx2(g.mult)}: +${price(g.payout)}`)}else{K.boom=performance.now();sfx.lose();hap('err')}
-  renderCrash();if(!K.raf)K.raf=requestAnimationFrame(crLoop);setTimeout(load,300)}
+  K.busy=true;crPaint();
+  try{const r=await api('rk/bet','POST',body);if(K.mode=='gift')K.gift=null;setBal(r.balance);S.balance=r.balance;hap('medium');toast(r.next?'Ставка принята на следующий раунд':'Ставка принята');await crSync()}
+  catch(e){toast(e.message);hap('err')}K.busy=false;crPaint()}
+async function crCash(){if(K.busy)return;K.busy=true;crPaint();
+  try{const r=await api('rk/cashout','POST');sfx.win();hap('ok');toast(`Выигрыш ${fx2(r.mult)}: +${price(r.payout)}`);await crSync();load()}catch(e){toast(e.message);await crSync()}K.busy=false;crPaint()}
 addEventListener('resize',()=>{if(GSEL=='crash')crLayout()});
+
 
 $('gback').onclick=()=>{hap();openGame(null)};
 
@@ -1061,7 +1096,7 @@ function renderCat(){const total=CAT.reduce((a,g)=>a+g.models.length,0);
       if(catPick&&U.src.value)ms=ms.filter(p=>p.value>U.src.value);
       const shown=ms.slice(0,180);
       L.innerHTML=(ms.length?`<p class="maxw" style="margin:0 0 10px">${num(ms.length)} ${plural(ms.length,'модель','модели','моделей')}${ms.length>shown.length?' — показаны первые '+shown.length:''}</p>`:'')+
-        `<div class="grid3">${shown.map((p,i)=>`<button class="pc t${tierP(p.pm)}" data-i="${i}"><span class="ch">${(p.pm/10).toLocaleString('ru-RU')}%</span><div class="pi"><img src="${esc(imgOf(p))}" alt="" loading="lazy" decoding="async"></div><b>${catColl?esc(p.model):esc(p.gift)+' · '+esc(p.model)}</b><em>${price(p.value)}</em></button>`).join('')}</div>`+(ms.length?'':'<p class="empty">Ничего не нашлось.</p>');
+        `<div class="grid3">${shown.map((p,i)=>`<button class="pc t${tierP(p.pm)}" data-i="${i}"><div class="pi"><img src="${esc(imgOf(p))}" alt="" loading="lazy" decoding="async"></div><b>${catColl?esc(p.model):esc(p.gift)+' · '+esc(p.model)}</b><em>${price(p.value)}</em></button>`).join('')}</div>`+(ms.length?'':'<p class="empty">Ничего не нашлось.</p>');
       $$('[data-i]',L).forEach(b=>b.onclick=()=>{const p=shown[+b.dataset.i];if(catPick){catPick(p);$('ovCat').classList.remove('on');afterClose()}})}
     else{const gs=[...CAT].sort((a,b)=>(FL[b.name]??4.5)-(FL[a.name]??4.5));
       L.innerHTML=`<div class="grid3">${gs.map((g,i)=>{const m=g.models[g.models.length-1];return `<button class="coll" data-c="${esc(g.name)}"><div class="pi"><img src="${esc(mimg(g.name,m[0]))}" alt="" loading="lazy" decoding="async"></div><b>${esc(g.name)}</b><small>от ${price(Math.min(...g.models.map(x=>nftVal(g.name,x[0]))))}</small><small>${g.models.length} ${plural(g.models.length,'модель','модели','моделей')}</small></button>`}).join('')}</div>`;
@@ -1212,7 +1247,7 @@ async function load(){S=await api('state');left=S.free_in;freeBadge();if(S.ton_s
   const u=tg.initDataUnsafe?.user;if(u){const a=$('ava');if(u.photo_url)a.style.backgroundImage=`url('${u.photo_url}')`;else a.textContent=(u.first_name||'?')[0]}
   if(M.g==null&&S.mines)M.g=S.mines;
   if(!$('chips').children.length)renderChips();
-  renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();if(!$('g-plinko').hidden)renderPlinko();if(GSEL=='crash'&&!(K.g&&K.g.status=='live'))renderCrash();if(!GSEL)renderLobby();if(S.crash_live&&!K.g){K.g=S.crash_live;K.off=S.crash_live.now-Date.now()/1000;crPoll()}renderProfile();
+  renderCases();if(!M.busy)renderMines();if(!U.busy)renderUpgrade();if(!$('g-plinko').hidden)renderPlinko();if(!GSEL)renderLobby();renderProfile();
   if(tab=='bonus'&&!(BV&&BV.spinning))renderBonus();else renderTasks();renderNick();renderCm();
   $('rb').innerHTML='+'+price(S.ref_bonus);$('rbh').innerHTML='+'+price(S.ref_bonus);$('rph').textContent=S.ref_percent+'%';$('rp').textContent=S.ref_percent+'%';$('rn').textContent=S.refs;$('re').parentElement.innerHTML=`<span id="re">${price(S.ref_earned)}</span>`;
   if(CV){CV.c=S.cases.find(c=>c.id==CV.c.id)||CV.c;CV.refresh()}
