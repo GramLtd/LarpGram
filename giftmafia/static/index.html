@@ -148,6 +148,12 @@ body.kb .tabs{transform:translateY(140%);opacity:0;pointer-events:none}
 .seg button{flex:1;height:52px;border-radius:16px;color:var(--mut);font-weight:800;font-size:17px}.seg button.on{background:#43455f;color:#fff}
 .bet{flex:1;display:flex;align-items:center;gap:10px;padding-left:12px;font:800 22px "Manrope";min-width:0}.bet input{width:100%;min-width:0;background:none;border:0;color:#fff;font:inherit}
 .sb{height:46px;min-width:50px;padding:0 12px;border-radius:14px;background:#ffffff0a;color:#c9cbe4;font-weight:800;font-size:16px;flex:none}
+.wdg{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:20px;background:#ffffff08;border:1px solid var(--line)}.wdg img{width:56px;height:56px;object-fit:contain}.wdg div{flex:1;min-width:0}.wdg b{display:block}.wdg small{color:var(--mut)}.wdg em{font-style:normal;font-weight:800;display:flex;align-items:center;gap:3px}
+.wds button{display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;min-width:0;font-size:16px}.wds button img{width:22px;height:22px}.wds .usd{width:22px;height:22px;border-radius:50%;background:#26a17b;color:#fff;font-size:14px;display:grid;place-items:center}.wds svg{color:#0098EA}
+.wdl{display:grid;gap:6px;margin-top:12px;font-size:13px;color:var(--mut);font-weight:700}.wdl .inp{color:#fff;font-size:15px}
+.wdc{display:grid;grid-template-columns:1fr auto;gap:6px 10px;margin-top:12px;padding:12px 14px;border-radius:18px;background:#ffffff08;font-size:14px}.wdc span{color:var(--mut)}.wdc b{text-align:right}.wdc .big2{font-size:17px;color:#fff;font-weight:800}
+.hi.cr{display:grid;place-items:center;background:#0098EA26;color:#5ac8ff;font-weight:800}.hi.cr.usdt{background:#26a17b33;color:#5ee0b0}
+.ugo{display:flex;gap:10px;margin-top:12px}.ugo .btn{flex:1;min-width:0}.fastb{width:76px;flex:none;border-radius:22px;background:#ffffff0d;border:1px solid var(--line);color:#c9cbe4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}.fastb svg{width:24px;height:24px}.fastb small{font-size:11px;font-weight:800}.fastb.on{color:var(--gold);background:#ffc83d1a;border-color:#ffc83d55}.fastb:disabled{opacity:.5}
 .row2{display:flex;gap:10px}.row2 .box{flex:1;margin-top:10px}
 .cnt{flex:1;min-width:0;white-space:nowrap;text-align:center;font:800 22px "Unbounded",system-ui;display:flex;align-items:center;justify-content:center;gap:6px}
 .gsel{flex:1;display:flex;align-items:center;gap:10px;padding:4px 8px;text-align:left;min-width:0}.gsel img{width:44px;height:44px;object-fit:contain}.gsel b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gsel small{color:var(--mut)}
@@ -936,7 +942,7 @@ function renderUpgrade(){if(U.src.kind=='nft'&&!U.busy&&!fresh(U.src))U.src={kin
   ${U.src.kind!='stars'?`<div class="box uab"><span class="ual">Добавить с баланса</span><div class="bet">${CI()}<input id="uAdd" inputmode="decimal" value="${U.add?inCur(U.add):''}" placeholder="0" aria-label="Добавить с баланса"></div><button class="sb" data-ua="100">+100</button><button class="sb" data-ua="500">+500</button><button class="sb" data-ua="max" style="color:#fff">МАКС</button>${U.add?'<button class="sb" data-ua="0" aria-label="Сбросить">✕</button>':''}</div>`:''}
   ${U.src.kind=='stars'?`<div class="box"><div class="bet">${CI()}<input id="uBet" inputmode="decimal" value="${inCur(U.src.value)}" aria-label="Сумма"></div><button class="sb" data-ub="h">½</button><button class="sb" data-ub="d">2×</button><button class="sb" data-ub="max" style="color:#fff">МАКС</button></div>`:''}
   <div class="ks">${[1.5,2,3,5,10].map(k=>`<button data-k="${k}">x${k}</button>`).join('')}</div>
-  <button class="btn" id="uGo" style="margin-top:12px" ${!U.target||!ch||U.busy?'disabled':''}>${U.src.kind=='gift'&&!U.src.id?'Выберите подарок':U.target?(ch?'Улучшить':'Цель дешевле ставки'):'Выберите цель'}</button>
+  <div class="ugo"><button class="btn" id="uGo" ${!U.target||!ch||U.busy?'disabled':''}>${U.src.kind=='gift'&&!U.src.id?'Выберите подарок':U.target?(ch?'Улучшить':'Цель дешевле ставки'):'Выберите цель'}</button><button class="fastb ${fast?'on':''}" id="uFast" aria-label="Быстрый прокрут" aria-pressed="${fast}">${IC.bolt}<small>${fast?'Быстро':'Обычно'}</small></button></div>
   <p class="maxw" style="justify-content:center;text-align:center">Чем ближе ставка к цене цели, тем выше шанс</p>`;
   $('uSrc').onclick=()=>{if(U.busy)return;if(U.src.kind=='stars')return;pickInv(w=>{U.src={...w,kind:'nft'};U.res=null;renderUpgrade()})};
   $('uTgt').onclick=()=>{if(!U.busy)openCatalog(p=>{U.target=p;U.res=null;renderUpgrade()})};
@@ -949,7 +955,7 @@ function renderUpgrade(){if(U.src.kind=='nft'&&!U.busy&&!fresh(U.src))U.src={kin
   const ai=$('uAdd');if(ai){ai.disabled=U.busy;ai.onchange=()=>{if(U.busy)return;U.add=Math.max(0,Math.min(upAddMax(),Math.round(fromCur(ai.value)||0)));U.res=null;renderUpgrade()}};
   const bi=$('uBet');if(bi){bi.disabled=U.busy;bi.onchange=()=>{if(U.busy)return;U.src.value=Math.max(1,fromCur(bi.value));U.res=null;renderUpgrade()}};
   $$('[data-k]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;if(!U.src.value)return toast('Сначала выберите, что улучшаем');U.target=nearest(upSV()*+b.dataset.k);U.res=null;renderUpgrade()});
-  $('uGo').onclick=doUpgrade;$$('#g-upgrade .sb,#g-upgrade [data-k],#g-upgrade [data-us],#g-upgrade [data-ua]').forEach(b=>b.disabled=U.busy)}
+  $('uGo').onclick=doUpgrade;$('uFast').onclick=()=>{if(U.busy)return;fast=!fast;save();hap();toast(fast?'Быстрый прокрут включён':'Быстрый прокрут выключен');renderUpgrade()};$$('#g-upgrade .sb,#g-upgrade [data-k],#g-upgrade [data-us],#g-upgrade [data-ua],#uFast').forEach(b=>b.disabled=U.busy)}
 function allModels(){if(allModels.c)return allModels.c;return allModels.c=CAT.flatMap(g=>g.models.map(([m,pm])=>({kind:'nft',gift:g.name,model:m,pm,img:mimg(g.name,m),value:nftVal(g.name,m)})))}
 function nearest(v){const a=allModels().filter(p=>p.value>upSV()&&PRC[p.gift]?.[p.model]!==0);if(!a.length)return null;
   const best=a.reduce((b,p)=>Math.abs(Math.log(p.value/v))<Math.abs(Math.log(b.value/v))?p:b);const close=a.filter(p=>p.value>=best.value*.97&&p.value<=best.value*1.03);return close[Math.random()*close.length|0]}
@@ -959,9 +965,9 @@ async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
   if(U.src.kind=='nft'&&U.add>S.balance)return openTop(U.add-S.balance);
   U.busy=true;U.res=null;renderUpgrade();
   try{const r=await api('upgrade','POST',U.src.kind=='stars'?{stars:U.src.value,gift:U.target.gift,model:U.target.model}:{win_id:U.src.id,add:U.add,gift:U.target.gift,model:U.target.model});
-    const end=U.rot-U.rot%360+360*(fast?2:5)+r.roll*360,p=$('ptr');
-    p.style.transition=`transform ${fast?1.2:3.6}s cubic-bezier(.12,.7,.1,1)`;requestAnimationFrame(()=>p.style.transform=`rotate(${end}deg)`);
-    await new Promise(z=>setTimeout(z,fast?1300:3700));U.rot=end;
+    const end=U.rot-U.rot%360+360*(fast?1:5)+r.roll*360,p=$('ptr');
+    p.style.transition=`transform ${fast?.8:3.6}s cubic-bezier(.12,.7,.1,1)`;requestAnimationFrame(()=>p.style.transform=`rotate(${end}deg)`);
+    await new Promise(z=>setTimeout(z,fast?850:3700));U.rot=end;
     U.res=r.ok?'win':'lose';if(r.ok){sfx.win();hap('ok')}else{sfx.lose();hap('err')}
     if(U.src.kind!='stars'){U.src={kind:'gift',value:0};U.add=0}
     U.busy=false;renderUpgrade();await load();
@@ -1194,6 +1200,7 @@ function histHtml(){if(!HI)return '<p class="empty">Загрузка…</p>';
   const items=[...HI.payments.map(p=>({t:p.paid_at||p.created,k:'in',p})),...HI.withdrawals.map(w=>({t:w.decided||w.created,k:'out',w}))].sort((a,b)=>b.t-a.t).filter(x=>HF=='all'||x.k==HF);
   return `<div class="box seg" style="margin-top:14px">${[['all','Всё'],['in','Пополнения'],['out','Выводы']].map(([k,t])=>`<button data-hf="${k}" class="${HF==k?'on':''}">${t}</button>`).join('')}</div>
    <div class="hl">${items.map(x=>x.k=='in'?`<div class="hr"><span class="hi in">${STAR}</span><div><b>Пополнение · ${METHN[x.p.method]||x.p.method}</b><small>${d(x.t)}${x.p.amount&&x.p.method!='stars'?' · '+(+x.p.amount).toLocaleString('ru-RU')+' '+esc(x.p.currency||''):''}</small></div><em class="${x.p.status=='paid'?'pos':''}">${x.p.status=='paid'?'+'+price(x.p.stars+x.p.bonus):'ожидает'}</em></div>`
+     :(x.w.kind=='ton'||x.w.kind=='usdt')?`<div class="hr"><span class="hi cr ${x.w.kind}">${x.w.cur=='TON'?TONI:'$'}</span><div><b>Вывод · ${fmtA(x.w.net,x.w.cur)} ${x.w.cur}</b><small>${d(x.t)} · ${x.w.src=='gift'?esc(x.w.gift):'с баланса'} · ${esc(x.w.address.slice(0,4)+'…'+x.w.address.slice(-4))}</small>${x.w.status=='rejected'&&x.w.reason?`<small class="neg">${esc(x.w.reason)}</small>`:''}</div><em class="st-${x.w.status}">${{requested:'⏳ В обработке',sent:'✅ Отправлен',rejected:'↩️ Возвращён'}[x.w.status]||x.w.status}</em></div>`
      :`<div class="hr"><span class="hi"><img src="${esc(th(x.w.gift,x.w.model,128))}" alt=""></span><div><b>Вывод · ${esc(x.w.gift)}</b><small>${d(x.t)} · ${esc(x.w.model)}</small>${x.w.status=='rejected'&&x.w.reason?`<small class="neg">${esc(x.w.reason)}</small>`:''}</div><em class="st-${x.w.status}">${{requested:'⏳ В обработке',sent:'✅ Отправлен',rejected:'↩️ Возвращён'}[x.w.status]||x.w.status}</em></div>`).join('')||'<p class="empty">Пока ничего нет.</p>'}</div>`}
 function promoHtml(){const p=S?.promo;
   return `<div class="card"><h3>Промокод</h3><p class="mut" style="margin-top:0">Промокод даёт бонус к следующему пополнению баланса любым способом.</p>
@@ -1203,12 +1210,12 @@ function renderProfile(){if(!$('ovProf').classList.contains('on'))return;const u
   if(!setHTML($('profIn'),`<div class="bar"><button class="x" id="pX" aria-label="Закрыть">${IC.x}</button><h3>Профиль</h3></div>
   <div class="prof"><div class="ava" style="${u.photo_url?`background-image:url('${esc(u.photo_url)}')`:''}">${u.photo_url?'':esc((u.first_name||'?')[0])}</div><div style="flex:1;min-width:0"><b>${esc(u.first_name||'Игрок')}</b><div class="big" style="font-size:22px;margin-top:4px">${price(S.balance)}</div></div>
    <div class="cursw" role="group" aria-label="Валюта цен"><button data-cur="stars" class="${CUR=='stars'?'on':''}" aria-label="Цены в звёздах">${STAR}</button><button data-cur="gram" class="${CUR=='gram'?'on':''}" aria-label="Цены в GRAM">${GRAM}</button></div></div>
-  <div class="row2" style="margin-top:14px"><button class="btn" id="pTop">Пополнить</button><button class="btn ghost" id="pCat">Все NFT</button></div>
+  <div class="row2" style="margin-top:14px"><button class="btn" id="pTop">Пополнить</button><button class="btn ghost" id="pOut">Вывести</button><button class="btn ghost" id="pCat">Все NFT</button></div>
   <div class="gsw glass ptabs" id="ptabs"><i class="lens" aria-hidden="true"></i><button data-pt="inv" class="${PT=='inv'?'on':''}">Инвентарь</button><button data-pt="stats" class="${PT=='stats'?'on':''}">Статистика</button><button data-pt="promo" class="${PT=='promo'?'on':''}">Промокод</button><button data-pt="hist" class="${PT=='hist'?'on':''}">История</button></div>
   ${PT=='inv'?`<h2>Инвентарь<small>${act.length} ${plural(act.length,'подарок','подарка','подарков')} · ${price(act.reduce((a,w)=>a+w.value,0))}</small></h2>
   <div class="inv">${inv.map(invCard).join('')||'<p class="empty">Пока пусто — откройте кейс или сыграйте.</p>'}</div>`:PT=='stats'?statsHtml():PT=='hist'?histHtml():promoHtml()}
   <p class="credit">Данные NFT: thanks to <a href="https://t.me/GiftChanges" target="_blank" rel="noopener">GiftChanges</a></p>`))return;
-  $('pX').onclick=closeProf;$('pTop').onclick=()=>openTop();$('pCat').onclick=()=>openCatalog();
+  $('pX').onclick=closeProf;$('pTop').onclick=()=>openTop();$('pOut').onclick=()=>openWithdraw({src:'balance'});$('pCat').onclick=()=>openCatalog();
   requestAnimationFrame(()=>moveLens($('ptabs')));setTimeout(()=>moveLens($('ptabs')),480);
   $$('#profIn [data-pt]').forEach(b=>b.onclick=()=>{PT=b.dataset.pt;renderProfile();if(PT=='stats')loadStats();if(PT=='hist')loadHist()});
   $$('#profIn [data-cur]').forEach(b=>b.onclick=()=>setCur(b.dataset.cur));
@@ -1233,7 +1240,7 @@ async function act_(a,id,b){try{b.disabled=true;
     tg.shareToStory(w.story_url,{text:`Я выиграл ${w.gift} в GiftMafia`,widget_link:{url:`https://t.me/${S.bot}`,name:'GiftMafia'}});await api(`win/${id}/story`,'POST')}
   if(a=='friend'){if(!tg.isVersionAtLeast('8.0')){b.disabled=false;return toast('Обновите Telegram')}
     const {id:mid}=await api(`win/${id}/prepare`,'POST');tg.shareMessage(mid,async ok=>{if(ok){await api(`win/${id}/shared`,'POST');await load()}})}
-  if(a=='withdraw'){await api(`win/${id}/withdraw`,'POST');HI=null;toast('Заявка принята. Вывод подарка в течение 24 ч.');hap('ok')}
+  if(a=='withdraw'){b.disabled=false;const w=S.inventory.find(x=>x.id==id);if(w)openWithdraw({src:'gift',w});return}
   if(a=='sell'){const r=await api(`win/${id}/sell`,'POST');toast(`+${price(r.amount)} на баланс`);hap('ok')}
   await load()}catch(e){toast(e.message);b.disabled=false}}
 function pickInv(cb,max){const all=(S?.inventory||[]).filter(w=>w.status=='ready'),inv=max?all.filter(w=>w.value<=max):all;
@@ -1241,6 +1248,46 @@ function pickInv(cb,max){const all=(S?.inventory||[]).filter(w=>w.status=='ready
   sheet(`<h4>Выберите подарок</h4><div class="inv">${inv.map(w=>`<button class="iv t${tierV(w.value,300)}" data-p="${w.id}" style="text-align:left"><div class="pi"><img src="${esc(imgOf(w))}" alt="" loading="lazy"></div><b>${esc(w.gift)}</b><span class="tag">${esc(w.model)}</span><em>${price(w.value)}</em></button>`).join('')}</div>`);
   $$('#sheetIn [data-p]').forEach(b=>b.onclick=()=>{closeSheet();cb(inv.find(w=>w.id==+b.dataset.p))})}
 
+/* ---------- вывод: подарком / TON / USDT (сеть TON) ---------- */
+const TONI='<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2 2.5 7.2c-.6.3-.7 1.1-.3 1.6L11 21c.5.7 1.5.7 2 0l8.8-12.2c.4-.5.3-1.3-.3-1.6Zm-1 15-5.9-8.2L11 8.4Zm2 0V8.4l5.9.4Z"/></svg>';
+const TON_RE=/^(?:[EUk0]Q[A-Za-z0-9_-]{46}|-?[01]:[0-9a-fA-F]{64})$/;
+const fmtA=(v,c)=>(c=='USDT'?(+v).toFixed(2):String(+(+v).toFixed(3))).replace('.',',');
+let WD={};
+function wdQuote(stars,cur){const c=S.wd,k=cur=='TON'?1000:100,g=Math.floor((cur=='TON'?stars*c.rate/c.ton_stars:stars*c.rate*c.star_usd)*k)/k,fee=c.fee[cur];return {amount:g,fee,net:Math.max(0,Math.round((g-fee)*k)/k),min:c.min[cur]}}
+function openWithdraw(o){const crypto=S.wd&&S.wd.on;
+  if(o.src=='gift'&&!crypto)return wdGift(o.w);
+  if(o.src=='balance'&&!crypto)return toast('Вывод баланса временно недоступен');
+  let addr='';try{addr=localStorage.gmAddr||''}catch(e){}
+  WD={src:o.src,w:o.w,cur:o.src=='gift'?'gift':'TON',stars:o.src=='balance'?S.balance:0,addr,memo:'',busy:false};renderWd()}
+function renderWd(){const w=WD.w,gift=WD.src=='gift',cur=WD.cur,stars=gift?w.value:WD.stars;
+  const qt=cur=='gift'?null:wdQuote(stars,cur),okA=TON_RE.test(WD.addr.replace(/\s/g,''));
+  let err='';if(qt){if(!stars)err='Введите сумму';else if(!gift&&stars>S.balance)err='Недостаточно на балансе';else if(qt.amount<qt.min)err=`Минимальный вывод — ${fmtA(qt.min,cur)} ${cur}`;else if(qt.net<=0)err='Сумма меньше комиссии';else if(!okA)err=WD.addr?'Неверный адрес TON':'Укажите адрес кошелька'}
+  const tabs=gift?[['gift','Подарком'],['TON','TON'],['USDT','USDT']]:[['TON','TON'],['USDT','USDT']];
+  sheet(`<h4>${gift?'Вывод подарка':'Вывод баланса'}</h4>
+   ${gift?`<div class="wdg t${tierV(w.value,300)}"><img src="${esc(imgOf(w))}" alt=""><div><b>${esc(w.gift)}</b><small>${esc(w.model)}</small></div><em>${price(w.value)}</em></div>`
+     :`<div class="box"><div class="bet">${CI()}<input id="wdAmt" inputmode="decimal" value="${WD.stars?inCur(WD.stars):''}" placeholder="0" aria-label="Сумма"></div><button class="sb" id="wdMax" style="color:#fff">МАКС</button></div><p class="maxw" style="margin:6px 2px 0">На балансе ${price(S.balance)}</p>`}
+   <div class="box seg wds">${tabs.map(([k,t])=>`<button data-wc="${k}" class="${cur==k?'on':''}">${k=='TON'?TONI+' TON':k=='USDT'?'<b class="usd">$</b> USDT':t}</button>`).join('')}</div>
+   ${cur=='gift'?`<p class="mut" style="margin:12px 2px">Подарок придёт в ваш профиль Telegram в течение 24 часов.</p><button class="btn" id="wdGo">Вывести подарком</button>`
+   :`<label class="wdl">Адрес кошелька TON${cur=='USDT'?' (USDT в сети TON)':''}<input class="inp" id="wdAddr" value="${esc(WD.addr)}" placeholder="UQ…" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+     <label class="wdl">Комментарий (memo) — нужен, если выводите на биржу<input class="inp" id="wdMemo" value="${esc(WD.memo)}" placeholder="необязательно" autocomplete="off"></label>
+     <div class="wdc"><span>Сумма</span><b>${fmtA(qt.amount,cur)} ${cur}</b><span>Комиссия</span><b>−${fmtA(qt.fee,cur)} ${cur}</b><span class="big2">Вы получите</span><b class="big2">${fmtA(qt.net,cur)} ${cur}</b></div>
+     <p class="maxw" style="margin:6px 2px 0">Минимум ${fmtA(qt.min,cur)} ${cur} · отправка до 24 ч</p>
+     <button class="btn" id="wdGo" ${err||WD.busy?'disabled':''}>${err||`Вывести ${fmtA(qt.net,cur)} ${cur}`}</button>`}`);
+  $$('#sheetIn [data-wc]').forEach(b=>b.onclick=()=>{WD.cur=b.dataset.wc;renderWd()});
+  const a=$('wdAmt');if(a)a.oninput=()=>{WD.stars=Math.max(0,Math.round(fromCur(a.value)||0));wdRefresh()};
+  if($('wdMax'))$('wdMax').onclick=()=>{WD.stars=S.balance;renderWd()};
+  const ad=$('wdAddr');if(ad)ad.oninput=()=>{WD.addr=ad.value.trim();wdRefresh()};
+  const me=$('wdMemo');if(me)me.oninput=()=>{WD.memo=me.value};
+  $('wdGo').onclick=wdSubmit}
+/* обновить расчёт и кнопку, не пересоздавая поля ввода (не теряем фокус) */
+function wdRefresh(){const f=document.activeElement&&document.activeElement.id,pos=document.activeElement?.selectionStart;renderWd();const e=f&&$(f);if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(x){}}}
+async function wdGift(w){try{await api(`win/${w.id}/withdraw`,'POST');closeSheet();HI=null;toast('Заявка принята. Вывод подарка в течение 24 ч.');hap('ok');await load()}catch(e){toast(e.message);hap('err')}}
+async function wdSubmit(){if(WD.busy)return;if(WD.cur=='gift')return wdGift(WD.w);
+  const addr=WD.addr.replace(/\s/g,'');try{localStorage.gmAddr=addr}catch(e){}
+  WD.busy=true;$('wdGo').disabled=true;
+  try{const r=await api('withdraw/crypto','POST',{src:WD.src,win_id:WD.w?.id,stars:WD.stars,cur:WD.cur,address:addr,memo:WD.memo});
+    closeSheet();HI=null;toast(`Заявка принята: ${fmtA(r.net,r.cur)} ${r.cur}. Отправка до 24 ч.`);hap('ok');await load()}
+  catch(e){toast(e.message);hap('err');WD.busy=false;if($('wdGo'))$('wdGo').disabled=false}}
 /* ---------- шторки ---------- */
 function sheet(h){$('sheetIn').innerHTML=h;$('sheet').style.display='flex'}
 function closeSheet(){$('sheet').style.display='none'}

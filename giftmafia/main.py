@@ -271,6 +271,7 @@ CREATE TABLE IF NOT EXISTS withdrawals(id INTEGER PRIMARY KEY AUTOINCREMENT, use
   status TEXT DEFAULT 'requested', reason TEXT DEFAULT '', created INT, decided INT DEFAULT 0);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
+CREATE TABLE IF NOT EXISTS wx_msgs(wd INT, chat_id INT, msg_id INT, html TEXT DEFAULT '', PRIMARY KEY(wd, chat_id));
 CREATE TABLE IF NOT EXISTS balance_log(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, amount INT, balance INT, note TEXT DEFAULT '', created INT);
 CREATE TABLE IF NOT EXISTS wd_msgs(win_id INT, chat_id INT, msg_id INT, html TEXT DEFAULT '', PRIMARY KEY(win_id, chat_id));
 CREATE TABLE IF NOT EXISTS broadcasts(id INTEGER PRIMARY KEY AUTOINCREMENT, html TEXT, photo TEXT DEFAULT '', buttons TEXT DEFAULT '[]', status TEXT DEFAULT 'running',
@@ -279,7 +280,10 @@ CREATE TABLE IF NOT EXISTS broadcasts(id INTEGER PRIMARY KEY AUTOINCREMENT, html
 
 
 for t, c, d in [("crash", "ladder", "TEXT DEFAULT ''"), ("crash", "src_win", "INT DEFAULT 0"), ("users", "photo", "TEXT DEFAULT ''"), ("crash", "round_id", "INT DEFAULT 0"), ("users", "last_seen", "INT DEFAULT 0"), ("users", "utm", "TEXT DEFAULT ''"), ("users", "free_notified", "INT DEFAULT 0"),
-                ("bot_started", "utm", "TEXT DEFAULT ''"), ("withdrawals", "decided_by", "TEXT DEFAULT ''")]:
+                ("bot_started", "utm", "TEXT DEFAULT ''"), ("withdrawals", "decided_by", "TEXT DEFAULT ''"),
+                ("withdrawals", "kind", "TEXT DEFAULT 'gift'"), ("withdrawals", "src", "TEXT DEFAULT 'gift'"), ("withdrawals", "cur", "TEXT DEFAULT ''"),
+                ("withdrawals", "address", "TEXT DEFAULT ''"), ("withdrawals", "memo", "TEXT DEFAULT ''"), ("withdrawals", "amount", "REAL DEFAULT 0"),
+                ("withdrawals", "fee", "REAL DEFAULT 0"), ("withdrawals", "net", "REAL DEFAULT 0")]:
     try: db.execute(f"ALTER TABLE {t} ADD COLUMN {c} {d}")
     except sqlite3.OperationalError: pass
 db.execute("CREATE INDEX IF NOT EXISTS crash_round ON crash(round_id, user_id)")
@@ -331,6 +335,10 @@ SETTINGS_DEFAULT = {
     "stats_exclude": "@IbuyBalenciaga",        # аккаунты, которые не учитываются в дашборде и статистике (через запятую)
     "stats_since": "0",                        # статистика админки считается с этого момента (unix-время), кнопка «Сбросить»
     "wd_admins": "@IbuyBalenciaga",            # кто принимает и отклоняет выводы кнопками в боте (через запятую: @username или id)
+    "wd_crypto_on": "1",                       # вывод в TON / USDT (сеть TON) включён
+    "wd_fee_ton": "0.5", "wd_fee_usdt": "3.5",  # комиссия за вывод: TON и USDT
+    "wd_min_ton": "3.5", "wd_min_usdt": "5",    # минимальная сумма вывода (до вычета комиссии)
+    "wd_rate": "100",                          # курс вывода, % от стоимости ⭐ (100 = по курсу TON_STARS / STAR_USD)
 }
 NICK_HOLD, NICK_WINDOW = 24 * 3600, 10 * 3600  # держать 24 ч, потом 10 ч на сбор награды
 
@@ -799,7 +807,7 @@ def state(uid: int = Depends(auth)):
             "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "min_bet": MIN_BET, "game_max_bet": GAME_MAX_BET, "gift_bet_max": GIFT_BET_MAX,
             "crash": {"speed": CRASH_SPEED, "max": CRASH_MAX, "max_win": CRASH_MAX_WIN},
             "free_channel": chat_ref(setting("free_channel")), "ton_stars": TON_STARS,
-            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE, "upgrade_edge": UPGRADE_EDGE}
+            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE, "upgrade_edge": UPGRADE_EDGE, "wd": wd_cfg()}
 
 
 CATALOG_CACHE = {}
@@ -925,16 +933,74 @@ def shared(wid: int, uid: int = Depends(auth)):
     return {"shares": w["shares"] + 1}
 
 
-@app.post("/api/win/{wid}/withdraw")
-async def withdraw(wid: int, uid: int = Depends(auth)):
+def win_to_requested(wid, uid):
+    """Подарок -> статус 'requested' (атомарно). Подарок из бесплатного кейса - только после заданий."""
     w = own_win(wid, uid)
+    if w["kind"] != "nft": raise HTTPException(400, "Это не подарок")
     if w["status"] == "locked":
         if not w["story_at"] or time.time() - w["story_at"] < STORY_MIN_DELAY or w["shares"] < FRIENDS_REQUIRED:
             raise HTTPException(400, "Сначала выполните все задания")
-        run("UPDATE wins SET status='ready' WHERE id=?", wid); w["status"] = "ready"
-    if changed("UPDATE wins SET status='requested' WHERE id=? AND status='ready'", wid) == 0: raise HTTPException(400, "Уже подана заявка")
-    run("INSERT INTO withdrawals(user_id,win_id,prize,gift,model,value,created) VALUES(?,?,?,?,?,?,?)", uid, wid, w["prize"], w["gift"], w["model"], w["value"], int(time.time()))
-    await wd_notify(wid, w, uid)
+        run("UPDATE wins SET status='ready' WHERE id=? AND status='locked'", wid)
+    if changed("UPDATE wins SET status='requested' WHERE id=? AND status='ready'", wid) == 0: raise HTTPException(400, "Подарок уже выводится или недоступен")
+    return w
+
+
+# ---------- вывод в TON / USDT (сеть TON) ----------
+# Звёзды (с баланса или стоимость подарка) -> TON по TON_STARS, -> USDT по STAR_USD, с учётом wd_rate.
+# Минимум - по сумме до комиссии. Отправляет админ вручную: заявка приходит в бота и в админку с адресом и суммой.
+TON_ADDR = re.compile(r"(?:[EUk0]Q[A-Za-z0-9_-]{46}|-?[01]:[0-9a-fA-F]{64})")
+
+
+def wd_cfg():
+    f = lambda k: float(setting(k) or 0)
+    return {"on": setting("wd_crypto_on") == "1", "rate": int(setting("wd_rate") or 100) / 100, "ton_stars": TON_STARS, "star_usd": STAR_USD,
+            "fee": {"TON": f("wd_fee_ton"), "USDT": f("wd_fee_usdt")}, "min": {"TON": f("wd_min_ton"), "USDT": f("wd_min_usdt")}}
+
+
+def crypto_quote(stars, cur):
+    c = wd_cfg()
+    gross = stars * c["rate"] / TON_STARS if cur == "TON" else stars * c["rate"] * STAR_USD
+    gross = math.floor(gross * (1000 if cur == "TON" else 100)) / (1000 if cur == "TON" else 100)
+    fee = c["fee"][cur]
+    return {"amount": gross, "fee": fee, "net": round(max(0, gross - fee), 3 if cur == "TON" else 2), "min": c["min"][cur]}
+
+
+@app.post("/api/withdraw/crypto")
+async def withdraw_crypto(b: dict = Body(...), uid: int = Depends(auth)):
+    if setting("wd_crypto_on") != "1": raise HTTPException(400, "Вывод в криптовалюте временно недоступен")
+    cur = str(b.get("cur") or "").upper()
+    if cur not in ("TON", "USDT"): raise HTTPException(400, "Выберите TON или USDT")
+    addr = re.sub(r"\s", "", str(b.get("address") or ""))
+    if not TON_ADDR.fullmatch(addr): raise HTTPException(400, "Неверный адрес TON-кошелька (начинается на UQ или EQ)")
+    memo = str(b.get("memo") or "").strip()[:120]
+    src = b.get("src")
+    if src == "gift":
+        w = own_win(int(b.get("win_id") or 0), uid)
+        if w["kind"] != "nft" or w["status"] not in ("ready", "locked"): raise HTTPException(400, "Подарок уже выводится или недоступен")
+        stars = w["value"]
+    elif src == "balance":
+        try: stars = int(b.get("stars") or 0)
+        except (TypeError, ValueError): raise HTTPException(400, "Укажите сумму")
+        if stars < 1: raise HTTPException(400, "Укажите сумму")
+    else: raise HTTPException(400, "Что выводим?")
+    qt = crypto_quote(stars, cur)
+    if qt["amount"] < qt["min"]: raise HTTPException(400, f"Минимальный вывод — {fmt_amt(qt['min'], cur)} {cur}")
+    if qt["net"] <= 0: raise HTTPException(400, "Сумма меньше комиссии")
+    if src == "gift": w = win_to_requested(w["id"], uid); prize, gift, model, win_id = w["prize"], w["gift"], w["model"], w["id"]
+    else: charge(uid, stars); prize, gift, model, win_id = f"{N(stars)} ⭐ с баланса", "", "", 0
+    wd = run("INSERT INTO withdrawals(user_id,win_id,prize,gift,model,value,created,kind,src,cur,address,memo,amount,fee,net) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+             uid, win_id, prize, gift, model, stars, int(time.time()), cur.lower(), src, cur, addr, memo, qt["amount"], qt["fee"], qt["net"])
+    await wx_notify(wd)
+    try: await bot.send_message(uid, f"💸 <b>Заявка на вывод принята</b>\n\n<blockquote>💎 {fmt_amt(qt['net'], cur)} {cur} (сеть TON)\n📬 <code>{E(addr)}</code></blockquote>\n\n⏳ Обычно до <b>24 часов</b>", parse_mode="HTML")
+    except Exception: pass
+    return {"ok": True, "id": wd, **qt, "cur": cur, "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
+
+
+@app.post("/api/win/{wid}/withdraw")
+async def withdraw(wid: int, uid: int = Depends(auth)):
+    w = win_to_requested(wid, uid)
+    wd = run("INSERT INTO withdrawals(user_id,win_id,prize,gift,model,value,created) VALUES(?,?,?,?,?,?,?)", uid, wid, w["prize"], w["gift"], w["model"], w["value"], int(time.time()))
+    await wx_notify(wd)
     try: await bot.send_message(uid, f"📦 <b>Заявка на вывод принята</b>\n\n<blockquote>🎁 {E(w['prize'])}</blockquote>\n\n⏳ Подарок придёт в течение <b>24 часов</b>", parse_mode="HTML")
     except Exception: pass
     return {"ok": True, "eta": "24 ч"}
@@ -1210,7 +1276,7 @@ def player(pid: int, uid: int = Depends(auth)):
 @app.get("/api/me/history")
 def me_history(uid: int = Depends(auth)):
     pays = q("SELECT method,stars,bonus,amount,currency,status,created,paid_at FROM payments WHERE user_id=? AND status IN('paid','pending') ORDER BY id DESC LIMIT 50", uid)
-    outs = q("SELECT win_id,prize,gift,model,value,status,reason,created,decided FROM withdrawals WHERE user_id=? ORDER BY id DESC LIMIT 50", uid)
+    outs = q("SELECT id,win_id,prize,gift,model,value,status,reason,created,decided,kind,src,cur,address,net FROM withdrawals WHERE user_id=? ORDER BY id DESC LIMIT 50", uid)
     return {"payments": [p for p in pays if p["status"] == "paid" or time.time() - p["created"] < 3600], "withdrawals": outs}
 
 
@@ -1291,46 +1357,63 @@ def wd_admin_ids():
 def who(u): return ("@" + u.username) if u.username else (u.first_name or str(u.id))
 
 
-def wd_kb(wid):
-    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ Отправлен", callback_data=f"wd:sent:{wid}", style="success")],
-                                                 [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"wd:rejected:{wid}", style="danger"),
-                                                  InlineKeyboardButton(text="✏️ Своя причина", callback_data=f"wd:why:{wid}")]])
+def wx_kb(wd):
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ Отправлен", callback_data=f"wx:sent:{wd}", style="success")],
+                                                 [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"wx:rejected:{wd}", style="danger"),
+                                                  InlineKeyboardButton(text="✏️ Своя причина", callback_data=f"wx:why:{wd}")]])
 
 
-async def wd_notify(wid, w, uid):
+def fmt_amt(v, cur): return (f"{v:.2f}" if cur == "USDT" else f"{v:.3f}".rstrip("0").rstrip(".")).replace(".", ",") if v else "0"
+
+
+async def wx_notify(wd):
+    """Заявка админам: в ADMIN_CHAT_ID и в личку каждому из wd_admins, с кнопками решения."""
+    d = q1("SELECT * FROM withdrawals WHERE id=?", wd); uid = d["user_id"]
     u = q1("SELECT * FROM users WHERE id=?", uid) or {}
-    text = (f"📦 <b>Заявка на вывод #{wid}</b>\n\n<blockquote>🎁 {E(w['prize'])}\n⭐ ≈ {N(w['value'])}\n"
-            f"👥 {('@' + E(u.get('username'))) if u.get('username') else E(u.get('name') or '')} · <code>{uid}</code></blockquote>")
+    who_ = f"👥 {('@' + E(u.get('username'))) if u.get('username') else E(u.get('name') or '')} · <code>{uid}</code>"
+    if d["kind"] in ("ton", "usdt"):
+        src = f"🎁 {E(d['prize'])} (≈ {N(d['value'])} ⭐)" if d["src"] == "gift" else f"⭐ {N(d['value'])} с баланса"
+        text = (f"💸 <b>Вывод {fmt_amt(d['net'], d['cur'])} {d['cur']} #{wd}</b>\n\n<blockquote>💎 Отправить: <b>{fmt_amt(d['net'], d['cur'])} {d['cur']}</b> (сеть TON)\n"
+                f"📬 <code>{E(d['address'])}</code>" + (f"\n💬 Комментарий: <code>{E(d['memo'])}</code>" if d["memo"] else "") +
+                f"\n🧾 Списано: {src}\n💰 Сумма {fmt_amt(d['amount'], d['cur'])} − комиссия {fmt_amt(d['fee'], d['cur'])}\n{who_}</blockquote>")
+    else:
+        text = f"📦 <b>Заявка на вывод #{wd}</b>\n\n<blockquote>🎁 {E(d['prize'])}\n⭐ ≈ {N(d['value'])}\n{who_}</blockquote>"
     for chat in dict.fromkeys(([ADMIN_CHAT_ID] if ADMIN_CHAT_ID else []) + wd_admin_ids()):
         try:
-            m = await bot.send_message(chat, text, parse_mode="HTML", reply_markup=wd_kb(wid))
-            run("INSERT OR REPLACE INTO wd_msgs(win_id,chat_id,msg_id,html) VALUES(?,?,?,?)", wid, chat, m.message_id, text)
+            m = await bot.send_message(chat, text, parse_mode="HTML", reply_markup=wx_kb(wd))
+            run("INSERT OR REPLACE INTO wx_msgs(wd,chat_id,msg_id,html) VALUES(?,?,?,?)", wd, chat, m.message_id, text)
         except Exception as e: print("wd notify", chat, e)
 
 
-async def wd_mark(wid, line):
-    """Во всех копиях заявки убрать кнопки и дописать, кто и что решил."""
-    for r in q("SELECT * FROM wd_msgs WHERE win_id=?", wid):
+async def wx_mark(wd, win_id, line):
+    """Во всех копиях заявки убрать кнопки и дописать, кто и что решил (новые и старые сообщения)."""
+    rows = q("SELECT chat_id,msg_id,html FROM wx_msgs WHERE wd=?", wd) + (q("SELECT chat_id,msg_id,html FROM wd_msgs WHERE win_id=?", win_id) if win_id else [])
+    for r in rows:
         try: await bot.edit_message_text(f"{r['html']}\n\n{line}", chat_id=r["chat_id"], message_id=r["msg_id"], parse_mode="HTML", reply_markup=None)
         except Exception as e: print("wd mark", e)
 
 
-@dp.callback_query(F.data.startswith("wd:"))
-async def wd_cb(c):
+@dp.callback_query(F.data.startswith("wx:") | F.data.startswith("wd:"))
+async def wx_cb(c):
     if not is_wd_admin(c.from_user): return await c.answer("Нет доступа к выводам", show_alert=True)
-    _, act, wid = c.data.split(":"); wid = int(wid)
-    if not q1("SELECT 1 FROM wins WHERE id=? AND status='requested'", wid):
+    pre, act, n = c.data.split(":"); n = int(n)
+    if pre == "wd":  # старые кнопки: там id подарка
+        r = q1("SELECT id FROM withdrawals WHERE win_id=? AND status='requested' ORDER BY id DESC LIMIT 1", n); wd = r["id"] if r else 0
+    else: wd = n
+    d = q1("SELECT * FROM withdrawals WHERE id=? AND status='requested'", wd) if wd else None
+    if not d:
         try: await c.message.edit_reply_markup(reply_markup=None)
         except Exception: pass
         return await c.answer("Заявка уже обработана", show_alert=True)
     if act == "why":
-        WAIT[(c.from_user.id, c.message.chat.id)] = ("why", wid)
-        await c.message.answer(f"✏️ Напишите причину отказа по заявке <b>#{wid}</b> — её увидит пользователь.\n\n/cancel — отмена", parse_mode="HTML",
+        WAIT[(c.from_user.id, c.message.chat.id)] = ("why", wd)
+        await c.message.answer(f"✏️ Напишите причину отказа по заявке <b>#{wd}</b> — её увидит пользователь.\n\n/cancel — отмена", parse_mode="HTML",
                                reply_markup=ForceReply(selective=True, input_field_placeholder="Причина отказа"))
         return await c.answer()
     if act not in ("sent", "rejected"): return await c.answer()
-    ok = await wd_decide(wid, act, "", who(c.from_user))
-    await c.answer(("Отмечено: отправлен" if act == "sent" else "Отклонено, подарок вернулся игроку") if ok else "Заявка уже обработана")
+    ok = await wx_decide(wd, act, "", who(c.from_user))
+    back = "звёзды вернулись игроку" if d["src"] == "balance" else "подарок вернулся игроку"
+    await c.answer(("Отмечено: отправлен" if act == "sent" else f"Отклонено, {back}") if ok else "Заявка уже обработана")
 
 
 @dp.message(Command("post"), F.chat.type == "private")
@@ -1348,8 +1431,8 @@ async def wait_reply(m):
     if kind[0] == "why":
         reason = (m.text or m.caption or "").strip()[:300]
         if not reason: WAIT[(m.from_user.id, m.chat.id)] = kind; return await m.answer("Нужен текст причины. /cancel — отмена")
-        ok = await wd_decide(kind[1], "rejected", reason, who(m.from_user))
-        return await m.answer("✅ Отклонено, подарок вернулся игроку" if ok else "Заявка уже обработана")
+        ok = await wx_decide(kind[1], "rejected", reason, who(m.from_user))
+        return await m.answer("✅ Заявка отклонена, игроку всё вернулось" if ok else "Заявка уже обработана")
     if kind[0] == "post":
         html = m.html_text if (m.text or m.caption) else ""
         photo = ("tg:" + m.photo[-1].file_id) if m.photo else ""
@@ -1898,7 +1981,7 @@ def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
 # ---------- admin ----------
 @app.get("/api/admin/requests", dependencies=[Depends(admin)])
 def a_req():
-    rows = q("SELECT d.id AS wd, d.win_id AS id, d.user_id, d.prize, d.gift, d.model, d.value, d.status, d.reason, d.decided_by, d.created, u.username, u.name "
+    rows = q("SELECT d.id AS wd, d.win_id AS id, d.user_id, d.prize, d.gift, d.model, d.value, d.status, d.reason, d.decided_by, d.created, d.kind, d.src, d.cur, d.address, d.memo, d.amount, d.fee, d.net, u.username, u.name "
              "FROM withdrawals d JOIN users u ON u.id=d.user_id ORDER BY (d.status='requested') DESC, d.id DESC LIMIT 150")
     for r in rows: r["img"] = model_img(r["gift"], r["model"], 128) if r["gift"] else ""
     return rows
@@ -1915,21 +1998,43 @@ async def a_win(wid: int, act: str, b: dict = Body(default={})):
     return {"ok": True}
 
 
+@app.post("/api/admin/wd/{wd}/{act}", dependencies=[Depends(admin)])
+async def a_wd(wd: int, act: str, b: dict = Body(default={})):
+    if act not in ("sent", "rejected"): raise HTTPException(400)
+    if not q1("SELECT 1 FROM withdrawals WHERE id=?", wd): raise HTTPException(404)
+    if not await wx_decide(wd, act, (b or {}).get("reason") or "", "админка"): raise HTTPException(400, "Заявка уже обработана")
+    return {"ok": True}
+
+
 async def wd_decide(wid, act, reason, by):
-    """Решение по заявке (из админки или кнопкой в боте). False - заявка уже обработана."""
-    w = q1("SELECT * FROM wins WHERE id=?", wid)
-    # отклонение - подарок возвращается в инвентарь (доступен к продаже и выводу)
-    if not w or not changed("UPDATE wins SET status=? WHERE id=? AND status='requested'", "sent" if act == "sent" else "ready", wid): return False
-    reason = reason or REJECT_REASON
-    run("UPDATE withdrawals SET status=?, reason=?, decided=?, decided_by=? WHERE id=(SELECT max(id) FROM withdrawals WHERE win_id=? AND status='requested')",
-        act, reason if act == "rejected" else "", int(time.time()), by, wid)
-    await wd_mark(wid, ("✅ <b>Отправлен</b>" if act == "sent" else f"❌ <b>Отклонён</b>: {E(reason)}") + f" · {E(by)}")
-    if act == "rejected":
-        try: await bot.send_message(w["user_id"], f"↩️ <b>Вывод не выполнен</b>\n\n<blockquote>🎁 {E(w['prize'])}\n⚠️ {E(reason)}</blockquote>\n\n✅ Подарок вернулся в инвентарь — его можно вывести снова или продать", parse_mode="HTML")
-        except Exception: pass
-    if act == "sent":
-        try: await bot.send_message(w["user_id"], f"✅ <b>Подарок отправлен!</b>\n\n<blockquote>🎁 {E(w['prize'])}</blockquote>\n\n🎉 Он уже в вашем профиле Telegram", parse_mode="HTML")
-        except Exception: pass
+    """Старый формат (по id подарка): находит открытую заявку на этот подарок."""
+    r = q1("SELECT id FROM withdrawals WHERE win_id=? AND status='requested' ORDER BY id DESC LIMIT 1", wid)
+    return bool(r) and await wx_decide(r["id"], act, reason, by)
+
+
+REJECT_REASON_CRYPTO = "Не удалось выполнить перевод — проверьте адрес и попробуйте снова."
+
+
+async def wx_decide(wd, act, reason, by):
+    """Решение по заявке на вывод (подарок, TON, USDT). False - уже обработана."""
+    d = q1("SELECT * FROM withdrawals WHERE id=?", wd)
+    if not d or not changed("UPDATE withdrawals SET status=?, decided=?, decided_by=? WHERE id=? AND status='requested'", act, int(time.time()), by, wd): return False
+    crypto = d["kind"] in ("ton", "usdt")
+    reason = reason or (REJECT_REASON_CRYPTO if crypto else REJECT_REASON)
+    if act == "rejected": run("UPDATE withdrawals SET reason=? WHERE id=?", reason, wd)
+    if d["win_id"]: run("UPDATE wins SET status=? WHERE id=? AND status='requested'", "sent" if act == "sent" else "ready", d["win_id"])
+    if act == "rejected" and d["src"] == "balance": credit(d["user_id"], d["value"])  # звёзды возвращаются на баланс
+    await wx_mark(wd, d["win_id"], ("✅ <b>Отправлен</b>" if act == "sent" else f"❌ <b>Отклонён</b>: {E(reason)}") + f" · {E(by)}")
+    what = f"💎 {fmt_amt(d['net'], d['cur'])} {d['cur']}" if crypto else f"🎁 {E(d['prize'])}"
+    try:
+        if act == "rejected":
+            back = (f"✅ {N(d['value'])} ⭐ вернулись на баланс" if d["src"] == "balance" else "✅ Подарок вернулся в инвентарь — его можно вывести снова или продать")
+            await bot.send_message(d["user_id"], f"↩️ <b>Вывод не выполнен</b>\n\n<blockquote>{what}\n⚠️ {E(reason)}</blockquote>\n\n{back}", parse_mode="HTML")
+        elif crypto:
+            await bot.send_message(d["user_id"], f"✅ <b>Вывод отправлен!</b>\n\n<blockquote>{what}\n📬 <code>{E(d['address'])}</code></blockquote>\n\n💎 Проверьте кошелёк", parse_mode="HTML")
+        else:
+            await bot.send_message(d["user_id"], f"✅ <b>Подарок отправлен!</b>\n\n<blockquote>{what}</blockquote>\n\n🎉 Он уже в вашем профиле Telegram", parse_mode="HTML")
+    except Exception: pass
     return True
 
 
@@ -2144,6 +2249,10 @@ def a_settings(b: dict):
         if k in ("cm_img_bonus", "cm_max") and not v.isdigit(): raise HTTPException(400, "Нужно целое число")
         if k == "cm_rate" and not re.fullmatch(r"\d+(\.\d+)?", v): raise HTTPException(400, "Ставка: число, например 1 или 0.5")
         if k == "cm_chat" and v and not re.fullmatch(r"-?\d+", v): raise HTTPException(400, "id чата: число, например -1001234567890")
+        if k in ("wd_fee_ton", "wd_fee_usdt", "wd_min_ton", "wd_min_usdt") and not re.fullmatch(r"\d+(\.\d+)?", v.replace(",", ".")): raise HTTPException(400, "Комиссии и минимумы: число, например 0.5")
+        if k in ("wd_fee_ton", "wd_fee_usdt", "wd_min_ton", "wd_min_usdt"): v = v.replace(",", ".")
+        if k == "wd_rate" and not (v.isdigit() and 1 <= int(v) <= 200): raise HTTPException(400, "Курс вывода: от 1 до 200%")
+        if k == "wd_crypto_on": v = "1" if v in ("1", "true", "True") else "0"
         if k == "wd_admins":
             v = ", ".join(x for x in (x.strip() for x in v.replace(";", ",").split(",")) if x)
             if any(not re.fullmatch(r"@?[A-Za-z0-9_]{4,32}|\d{4,15}", x) for x in v.split(", ") if x): raise HTTPException(400, "Админы вывода: @username или числовой id через запятую")

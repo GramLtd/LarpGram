@@ -102,6 +102,8 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .epick{position:fixed;inset:0;z-index:50;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}.epick .card{max-width:520px;width:100%;max-height:80vh;overflow:auto}
 .eadd{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:8px;margin-top:8px;max-width:100%}.eadd .btn{padding:0 12px}.eadd .inp{min-width:0}#eaE{text-align:center;font-size:20px}
 .grr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}@media(max-width:560px){.grr{grid-template-columns:1fr}}
+.list>*{min-width:0}.req .lnk{min-width:0}.req .lnk code{min-width:0;flex:1 1 120px}
+.cri{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font:800 24px Manrope;flex:none;background:#0098EA33;color:#5ac8ff}.cri.usdt{background:#26a17b33;color:#5ee0b0}
 .mtc.on{border-color:#ff5a6e66;box-shadow:0 0 0 1px #ff5a6e33}
 .bcbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.bcbar button{height:36px;min-width:40px;padding:0 10px;border-radius:10px;background:#ffffff0d;font-weight:800}
 .bcbar button:hover{background:#ffffff1f}.bcta{width:100%;min-height:170px;height:auto;padding:12px;resize:vertical;font:600 14px/1.5 ui-monospace,Menlo,monospace;color:#fff}
@@ -150,15 +152,23 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
   if(view=='cm'){M.innerHTML='<p class="empty">Загрузка…</p>';renderCmAdmin()}
   if(view=='utm'){M.innerHTML='<p class="empty">Загрузка…</p>';renderUtm()}
   if(view=='promo'){M.innerHTML='<p class="empty">Загрузка…</p>';renderPromos()}
-  if(view=='req'){const all=D.r,list=reqF=='all'?all:all.filter(w=>w.status==reqF);
+  if(view=='req'){const all=D.r,list=reqF=='all'?all:reqF=='crypto'?all.filter(w=>w.kind=='ton'||w.kind=='usdt'):all.filter(w=>w.status==reqF);
+    const amt=(v,c)=>(c=='USDT'?(+v).toFixed(2):String(+(+v).toFixed(3))).replace('.',',');
+    const user=w=>w.username?`<a href="https://t.me/${esc(w.username)}" target="_blank" rel="noopener">@${esc(w.username)}</a>`:`<a href="tg://user?id=${w.user_id}">${esc(w.name||w.user_id)}</a>`;
     M.innerHTML=`<h2>Заявки на вывод<small>${all.filter(w=>w.status=='requested').length} ждут</small></h2>
-      <div class="chips">${[['requested','Ждут'],['sent','Отправлены'],['rejected','Отклонены'],['all','Все']].map(([k,t])=>`<button class="chip ${reqF==k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
-      <div class="list">${list.map(w=>`<div class="card req">${w.img?`<img src="${esc(w.img)}" alt="">`:''}
-        <div class="who"><b>${esc(w.prize)}</b><small>#${w.id} · ≈ ${num(w.value)} ⭐ · ${w.username?`<a href="https://t.me/${esc(w.username)}" target="_blank" rel="noopener">@${esc(w.username)}</a>`:`<a href="tg://user?id=${w.user_id}">${esc(w.name||w.user_id)}</a>`}</small></div>
+      <div class="chips">${[['requested','Ждут'],['crypto','TON / USDT'],['sent','Отправлены'],['rejected','Отклонены'],['all','Все']].map(([k,t])=>`<button class="chip ${reqF==k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
+      <div class="list">${list.map(w=>{const cr=w.kind=='ton'||w.kind=='usdt';return `<div class="card req">${cr?`<span class="cri ${w.kind}">${w.cur=='TON'?'💎':'$'}</span>`:w.img?`<img src="${esc(w.img)}" alt="">`:''}
+        <div class="who">${cr?`<b>${amt(w.net,w.cur)} ${w.cur} <small style="color:var(--mut);font-weight:700">сеть TON</small></b><small>#${w.wd} · ${w.src=='gift'?'подарок '+esc(w.prize):'с баланса'} · ${num(w.value)} ⭐ · сумма ${amt(w.amount,w.cur)} − комиссия ${amt(w.fee,w.cur)} · ${user(w)}</small>`
+          :`<b>${esc(w.prize)}</b><small>#${w.wd} · ≈ ${num(w.value)} ⭐ · ${user(w)}</small>`}</div>
+        ${cr?`<div class="lnk" style="width:100%;margin-top:0"><code>${esc(w.address)}</code><button class="btn ghost sm" data-cp="${esc(w.address)}">Копировать</button>${w.memo?`<code style="flex:0 1 auto">💬 ${esc(w.memo)}</code><button class="btn ghost sm" data-cp="${esc(w.memo)}">Коммент</button>`:''}</div>`:''}
         ${w.reason||w.decided_by?`<small style="color:var(--mut);width:100%">${esc(w.reason||'')}${w.reason&&w.decided_by?' · ':''}${w.decided_by?'решил: '+esc(w.decided_by):''}</small>`:''}<span class="st ${w.status}">${{requested:'Ждёт',sent:'Отправлен',rejected:'Отклонён'}[w.status]||w.status}</span>
-        ${w.status=='requested'?`<div class="acts"><button class="btn ok sm" data-w="${w.id}" data-a="sent">Отправлен</button><button class="btn bad sm" data-w="${w.id}" data-a="rejected">Отклонить</button></div>`:''}</div>`).join('')||'<p class="empty">Заявок нет.</p>'}</div>`;
+        ${w.status=='requested'?`<div class="acts"><button class="btn ok sm" data-w="${w.wd}" data-a="sent" data-k="${cr?'c':'g'}">Отправлен</button><button class="btn bad sm" data-w="${w.wd}" data-a="rejected" data-k="${cr?'c':'g'}" data-src="${w.src}">Отклонить</button></div>`:''}</div>`}).join('')||'<p class="empty">Заявок нет.</p>'}</div>`;
     $$('[data-f]',M).forEach(b=>b.onclick=()=>{reqF=b.dataset.f;render()});
-    $$('[data-a]',M).forEach(b=>b.onclick=async()=>{let body={};if(b.dataset.a=='rejected'){const r=prompt('Причина (увидит пользователь):','Не смогли найти подарок на маркете по флору — попробуйте вывести позже.');if(r===null)return;body={reason:r}}b.disabled=true;try{await api(`win/${b.dataset.w}/${b.dataset.a}`,'POST',body);toast(b.dataset.a=='sent'?'Отмечено как отправленное':'Отклонено, подарок вернулся пользователю');await load()}catch(e){toast(e.message);b.disabled=false}})}
+    $$('[data-cp]',M).forEach(b=>b.onclick=()=>{navigator.clipboard?.writeText(b.dataset.cp).then(()=>toast('Скопировано'),()=>prompt('Скопируйте:',b.dataset.cp))});
+    $$('[data-a]',M).forEach(b=>b.onclick=async()=>{let body={};const cr=b.dataset.k=='c';
+      if(b.dataset.a=='rejected'){const r=prompt('Причина (увидит пользователь):',cr?'Не удалось выполнить перевод — проверьте адрес и попробуйте снова.':'Не смогли найти подарок на маркете по флору — попробуйте вывести позже.');if(r===null)return;body={reason:r}}
+      else if(cr&&!confirm('Перевод уже отправлен с вашего кошелька?'))return;
+      b.disabled=true;try{await api(`wd/${b.dataset.w}/${b.dataset.a}`,'POST',body);toast(b.dataset.a=='sent'?'Отмечено как отправленное':b.dataset.src=='balance'?'Отклонено, звёзды вернулись на баланс':'Отклонено, подарок вернулся пользователю');await load()}catch(e){toast(e.message);b.disabled=false}})}
   if(view=='tasks'){M.innerHTML='<p class="empty">Загрузка…</p>';renderTasksAdmin()}
   if(view=='bc'){M.innerHTML='<p class="empty">Загрузка…</p>';renderBc()}
   if(view=='prices'){M.innerHTML=`<h2>Цены моделей<small id="pinfo"></small></h2>
@@ -460,6 +470,12 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     <label>Сколько % от оценки NFT зачислять за подарок<input class="inp" id="sGr" type="number" min="1" max="100" value="${esc(st.gift_rate)}"></label>
     <label>Набор премиум-эмодзи для текстов бота (имя из ссылки t.me/addemoji/ИМЯ)<input class="inp" id="sEm" value="${esc(st.emoji_set)}" placeholder="GiftMafiaNFT"></label>
     <div class="card" style="padding:12px;background:#ffffff08" id="emInfo">Загрузка…</div>
+    <div class="card" style="padding:12px;background:#ffffff08;display:grid;gap:10px"><b>Вывод в TON / USDT (сеть TON)</b>
+      <label style="display:flex;align-items:center;gap:10px;color:#fff"><button class="sw ${st.wd_crypto_on=='1'?'on':''}" id="sWc" type="button" aria-label="Вывод в крипте"></button>Разрешить вывод баланса и подарков в TON и USDT</label>
+      <div class="two"><label>Комиссия TON<input class="inp" id="sFt" inputmode="decimal" value="${esc(st.wd_fee_ton)}"></label><label>Комиссия USDT<input class="inp" id="sFu" inputmode="decimal" value="${esc(st.wd_fee_usdt)}"></label>
+      <label>Минимум TON<input class="inp" id="sMt" inputmode="decimal" value="${esc(st.wd_min_ton)}"></label><label>Минимум USDT<input class="inp" id="sMu" inputmode="decimal" value="${esc(st.wd_min_usdt)}"></label></div>
+      <label>Курс вывода, % от стоимости ⭐ (100 — по текущему курсу TON и цене звезды)<input class="inp" id="sWr" type="number" min="1" max="200" value="${esc(st.wd_rate)}"></label>
+      <small style="color:var(--mut)">Минимум считается от суммы до комиссии. Переводы отправляете вручную — заявка приходит в бота и в «Заявки» с адресом и суммой к отправке.</small></div>
     <label>Админы выводов — получают заявки в бота с кнопками «Отправлен / Отклонить» (через запятую: @username или id; аккаунт должен один раз запустить бота)<input class="inp" id="sWa" value="${esc(st.wd_admins)}" placeholder="@IbuyBalenciaga"></label>
     <label>Не учитывать в дашборде и статистике (аккаунты через запятую: @username или id)<input class="inp" id="sEx" value="${esc(st.stats_exclude)}" placeholder="@IbuyBalenciaga"></label>
     <label style="display:flex;align-items:center;gap:10px;color:#fff"><button class="sw ${st.free_notify=='1'?'on':''}" id="sFn" type="button" aria-label="Напоминание"></button>Писать в бота, когда снова доступен «Подарок дня»</label>
@@ -476,13 +492,13 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     <label>Награда ⭐<input class="inp" id="nR" type="number" min="1" value="3"></label>
     <button class="btn" id="nAdd">Добавить задание</button></div>`;
   const kind=()=>{$('nTgL').style.display=['channel','link'].includes($('nK').value)?'':'none'};$('nK').onchange=kind;kind();
-  $('sFn').onclick=()=>$('sFn').classList.toggle('on');
+  $('sFn').onclick=()=>$('sFn').classList.toggle('on');$('sWc').onclick=()=>$('sWc').classList.toggle('on');
   $('mOn').onclick=()=>$('mOn').classList.toggle('on');
   $('mSave').onclick=()=>{const on=$('mOn').classList.contains('on'),un=$('mUn').value?String(Math.floor(new Date($('mUn').value).getTime()/1000)):'';
     if(on&&st.maint_on!='1'&&!confirm('Закрыть мини-апп для всех пользователей на технические работы?'))return;
     act(api('settings','POST',{maint_on:on?'1':'0',maint_text:$('mTx').value,maint_until:un,maint_allow:$('mAl').value}),on?'Технические работы включены':'Технические работы выключены',renderTasksAdmin)};
   $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value,
-    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value,wd_admins:$('sWa').value,emoji_set:$('sEm').value}),'Настройки сохранены',async()=>{await api('emoji?reload=1');renderTasksAdmin()});
+    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value,wd_admins:$('sWa').value,wd_crypto_on:$('sWc').classList.contains('on')?'1':'0',wd_fee_ton:$('sFt').value,wd_fee_usdt:$('sFu').value,wd_min_ton:$('sMt').value,wd_min_usdt:$('sMu').value,wd_rate:$('sWr').value,emoji_set:$('sEm').value}),'Настройки сохранены',async()=>{await api('emoji?reload=1');renderTasksAdmin()});
   renderEmoji();
   $('nAdd').onclick=()=>act(api('task','POST',{kind:$('nK').value,title:$('nT').value,target:$('nTg').value,reward:$('nR').value}),'Задание добавлено',renderTasksAdmin);
   $$('[data-trw]').forEach(i=>i.onchange=()=>act(api(`task/${i.dataset.trw}`,'PATCH',{reward:i.value}),'Награда сохранена',renderTasksAdmin));
