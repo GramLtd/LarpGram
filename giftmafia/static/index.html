@@ -1342,5 +1342,5 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
     document.fonts?document.fonts.ready:0]),wait(5000)]);
   bootP(100);await wait(Math.max(250,600-(Date.now()-t0)));
   document.body.classList.add('ready');$$('.glass').forEach(moveLens);
-  const GO=new URLSearchParams(location.search).get('go')||tg.initDataUnsafe?.start_param;if(GO=='free')setTab('bonus');if(GO=='earn'){esec='cm';$$('#esw button').forEach(x=>x.classList.toggle('on',x.dataset.e=='cm'));setTab('earn')}setTimeout(()=>$('boot')?.remove(),600)})();
+  const GO=new URLSearchParams(location.search).get('go')||tg.initDataUnsafe?.start_param;if(GO=='free')setTab('bonus');if(GO=='games')setTab('games');if(GO=='earn'){esec='cm';$$('#esw button').forEach(x=>x.classList.toggle('on',x.dataset.e=='cm'));setTab('earn')}setTimeout(()=>$('boot')?.remove(),600)})();
 </script></body></html>

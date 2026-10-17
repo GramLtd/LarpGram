@@ -102,6 +102,21 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .epick{position:fixed;inset:0;z-index:50;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}.epick .card{max-width:520px;width:100%;max-height:80vh;overflow:auto}
 .eadd{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:8px;margin-top:8px;max-width:100%}.eadd .btn{padding:0 12px}.eadd .inp{min-width:0}#eaE{text-align:center;font-size:20px}
 .mtc.on{border-color:#ff5a6e66;box-shadow:0 0 0 1px #ff5a6e33}
+.bcbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.bcbar button{height:36px;min-width:40px;padding:0 10px;border-radius:10px;background:#ffffff0d;font-weight:800}
+.bcbar button:hover{background:#ffffff1f}.bcta{width:100%;min-height:170px;height:auto;padding:12px;resize:vertical;font:600 14px/1.5 ui-monospace,Menlo,monospace;color:#fff}
+.bcbtn{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 44px 36px;grid-template-areas:"t t i x" "k s s s" "u u u u";gap:6px;align-items:center;margin-top:6px}
+.bcbtn select{padding:0 6px 0 8px}.bcbtn+.bcbtn{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}.bcbtn [data-f=text]{grid-area:t}.bcbtn [data-f=kind]{grid-area:k}.bcbtn [data-f=style]{grid-area:s}.bcbtn [data-f=url]{grid-area:u}.bcbtn .ico{grid-area:i}.bcbtn .x{grid-area:x}
+.bcbtn .ico{height:40px;border-radius:12px;background:#ffffff0d;display:grid;place-items:center}.bcbtn .ico img{width:26px;height:26px;object-fit:contain}
+.bcrow{padding:10px;border-radius:14px;background:#ffffff06;border:1px dashed #ffffff1f;margin-top:8px}.bcrow>small{color:var(--mut);font-size:12px}
+.tgv{background:#0e1621;border-radius:18px;padding:12px;max-width:420px}.tgm{background:#182533;border-radius:14px;overflow:hidden;color:#f5f5f5;font:500 15px/1.4 -apple-system,system-ui,sans-serif}
+.tgm img.ph{display:block;width:100%;max-height:320px;object-fit:cover}.tgm .tx{padding:8px 12px 10px;white-space:pre-wrap;word-break:break-word}
+.tgm blockquote{display:block;border-left:3px solid #6ab3f3;background:#6ab3f31a;border-radius:4px;padding:2px 8px;margin:2px 0;white-space:pre-wrap}.tgm a{color:#6ab3f3}
+.tgm code{font-family:ui-monospace,monospace;background:#ffffff14;border-radius:4px;padding:0 3px}.tgm .sp{background:#ffffff40;color:transparent;border-radius:4px}
+.tgm img.ce{width:20px;height:20px;vertical-align:-4px;object-fit:contain}.tgk{display:grid;gap:4px;margin-top:4px}.tgk div{display:flex;gap:4px}
+.tgk span{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;height:40px;border-radius:10px;background:#2b5278cc;color:#fff;font:600 14px system-ui;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 8px}
+.tgk span.primary{background:#3e88f7}.tgk span.success{background:#2fb35a}.tgk span.danger{background:#e5484d}.tgk img{width:20px;height:20px;object-fit:contain}
+.bch{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.bch{min-width:0}.bch .nm{flex:1 1 180px;min-width:0}.bch .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bch .nm small{color:var(--mut)}
+.prog{height:6px;border-radius:9px;background:#ffffff14;overflow:hidden;width:100%}.prog i{display:block;height:100%;background:var(--grad)}
 </style></head><body>
 <div id="app"></div><div id="toast" role="status"></div>
 <script>
@@ -122,7 +137,7 @@ function renderLogin(){$('app').innerHTML=`<div class="login"><div class="logo">
 function moveLens(){const bar=document.querySelector('.glass'),on=bar?.querySelector('button.on'),l=bar?.querySelector('.lens');if(on&&l){l.style.width=on.offsetWidth+'px';l.style.transform=`translateX(${on.offsetLeft}px)`;bar.scrollTo({left:on.offsetLeft-bar.clientWidth/2+on.offsetWidth/2,behavior:'smooth'})}}
 addEventListener('resize',moveLens);
 function start(){$('app').innerHTML=`<header class="top"><span class="logo">Gift<b>Mafia</b></span><span class="tag">админка</span><span class="sp"></span><button class="btn ghost sm" id="out">Выйти</button></header>
-  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Дашборд</button><button data-v="users">Игроки</button><button data-v="req">Заявки</button><button data-v="cm">Комменты</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button><button data-v="utm">UTM</button><button data-v="promo">Промокоды</button><button data-v="tasks">Настройки</button></nav><main id="main"></main>`;
+  <nav class="glass" id="nav"><i class="lens"></i><button data-v="stats">Дашборд</button><button data-v="users">Игроки</button><button data-v="req">Заявки</button><button data-v="cm">Комменты</button><button data-v="cases">Кейсы</button><button data-v="prices">Цены</button><button data-v="utm">UTM</button><button data-v="promo">Промокоды</button><button data-v="bc">Рассылка</button><button data-v="tasks">Настройки</button></nav><main id="main"></main>`;
   $('out').onclick=logout;$$('#nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
   fetch('/static/gifts.json').then(r=>r.json()).then(g=>CATALOG=g).catch(()=>{});
   load()}
@@ -139,11 +154,12 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
       <div class="chips">${[['requested','Ждут'],['sent','Отправлены'],['rejected','Отклонены'],['all','Все']].map(([k,t])=>`<button class="chip ${reqF==k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
       <div class="list">${list.map(w=>`<div class="card req">${w.img?`<img src="${esc(w.img)}" alt="">`:''}
         <div class="who"><b>${esc(w.prize)}</b><small>#${w.id} · ≈ ${num(w.value)} ⭐ · ${w.username?`<a href="https://t.me/${esc(w.username)}" target="_blank" rel="noopener">@${esc(w.username)}</a>`:`<a href="tg://user?id=${w.user_id}">${esc(w.name||w.user_id)}</a>`}</small></div>
-        ${w.reason?`<small style="color:var(--mut);width:100%">${esc(w.reason)}</small>`:''}<span class="st ${w.status}">${{requested:'Ждёт',sent:'Отправлен',rejected:'Отклонён'}[w.status]||w.status}</span>
+        ${w.reason||w.decided_by?`<small style="color:var(--mut);width:100%">${esc(w.reason||'')}${w.reason&&w.decided_by?' · ':''}${w.decided_by?'решил: '+esc(w.decided_by):''}</small>`:''}<span class="st ${w.status}">${{requested:'Ждёт',sent:'Отправлен',rejected:'Отклонён'}[w.status]||w.status}</span>
         ${w.status=='requested'?`<div class="acts"><button class="btn ok sm" data-w="${w.id}" data-a="sent">Отправлен</button><button class="btn bad sm" data-w="${w.id}" data-a="rejected">Отклонить</button></div>`:''}</div>`).join('')||'<p class="empty">Заявок нет.</p>'}</div>`;
     $$('[data-f]',M).forEach(b=>b.onclick=()=>{reqF=b.dataset.f;render()});
     $$('[data-a]',M).forEach(b=>b.onclick=async()=>{let body={};if(b.dataset.a=='rejected'){const r=prompt('Причина (увидит пользователь):','Не смогли найти подарок на маркете по флору — попробуйте вывести позже.');if(r===null)return;body={reason:r}}b.disabled=true;try{await api(`win/${b.dataset.w}/${b.dataset.a}`,'POST',body);toast(b.dataset.a=='sent'?'Отмечено как отправленное':'Отклонено, подарок вернулся пользователю');await load()}catch(e){toast(e.message);b.disabled=false}})}
   if(view=='tasks'){M.innerHTML='<p class="empty">Загрузка…</p>';renderTasksAdmin()}
+  if(view=='bc'){M.innerHTML='<p class="empty">Загрузка…</p>';renderBc()}
   if(view=='prices'){M.innerHTML=`<h2>Цены моделей<small id="pinfo"></small></h2>
       <p style="color:var(--mut);margin-bottom:10px">Цена модели: своя цена → флор модели на Portals (обновляется раз в сутки, шансы кейсов подгоняются автоматически) → формула, если модели нет в продаже. После своих правок нажмите «Подогнать шансы» у нужных кейсов.</p>
       <div class="card" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px"><span id="mkinfo" style="flex:1;min-width:200px;color:var(--mut);font-size:14px"></span><button class="btn sm" id="mkGo">Обновить с Portals</button></div>
@@ -316,6 +332,88 @@ async function renderEmoji(reload){const el=$('emInfo');if(!el)return;let e;try{
   $$('[data-ep]',el).forEach(b=>b.onclick=()=>{const em=b.dataset.ep,box=document.createElement('div');box.className='epick';
     box.innerHTML=`<div class="card"><p style="font-weight:800;margin-bottom:10px">Какой иконкой показывать ${esc(em)}?</p><div class="epk big">${e.pack.map(p=>`<button data-id="${p.id}"><img src="${efile(p.thumb)}" alt=""><i>${esc(p.emoji)}</i></button>`).join('')}</div><button class="btn ghost sm" style="margin-top:12px">Отмена</button></div>`;
     document.body.appendChild(box);box.onclick=ev=>{const t=ev.target.closest('[data-id]');if(t)act(api('emoji_alias','POST',{emoji:em,id:t.dataset.id}),'Сохранено',()=>renderEmoji());if(t||ev.target==box||ev.target.matches('.btn'))box.remove()}})}
+/* ---------- рассылка ---------- */
+let BCS=null,BCP=null,EI={},PACKS=null;
+try{BCS=JSON.parse(localStorage.bcDraft||'null')}catch(e){}
+if(!BCS)BCS={html:'',photo:'',buttons:[[{text:'🎁 Открыть GiftMafia',kind:'app',url:'',style:'primary',icon:''}]]};
+const bcSave=()=>{try{localStorage.bcDraft=JSON.stringify(BCS)}catch(e){}};
+const SECTIONS=[['','Главная'],['free','Подарок дня'],['games','Игры'],['earn','Заработок']];
+const STYLES=[['','Обычная'],['primary','Синяя'],['success','Зелёная'],['danger','Красная']];
+const bcPhotoUrl=p=>!p?'':p.startsWith('tg:')?efile(p.slice(3)):'/static/cache/bc/'+p.slice(5);
+async function emojiPack(){if(PACKS)return PACKS;const e=await api('emoji');PACKS=[...e.pack,...Object.entries(e.extra||{}).map(([id,x])=>({...x,id}))];PACKS.forEach(p=>EI[p.id]=p);return PACKS}
+async function needEmoji(html){const ids=[...new Set([...html.matchAll(/emoji-id="(\d+)"/g)].map(m=>m[1]).concat(BCS.buttons.flat().map(b=>b.icon).filter(Boolean)))].filter(i=>!EI[i]);
+  if(ids.length){try{Object.assign(EI,await api('emoji_info?ids='+ids.join(',')))}catch(e){}}}
+function tgHtml(html){/* безопасный предпросмотр: только теги, которые понимает Telegram */
+  const d=new DOMParser().parseFromString('<div>'+html+'</div>','text/html').body.firstChild,OK={B:'b',STRONG:'b',I:'i',EM:'i',U:'u',INS:'u',S:'s',STRIKE:'s',DEL:'s',CODE:'code',PRE:'code',BLOCKQUOTE:'blockquote'};
+  const walk=n=>[...n.childNodes].map(c=>{if(c.nodeType==3)return esc(c.textContent);if(c.nodeType!=1)return '';const t=c.tagName,inner=walk(c);
+    if(t=='TG-EMOJI'){const x=EI[c.getAttribute('emoji-id')];return x&&x.thumb?`<img class="ce" src="${efile(x.thumb)}" alt="${esc(c.textContent)}">`:inner}
+    if(t=='TG-SPOILER'||(t=='SPAN'&&c.classList.contains('tg-spoiler')))return `<span class="sp">${inner}</span>`;
+    if(t=='A')return `<a href="${esc(c.getAttribute('href')||'')}" target="_blank" rel="noopener">${inner}</a>`;
+    if(t=='BR')return '\n';return OK[t]?`<${OK[t]}>${inner}</${OK[t]}>`:inner}).join('');
+  return walk(d).replace(/<\/blockquote>\n/g,'</blockquote>').replace(/\n<blockquote>/g,'<blockquote>')}
+async function bcPreview(){const el=$('bcPv');if(!el)return;await needEmoji(BCS.html);
+  const kb=BCS.buttons.filter(r=>r.some(b=>b.text.trim()));
+  el.innerHTML=`<div class="tgv"><div class="tgm">${BCS.photo?`<img class="ph" src="${bcPhotoUrl(BCS.photo)}" alt="">`:''}${BCS.html.trim()?`<div class="tx">${tgHtml(BCS.html.trim())}</div>`:BCS.photo?'':'<div class="tx" style="color:#8a9aa9">Текст сообщения…</div>'}</div>
+    ${kb.length?`<div class="tgk">${kb.map(r=>`<div>${r.filter(b=>b.text.trim()).map(b=>`<span class="${b.style}">${b.icon&&EI[b.icon]?.thumb?`<img src="${efile(EI[b.icon].thumb)}" alt="">`:''}${esc(b.text)}</span>`).join('')}</div>`).join('')}</div>`:''}</div>`}
+function pickEmoji(title,cb){emojiPack().then(pack=>{const box=document.createElement('div');box.className='epick';
+  box.innerHTML=`<div class="card"><p style="font-weight:800;margin-bottom:4px">${esc(title)}</p><p style="color:var(--mut);font-size:13px">Иконки из набора и добавленные по ID. Свой премиум-эмодзи: отправьте боту /post и сообщение с ним — затем «Взять из бота».</p>
+    <div class="epk big">${pack.map(p=>`<button data-id="${p.id}" data-e="${esc(p.emoji)}"><img src="${efile(p.thumb)}" alt=""><i>${esc(p.emoji)}</i></button>`).join('')||'<p class="empty">Набор не загружен</p>'}</div><button class="btn ghost sm" style="margin-top:12px">Отмена</button></div>`;
+  document.body.appendChild(box);box.onclick=ev=>{const t=ev.target.closest('[data-id]');if(t)cb(t.dataset.id,t.dataset.e||'⭐');if(t||ev.target==box||ev.target.matches('.btn'))box.remove()}}).catch(e=>toast(e.message))}
+function bcWrap(a,b){const ta=$('bcT'),s0=ta.selectionStart,s1=ta.selectionEnd,v=ta.value;ta.value=v.slice(0,s0)+a+v.slice(s0,s1)+b+v.slice(s1);ta.focus();ta.selectionStart=s0+a.length;ta.selectionEnd=s1+a.length;BCS.html=ta.value;bcSave();bcPreview()}
+function bcButtonsHtml(){return BCS.buttons.map((r,ri)=>`<div class="bcrow"><small>Ряд ${ri+1}</small>${r.map((b,bi)=>`<div class="bcbtn" data-r="${ri}" data-b="${bi}">
+    <input class="inp bt" data-f="text" value="${esc(b.text)}" placeholder="Текст кнопки" maxlength="64">
+    <select class="inp" data-f="kind"><option value="url" ${b.kind=='url'?'selected':''}>Ссылка</option><option value="app" ${b.kind=='app'?'selected':''}>Мини-апп</option></select>
+    ${b.kind=='app'?`<select class="inp bu" data-f="url">${SECTIONS.map(([k,t])=>`<option value="${k}" ${b.url==k?'selected':''}>${t}</option>`).join('')}</select>`:`<input class="inp bu" data-f="url" value="${esc(b.url)}" placeholder="https://t.me/…">`}
+    <select class="inp" data-f="style">${STYLES.map(([k,t])=>`<option value="${k}" ${b.style==k?'selected':''}>${t}</option>`).join('')}</select>
+    <button class="ico" data-ico title="Премиум-иконка">${b.icon&&EI[b.icon]?.thumb?`<img src="${efile(EI[b.icon].thumb)}" alt="">`:'☺'}</button><button class="x" data-bdel aria-label="Удалить">×</button></div>`).join('')}
+    ${r.length<3?`<button class="btn ghost sm" data-badd="${ri}" style="margin-top:8px">+ кнопка в ряд</button>`:''}</div>`).join('')+`<button class="btn ghost sm" id="bcRow" style="margin-top:10px">+ новый ряд</button>`}
+async function renderBc(){const M=$('main');let d;try{d=await api('broadcasts')}catch(e){return toast(e.message)}
+  const run=d.list.find(x=>x.status=='running'),dr=d.draft;
+  M.innerHTML=`<h2>Рассылка<small>${num(d.users)} получателей</small></h2>
+  ${dr?`<div class="card rst"><span>📥 Черновик из бота от ${new Date(dr.at*1000).toLocaleString('ru-RU')} — с форматированием и премиум-эмодзи</span><button class="btn sm" id="bcDr">Взять из бота</button></div>`:''}
+  <div class="two"><div class="card set">
+    <label>Текст<span style="font-size:12px">Выделите текст и нажмите кнопку форматирования. Обычные эмодзи, у которых есть иконка в наборе, станут премиум сами. Свои премиум-эмодзи проще всего: напишите боту <b>/post</b>, пришлите готовое сообщение и нажмите «Взять из бота».</span></label>
+    <div class="bcbar"><button data-w="b" title="Жирный"><b>B</b></button><button data-w="i" title="Курсив"><i>I</i></button><button data-w="u" title="Подчёркнутый"><u>U</u></button><button data-w="s" title="Зачёркнутый"><s>S</s></button>
+      <button data-w="blockquote" title="Цитата">❝</button><button data-w="tg-spoiler" title="Спойлер">▒</button><button data-w="code" title="Моноширинный">&lt;/&gt;</button><button id="bcLn" title="Ссылка">🔗</button><button id="bcEm" title="Премиум-эмодзи">☺ Премиум</button></div>
+    <textarea class="inp bcta" id="bcT" placeholder="🎁 <b>Новый кейс!</b>&#10;&#10;<blockquote>Шанс на Plush Pepe</blockquote>">${esc(BCS.html)}</textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><label class="btn ghost sm" style="display:inline-flex;align-items:center;cursor:pointer;color:#fff">🖼 ${BCS.photo?'Заменить картинку':'Добавить картинку'}<input type="file" id="bcF" accept="image/*" hidden></label>${BCS.photo?'<button class="btn bad sm" id="bcFx">Убрать картинку</button>':''}</div>
+    <p style="font-weight:800;margin-top:6px">Кнопки</p><div id="bcB">${bcButtonsHtml()}</div>
+  </div><div><div class="card set"><p style="font-weight:800">Предпросмотр</p><div id="bcPv"></div>
+    <label>Кому отправить тест<input class="inp" id="bcTo" value="${esc(d.test_to)}" placeholder="@username или id"></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="bcTest" style="flex:1">Отправить тест</button><button class="btn" id="bcGo" style="flex:1" ${run?'disabled':''}>Разослать всем</button></div></div></div></div>
+  <h2>История</h2><div id="bcH"></div></div>`;
+  const ta=$('bcT');ta.oninput=()=>{BCS.html=ta.value;bcSave();clearTimeout(ta.t);ta.t=setTimeout(bcPreview,250)};
+  $$('[data-w]',M).forEach(b=>b.onclick=()=>bcWrap(`<${b.dataset.w}>`,`</${b.dataset.w}>`));
+  $('bcLn').onclick=()=>{const u=prompt('Ссылка (https://…)','https://t.me/');if(u)bcWrap(`<a href="${u.replace(/"/g,'')}">`,'</a>')};
+  $('bcEm').onclick=()=>pickEmoji('Вставить премиум-эмодзи',(id,e)=>bcWrap(`<tg-emoji emoji-id="${id}">${e}</tg-emoji>`,''));
+  if($('bcDr'))$('bcDr').onclick=()=>{if(BCS.html.trim()&&!confirm('Заменить текущий текст черновиком из бота?'))return;BCS.html=dr.html||'';if(dr.photo)BCS.photo=dr.photo;bcSave();renderBc()};
+  $('bcF').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async()=>{try{const x=await api('broadcast/photo','POST',{data:r.result});BCS.photo=x.photo;bcSave();renderBc()}catch(er){toast(er.message)}};r.readAsDataURL(f)};
+  if($('bcFx'))$('bcFx').onclick=()=>{BCS.photo='';bcSave();renderBc()};
+  const B=$('bcB');B.oninput=B.onchange=e=>{const row=e.target.closest('[data-r]'),f=e.target.dataset.f;if(!row||!f)return;const b=BCS.buttons[row.dataset.r][row.dataset.b];
+    b[f]=e.target.value;if(f=='kind'){b.url='';bcSave();B.innerHTML=bcButtonsHtml();bindBtns()}else bcSave();bcPreview()};
+  function bindBtns(){$$('[data-bdel]',B).forEach(x=>x.onclick=()=>{const r=x.closest('[data-r]');BCS.buttons[r.dataset.r].splice(r.dataset.b,1);BCS.buttons=BCS.buttons.filter(r=>r.length);bcSave();B.innerHTML=bcButtonsHtml();bindBtns();bcPreview()});
+    $$('[data-badd]',B).forEach(x=>x.onclick=()=>{BCS.buttons[x.dataset.badd].push({text:'',kind:'url',url:'',style:'',icon:''});bcSave();B.innerHTML=bcButtonsHtml();bindBtns()});
+    $('bcRow').onclick=()=>{BCS.buttons.push([{text:'',kind:'url',url:'',style:'',icon:''}]);bcSave();B.innerHTML=bcButtonsHtml();bindBtns()};
+    $$('[data-ico]',B).forEach(x=>x.onclick=()=>{const r=x.closest('[data-r]'),b=BCS.buttons[r.dataset.r][r.dataset.b];
+      if(b.icon){b.icon='';bcSave();B.innerHTML=bcButtonsHtml();bindBtns();bcPreview();return}
+      pickEmoji('Иконка для кнопки «'+(b.text||'…')+'»',id=>{b.icon=id;bcSave();B.innerHTML=bcButtonsHtml();bindBtns();bcPreview()})})}
+  bindBtns();
+  const body=()=>({html:BCS.html,photo:BCS.photo,buttons:BCS.buttons});
+  $('bcTest').onclick=async()=>{const b=$('bcTest');b.disabled=true;try{await api('broadcast','POST',{...body(),test:$('bcTo').value});toast('Тест отправлен — проверьте бота')}catch(e){toast(e.message)}b.disabled=false};
+  $('bcGo').onclick=async()=>{if(!confirm(`Разослать сообщение всем (${num(d.users)})? Отменить уже отправленное будет нельзя.`))return;
+    try{const r=await api('broadcast','POST',body());toast(`Рассылка запущена: ${num(r.total)} получателей`);bcHist()}catch(e){toast(e.message)}};
+  bcPreview();bcHist(d)}
+async function bcHist(d){clearTimeout(BCP);const H=$('bcH');if(!H)return;if(!d){try{d=await api('broadcasts')}catch(e){return}}
+  const run=d.list.find(x=>x.status=='running');if($('bcGo'))$('bcGo').disabled=!!run;
+  H.innerHTML=`<div class="list">${d.list.map(b=>{const pr=b.total?Math.min(100,(b.sent+b.failed)/b.total*100):100,txt=b.html.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim()||'🖼 Картинка';
+    return `<div class="card bch"><div class="nm"><b>${esc(txt.slice(0,90))}</b><small>${new Date(b.created*1000).toLocaleString('ru-RU')} · доставлено ${num(b.sent)} из ${num(b.total)}${b.failed?` · не дошло ${num(b.failed)} (бот не запущен или заблокирован)`:''}</small>
+      ${b.error?`<small style="color:var(--bad);display:block">${esc(b.error)}</small>`:''}</div>
+      <span class="st ${{running:'requested',done:'sent',stopped:'rejected',error:'rejected'}[b.status]}">${{running:'Идёт '+pr.toFixed(0)+'%',done:'Готово',stopped:'Остановлена',error:'Ошибка'}[b.status]||b.status}</span>
+      ${b.status=='running'?'<button class="btn bad sm" id="bcStop">Остановить</button>':`<button class="btn ghost sm" data-re="${b.id}">Повторить текст</button>`}
+      ${b.status=='running'?`<div class="prog"><i style="width:${pr}%"></i></div>`:''}</div>`}).join('')||'<p class="empty">Рассылок ещё не было.</p>'}`;
+  if($('bcStop'))$('bcStop').onclick=()=>act(api('broadcast/stop','POST'),'Останавливаю…',()=>setTimeout(()=>bcHist(),800));
+  $$('[data-re]',H).forEach(x=>x.onclick=()=>{const b=d.list.find(y=>y.id==x.dataset.re);BCS={html:b.html,photo:b.photo,buttons:JSON.parse(b.buttons||'[]')};if(!BCS.buttons.length)BCS.buttons=[[{text:'',kind:'url',url:'',style:'',icon:''}]];bcSave();renderBc();scrollTo(0,0)});
+  if(run)BCP=setTimeout(()=>{if(view=='bc'&&$('bcH'))bcHist()},2000)}
 const KIND={channel:'Подписка на канал',bot:'Запустить бота',story:'Сторис',link:'Перейти по ссылке'};
 async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks')}catch(e){return toast(e.message)}const st=d.settings;
   const mu=+st.maint_until||0,muv=mu?new Date(mu*1000-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16):'';
@@ -337,6 +435,7 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     <label>Сколько % от оценки NFT зачислять за подарок<input class="inp" id="sGr" type="number" min="1" max="100" value="${esc(st.gift_rate)}"></label>
     <label>Набор премиум-эмодзи для текстов бота (имя из ссылки t.me/addemoji/ИМЯ)<input class="inp" id="sEm" value="${esc(st.emoji_set)}" placeholder="GiftMafiaNFT"></label>
     <div class="card" style="padding:12px;background:#ffffff08" id="emInfo">Загрузка…</div>
+    <label>Админы выводов — получают заявки в бота с кнопками «Отправлен / Отклонить» (через запятую: @username или id; аккаунт должен один раз запустить бота)<input class="inp" id="sWa" value="${esc(st.wd_admins)}" placeholder="@IbuyBalenciaga"></label>
     <label>Не учитывать в дашборде и статистике (аккаунты через запятую: @username или id)<input class="inp" id="sEx" value="${esc(st.stats_exclude)}" placeholder="@IbuyBalenciaga"></label>
     <label style="display:flex;align-items:center;gap:10px;color:#fff"><button class="sw ${st.free_notify=='1'?'on':''}" id="sFn" type="button" aria-label="Напоминание"></button>Писать в бота, когда снова доступен «Подарок дня»</label>
     <button class="btn" id="sSave">Сохранить</button>
@@ -358,7 +457,7 @@ async function renderTasksAdmin(){const M=$('main');let d;try{d=await api('tasks
     if(on&&st.maint_on!='1'&&!confirm('Закрыть мини-апп для всех пользователей на технические работы?'))return;
     act(api('settings','POST',{maint_on:on?'1':'0',maint_text:$('mTx').value,maint_until:un,maint_allow:$('mAl').value}),on?'Технические работы включены':'Технические работы выключены',renderTasksAdmin)};
   $('sSave').onclick=()=>act(api('settings','POST',{free_channel:$('sCh').value,nick_tag:$('sTag').value,nick_bio:$('sBio').value,nick_rewards:$('sRw').value,
-    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value,emoji_set:$('sEm').value}),'Настройки сохранены',async()=>{await api('emoji?reload=1');renderTasksAdmin()});
+    ton_wallet:$('sTon').value,gift_account:$('sGa').value,gift_rate:$('sGr').value,free_notify:$('sFn').classList.contains('on')?'1':'0',stats_exclude:$('sEx').value,wd_admins:$('sWa').value,emoji_set:$('sEm').value}),'Настройки сохранены',async()=>{await api('emoji?reload=1');renderTasksAdmin()});
   renderEmoji();
   $('nAdd').onclick=()=>act(api('task','POST',{kind:$('nK').value,title:$('nT').value,target:$('nTg').value,reward:$('nR').value}),'Задание добавлено',renderTasksAdmin);
   $$('[data-trw]').forEach(i=>i.onchange=()=>act(api(`task/${i.dataset.trw}`,'PATCH',{reward:i.value}),'Награда сохранена',renderTasksAdmin));

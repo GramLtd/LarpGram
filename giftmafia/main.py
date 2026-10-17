@@ -3,9 +3,10 @@ from contextlib import asynccontextmanager
 from urllib.parse import parse_qsl
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import CommandStart
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
+from aiogram.filters import Command, CommandStart
 from aiogram.types import (FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InlineQueryResultPhoto,
-                           InputProfilePhotoStatic, InputTextMessageContent, LabeledPrice, WebAppInfo)
+                           ForceReply, InputProfilePhotoStatic, InputTextMessageContent, LabeledPrice, WebAppInfo)
 from dotenv import load_dotenv
 from fastapi import Body, Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, Response
@@ -270,14 +271,18 @@ CREATE TABLE IF NOT EXISTS withdrawals(id INTEGER PRIMARY KEY AUTOINCREMENT, use
   status TEXT DEFAULT 'requested', reason TEXT DEFAULT '', created INT, decided INT DEFAULT 0);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
+CREATE TABLE IF NOT EXISTS wd_msgs(win_id INT, chat_id INT, msg_id INT, html TEXT DEFAULT '', PRIMARY KEY(win_id, chat_id));
+CREATE TABLE IF NOT EXISTS broadcasts(id INTEGER PRIMARY KEY AUTOINCREMENT, html TEXT, photo TEXT DEFAULT '', buttons TEXT DEFAULT '[]', status TEXT DEFAULT 'running',
+  total INT DEFAULT 0, sent INT DEFAULT 0, failed INT DEFAULT 0, error TEXT DEFAULT '', created INT, finished INT DEFAULT 0);
 """)
 
 
 for t, c, d in [("crash", "ladder", "TEXT DEFAULT ''"), ("crash", "src_win", "INT DEFAULT 0"), ("users", "photo", "TEXT DEFAULT ''"), ("crash", "round_id", "INT DEFAULT 0"), ("users", "last_seen", "INT DEFAULT 0"), ("users", "utm", "TEXT DEFAULT ''"), ("users", "free_notified", "INT DEFAULT 0"),
-                ("bot_started", "utm", "TEXT DEFAULT ''")]:
+                ("bot_started", "utm", "TEXT DEFAULT ''"), ("withdrawals", "decided_by", "TEXT DEFAULT ''")]:
     try: db.execute(f"ALTER TABLE {t} ADD COLUMN {c} {d}")
     except sqlite3.OperationalError: pass
 db.execute("CREATE INDEX IF NOT EXISTS crash_round ON crash(round_id, user_id)")
+db.execute("UPDATE broadcasts SET status='stopped', finished=? WHERE status='running'", (int(time.time()),))  # рассылка, прерванная перезапуском
 try: db.execute("CREATE UNIQUE INDEX IF NOT EXISTS crash_one ON crash(round_id, user_id) WHERE round_id>0")
 except sqlite3.Error as e: print("crash index:", e)
 
@@ -324,6 +329,7 @@ SETTINGS_DEFAULT = {
     "emoji_alias": "{}",                       # ручные сопоставления: {"🚀": "<custom_emoji_id>"}
     "stats_exclude": "@IbuyBalenciaga",        # аккаунты, которые не учитываются в дашборде и статистике (через запятую)
     "stats_since": "0",                        # статистика админки считается с этого момента (unix-время), кнопка «Сбросить»
+    "wd_admins": "@IbuyBalenciaga",            # кто принимает и отклоняет выводы кнопками в боте (через запятую: @username или id)
 }
 NICK_HOLD, NICK_WINDOW = 24 * 3600, 10 * 3600  # держать 24 ч, потом 10 ч на сбор награды
 
@@ -927,10 +933,7 @@ async def withdraw(wid: int, uid: int = Depends(auth)):
         run("UPDATE wins SET status='ready' WHERE id=?", wid); w["status"] = "ready"
     if changed("UPDATE wins SET status='requested' WHERE id=? AND status='ready'", wid) == 0: raise HTTPException(400, "Уже подана заявка")
     run("INSERT INTO withdrawals(user_id,win_id,prize,gift,model,value,created) VALUES(?,?,?,?,?,?,?)", uid, wid, w["prize"], w["gift"], w["model"], w["value"], int(time.time()))
-    if ADMIN_CHAT_ID:
-        u = q1("SELECT * FROM users WHERE id=?", uid)
-        await bot.send_message(ADMIN_CHAT_ID, f"📦 <b>Заявка на вывод #{wid}</b>\n\n<blockquote>🎁 {E(w['prize'])}\n⭐ ≈ {N(w['value'])}\n"
-                                              f"👥 {('@' + E(u['username'])) if u['username'] else E(u['name'] or '')} · <code>{uid}</code></blockquote>", parse_mode="HTML")
+    await wd_notify(wid, w, uid)
     try: await bot.send_message(uid, f"📦 <b>Заявка на вывод принята</b>\n\n<blockquote>🎁 {E(w['prize'])}</blockquote>\n\n⏳ Подарок придёт в течение <b>24 часов</b>", parse_mode="HTML")
     except Exception: pass
     return {"ok": True, "eta": "24 ч"}
@@ -1262,6 +1265,98 @@ async def cm_report(m, photos):
 
 
 # ---------- ID премиум-эмодзи прямо в боте ----------
+# ---------- выводы кнопками в боте ----------
+# Заявка приходит в ADMIN_CHAT_ID и в личку каждому из настройки wd_admins (если он запускал бота).
+# Кнопки: «Отправлен», «Отклонить» (причина по умолчанию) и «Своя причина» (бот попросит написать текст).
+WAIT = {}  # (user_id, chat_id) -> ("why", win_id) | ("post",): ждём следующее сообщение админа
+
+
+def _acc_list(v): return [x.strip().lstrip("@").lower() for x in (v or "").replace(";", ",").split(",") if x.strip()]
+
+
+def is_wd_admin(u):
+    allow = _acc_list(setting("wd_admins"))
+    return u.id == ADMIN_CHAT_ID or str(u.id) in allow or (u.username or "").lower() in allow
+
+
+def wd_admin_ids():
+    ids = []
+    for a in _acc_list(setting("wd_admins")):
+        r = {"id": int(a)} if a.isdigit() else q1("SELECT id FROM users WHERE lower(username)=?", a)
+        if r and r["id"] not in ids: ids.append(r["id"])
+    return ids
+
+
+def who(u): return ("@" + u.username) if u.username else (u.first_name or str(u.id))
+
+
+def wd_kb(wid):
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ Отправлен", callback_data=f"wd:sent:{wid}", style="success")],
+                                                 [InlineKeyboardButton(text="❌ Отклонить", callback_data=f"wd:rejected:{wid}", style="danger"),
+                                                  InlineKeyboardButton(text="✏️ Своя причина", callback_data=f"wd:why:{wid}")]])
+
+
+async def wd_notify(wid, w, uid):
+    u = q1("SELECT * FROM users WHERE id=?", uid) or {}
+    text = (f"📦 <b>Заявка на вывод #{wid}</b>\n\n<blockquote>🎁 {E(w['prize'])}\n⭐ ≈ {N(w['value'])}\n"
+            f"👥 {('@' + E(u.get('username'))) if u.get('username') else E(u.get('name') or '')} · <code>{uid}</code></blockquote>")
+    for chat in dict.fromkeys(([ADMIN_CHAT_ID] if ADMIN_CHAT_ID else []) + wd_admin_ids()):
+        try:
+            m = await bot.send_message(chat, text, parse_mode="HTML", reply_markup=wd_kb(wid))
+            run("INSERT OR REPLACE INTO wd_msgs(win_id,chat_id,msg_id,html) VALUES(?,?,?,?)", wid, chat, m.message_id, text)
+        except Exception as e: print("wd notify", chat, e)
+
+
+async def wd_mark(wid, line):
+    """Во всех копиях заявки убрать кнопки и дописать, кто и что решил."""
+    for r in q("SELECT * FROM wd_msgs WHERE win_id=?", wid):
+        try: await bot.edit_message_text(f"{r['html']}\n\n{line}", chat_id=r["chat_id"], message_id=r["msg_id"], parse_mode="HTML", reply_markup=None)
+        except Exception as e: print("wd mark", e)
+
+
+@dp.callback_query(F.data.startswith("wd:"))
+async def wd_cb(c):
+    if not is_wd_admin(c.from_user): return await c.answer("Нет доступа к выводам", show_alert=True)
+    _, act, wid = c.data.split(":"); wid = int(wid)
+    if not q1("SELECT 1 FROM wins WHERE id=? AND status='requested'", wid):
+        try: await c.message.edit_reply_markup(reply_markup=None)
+        except Exception: pass
+        return await c.answer("Заявка уже обработана", show_alert=True)
+    if act == "why":
+        WAIT[(c.from_user.id, c.message.chat.id)] = ("why", wid)
+        await c.message.answer(f"✏️ Напишите причину отказа по заявке <b>#{wid}</b> — её увидит пользователь.\n\n/cancel — отмена", parse_mode="HTML",
+                               reply_markup=ForceReply(selective=True, input_field_placeholder="Причина отказа"))
+        return await c.answer()
+    if act not in ("sent", "rejected"): return await c.answer()
+    ok = await wd_decide(wid, act, "", who(c.from_user))
+    await c.answer(("Отмечено: отправлен" if act == "sent" else "Отклонено, подарок вернулся игроку") if ok else "Заявка уже обработана")
+
+
+@dp.message(Command("post"), F.chat.type == "private")
+async def post_cmd(m):
+    if not is_bot_admin(m.from_user): return
+    WAIT[(m.from_user.id, m.chat.id)] = ("post",)
+    await m.answer("📣 <b>Черновик рассылки</b>\n\n<blockquote>Пришлите сообщение для рассылки: текст с форматированием и премиум-эмодзи, можно с картинкой.</blockquote>\n\n"
+                   "Потом откройте админку → «Рассылка» → «Взять из бота», добавьте кнопки и отправьте.\n\n/cancel — отмена", parse_mode="HTML")
+
+
+@dp.message(lambda m: m.from_user is not None and (m.from_user.id, m.chat.id) in WAIT)
+async def wait_reply(m):
+    kind = WAIT.pop((m.from_user.id, m.chat.id))
+    if (m.text or "").strip().lower() in ("/cancel", "отмена"): return await m.answer("Отменено")
+    if kind[0] == "why":
+        reason = (m.text or m.caption or "").strip()[:300]
+        if not reason: WAIT[(m.from_user.id, m.chat.id)] = kind; return await m.answer("Нужен текст причины. /cancel — отмена")
+        ok = await wd_decide(kind[1], "rejected", reason, who(m.from_user))
+        return await m.answer("✅ Отклонено, подарок вернулся игроку" if ok else "Заявка уже обработана")
+    if kind[0] == "post":
+        html = m.html_text if (m.text or m.caption) else ""
+        photo = ("tg:" + m.photo[-1].file_id) if m.photo else ""
+        if not html and not photo: WAIT[(m.from_user.id, m.chat.id)] = kind; return await m.answer("Пришлите текст или картинку. /cancel — отмена")
+        run("INSERT OR REPLACE INTO meta(k,v) VALUES('bc_draft',?)", json.dumps({"html": html, "photo": photo, "at": int(time.time())}, ensure_ascii=False))
+        await m.answer("✅ Черновик сохранён. Админка → «Рассылка» → «Взять из бота».")
+
+
 # Админ присылает боту премиум-эмодзи - бот отвечает ID каждого. Если перед премиум-эмодзи стоит обычный
 # («🚀 + премиум, 🎉 + премиум»), бот сразу привязывает: в текстах бота этот обычный эмодзи станет премиумом.
 _EB = r"[\U0001F000-\U0001FAFF\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u3030\u303D\u3297\u3299][\ufe0f\U0001F3FB-\U0001F3FF]*"
@@ -1802,7 +1897,7 @@ def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
 # ---------- admin ----------
 @app.get("/api/admin/requests", dependencies=[Depends(admin)])
 def a_req():
-    rows = q("SELECT d.id AS wd, d.win_id AS id, d.user_id, d.prize, d.gift, d.model, d.value, d.status, d.reason, d.created, u.username, u.name "
+    rows = q("SELECT d.id AS wd, d.win_id AS id, d.user_id, d.prize, d.gift, d.model, d.value, d.status, d.reason, d.decided_by, d.created, u.username, u.name "
              "FROM withdrawals d JOIN users u ON u.id=d.user_id ORDER BY (d.status='requested') DESC, d.id DESC LIMIT 150")
     for r in rows: r["img"] = model_img(r["gift"], r["model"], 128) if r["gift"] else ""
     return rows
@@ -1814,20 +1909,27 @@ REJECT_REASON = "Не смогли найти подарок на маркете
 @app.post("/api/admin/win/{wid}/{act}", dependencies=[Depends(admin)])
 async def a_win(wid: int, act: str, b: dict = Body(default={})):
     if act not in ("sent", "rejected"): raise HTTPException(400)
+    if not q1("SELECT 1 FROM wins WHERE id=?", wid): raise HTTPException(404)
+    if not await wd_decide(wid, act, (b or {}).get("reason") or "", "админка"): raise HTTPException(400, "Заявка уже обработана")
+    return {"ok": True}
+
+
+async def wd_decide(wid, act, reason, by):
+    """Решение по заявке (из админки или кнопкой в боте). False - заявка уже обработана."""
     w = q1("SELECT * FROM wins WHERE id=?", wid)
-    if not w: raise HTTPException(404)
     # отклонение - подарок возвращается в инвентарь (доступен к продаже и выводу)
-    if not changed("UPDATE wins SET status=? WHERE id=? AND status='requested'", "sent" if act == "sent" else "ready", wid): raise HTTPException(400, "Заявка уже обработана")
-    reason = (b or {}).get("reason") or REJECT_REASON
-    run("UPDATE withdrawals SET status=?, reason=?, decided=? WHERE id=(SELECT max(id) FROM withdrawals WHERE win_id=? AND status='requested')",
-        act, reason if act == "rejected" else "", int(time.time()), wid)
+    if not w or not changed("UPDATE wins SET status=? WHERE id=? AND status='requested'", "sent" if act == "sent" else "ready", wid): return False
+    reason = reason or REJECT_REASON
+    run("UPDATE withdrawals SET status=?, reason=?, decided=?, decided_by=? WHERE id=(SELECT max(id) FROM withdrawals WHERE win_id=? AND status='requested')",
+        act, reason if act == "rejected" else "", int(time.time()), by, wid)
+    await wd_mark(wid, ("✅ <b>Отправлен</b>" if act == "sent" else f"❌ <b>Отклонён</b>: {E(reason)}") + f" · {E(by)}")
     if act == "rejected":
         try: await bot.send_message(w["user_id"], f"↩️ <b>Вывод не выполнен</b>\n\n<blockquote>🎁 {E(w['prize'])}\n⚠️ {E(reason)}</blockquote>\n\n✅ Подарок вернулся в инвентарь — его можно вывести снова или продать", parse_mode="HTML")
         except Exception: pass
     if act == "sent":
         try: await bot.send_message(w["user_id"], f"✅ <b>Подарок отправлен!</b>\n\n<blockquote>🎁 {E(w['prize'])}</blockquote>\n\n🎉 Он уже в вашем профиле Telegram", parse_mode="HTML")
         except Exception: pass
-    return {"ok": True}
+    return True
 
 
 @app.get("/api/admin/prizes", dependencies=[Depends(admin)])
@@ -2041,6 +2143,9 @@ def a_settings(b: dict):
         if k in ("cm_img_bonus", "cm_max") and not v.isdigit(): raise HTTPException(400, "Нужно целое число")
         if k == "cm_rate" and not re.fullmatch(r"\d+(\.\d+)?", v): raise HTTPException(400, "Ставка: число, например 1 или 0.5")
         if k == "cm_chat" and v and not re.fullmatch(r"-?\d+", v): raise HTTPException(400, "id чата: число, например -1001234567890")
+        if k == "wd_admins":
+            v = ", ".join(x for x in (x.strip() for x in v.replace(";", ",").split(",")) if x)
+            if any(not re.fullmatch(r"@?[A-Za-z0-9_]{4,32}|\d{4,15}", x) for x in v.split(", ") if x): raise HTTPException(400, "Админы вывода: @username или числовой id через запятую")
         run("INSERT OR REPLACE INTO meta(k,v) VALUES(?,?)", "set:" + k, v.replace(" ", "") if k == "nick_rewards" else v)
     return {k: setting(k) for k in SETTINGS_DEFAULT}
 
@@ -2248,5 +2353,153 @@ def admin_page(): return FileResponse("static/admin.html")
 
 @app.get("/")
 def index(): return FileResponse("static/index.html")
+
+# ---------- рассылки (админка → «Рассылка») ----------
+# Текст в HTML-разметке Telegram: <b>, <i>, <u>, <s>, <a>, <blockquote>, <tg-spoiler>, <code>, премиум-эмодзи <tg-emoji emoji-id="...">.
+# Обычные эмодзи, у которых есть иконка в наборе, автоматически становятся премиум (EmojiMiddleware). Кнопки - ссылка или мини-апп.
+BC = {"task": None, "stop": False}
+BC_DIR = "static/cache/bc"
+BC_STYLES = ("", "primary", "success", "danger")
+_ce_info = {}  # custom_emoji_id -> {emoji, thumb} для превью в админке
+
+
+def bc_buttons(rows):
+    """[[{text, kind: url|app, url, style, icon}]] -> проверенный список + разметка."""
+    out = []
+    for row in (rows or [])[:8]:
+        r = []
+        for b in (row or [])[:3]:
+            t = str(b.get("text") or "").strip()
+            if not t: continue
+            if len(t) > 64: raise HTTPException(400, f"Текст кнопки «{t[:20]}…» длиннее 64 символов")
+            kind, url = b.get("kind") or "url", str(b.get("url") or "").strip()
+            if kind == "url" and not re.match(r"(https?|tg)://\S+$", url): raise HTTPException(400, f"Кнопка «{t}»: ссылка должна начинаться с https:// или tg://")
+            if kind == "app" and url and not re.fullmatch(r"[\w\-]{1,32}", url): raise HTTPException(400, f"Кнопка «{t}»: неверный раздел")
+            st = b.get("style") or ""
+            if st not in BC_STYLES: st = ""
+            icon = re.sub(r"\D", "", str(b.get("icon") or ""))
+            r.append({"text": t, "kind": kind, "url": url, "style": st, "icon": icon})
+        if r: out.append(r)
+    return out
+
+
+def bc_markup(rows):
+    if not rows: return None
+    kb = []
+    for row in rows:
+        kb.append([InlineKeyboardButton(text=b["text"], style=b["style"] or None, icon_custom_emoji_id=b["icon"] or None,
+                                        **({"url": b["url"]} if b["kind"] == "url" else {"web_app": WebAppInfo(url=WEBAPP_URL + (f"?go={b['url']}" if b["url"] else ""))}))
+                   for b in row])
+    return InlineKeyboardMarkup(inline_keyboard=kb)
+
+
+def bc_photo_input(photo):
+    if photo.startswith("tg:"): return photo[3:]
+    if photo.startswith("file:"):
+        path = os.path.join(BC_DIR, os.path.basename(photo[5:]))
+        if os.path.exists(path): return FSInputFile(path)
+    raise HTTPException(400, "Картинка не найдена — загрузите заново")
+
+
+async def bc_send(chat, html, photo, kb):
+    if photo: return await bot.send_photo(chat, bc_photo_input(photo) if isinstance(photo, str) else photo, caption=html or None, parse_mode="HTML", reply_markup=kb)
+    return await bot.send_message(chat, html, parse_mode="HTML", reply_markup=kb, disable_web_page_preview=True)
+
+
+def bc_check(b):
+    html = str(b.get("html") or "").strip(); photo = str(b.get("photo") or "")
+    if not html and not photo: raise HTTPException(400, "Напишите текст рассылки")
+    plain = re.sub(r"<[^>]+>", "", html)
+    if photo and len(plain) > 1024: raise HTTPException(400, f"С картинкой текст до 1024 символов (сейчас {len(plain)})")
+    if len(plain) > 4096: raise HTTPException(400, f"Текст до 4096 символов (сейчас {len(plain)})")
+    return html, photo, bc_buttons(b.get("buttons"))
+
+
+def tg_error(e):
+    t = str(e)
+    if "parse entities" in t or "can't find end" in t.lower(): return "Ошибка разметки текста: проверьте, что все теги закрыты (" + t.split(":")[-1].strip() + ")"
+    return t.replace("Telegram server says - ", "")
+
+
+@app.post("/api/admin/broadcast/photo", dependencies=[Depends(admin)])
+def a_bc_photo(b: dict):
+    data = str(b.get("data") or "")
+    try: raw = base64.b64decode(data.split(",", 1)[-1]); im = Image.open(io.BytesIO(raw)); im.load()
+    except Exception: raise HTTPException(400, "Не удалось прочитать картинку")
+    im = im.convert("RGB"); im.thumbnail((2560, 2560))
+    os.makedirs(BC_DIR, exist_ok=True); name = hashlib.sha1(raw).hexdigest()[:16] + ".jpg"
+    im.save(os.path.join(BC_DIR, name), quality=90)
+    return {"photo": "file:" + name}
+
+
+@app.get("/api/admin/broadcasts", dependencies=[Depends(admin)])
+def a_bcs():
+    try: draft = json.loads((q1("SELECT v FROM meta WHERE k='bc_draft'") or {}).get("v") or "null")
+    except Exception: draft = None
+    return {"list": q("SELECT id,html,photo,buttons,status,total,sent,failed,error,created,finished FROM broadcasts ORDER BY id DESC LIMIT 10"),
+            "draft": draft, "users": q1("SELECT COUNT(*) n FROM (SELECT id FROM users UNION SELECT user_id FROM bot_started)")["n"],
+            "test_to": (setting("wd_admins").split(",")[0].strip() if setting("wd_admins") else "")}
+
+
+@app.get("/api/admin/emoji_info", dependencies=[Depends(admin)])
+async def a_emoji_info(ids: str = ""):
+    """Превью премиум-эмодзи по ID (для текста рассылки)."""
+    want = [i for i in dict.fromkeys(re.findall(r"\d{6,25}", ids))][:200]
+    known = {p["id"]: p for p in PACK}; known.update(EXTRA); known.update(_ce_info)
+    miss = [i for i in want if i not in known]
+    if miss:
+        try: _ce_info.update(await custom_emoji_info(miss)); known.update(_ce_info)
+        except Exception as e: print("emoji info:", e)
+    return {i: {"emoji": known[i].get("emoji", ""), "thumb": known[i].get("thumb", "")} for i in want if i in known}
+
+
+@app.post("/api/admin/broadcast", dependencies=[Depends(admin)])
+async def a_bc(b: dict):
+    html, photo, rows = bc_check(b)
+    kb = bc_markup(rows)
+    if b.get("test") is not None:  # тест: только одному получателю
+        t = str(b.get("test") or "").strip().lstrip("@")
+        r = {"id": int(t)} if t.lstrip("-").isdigit() else q1("SELECT id FROM users WHERE lower(username)=?", t.lower()) if t else None
+        if not r: raise HTTPException(400, "Кому тест: @username игрока (он должен был открыть бота) или числовой id")
+        try: await bc_send(r["id"], html, photo, kb)
+        except TelegramForbiddenError: raise HTTPException(400, "Этот аккаунт не запускал бота или заблокировал его")
+        except TelegramBadRequest as e: raise HTTPException(400, tg_error(e))
+        return {"ok": True}
+    if BC["task"] and not BC["task"].done(): raise HTTPException(400, "Уже идёт рассылка — дождитесь окончания или остановите")
+    ids = [r["id"] for r in q("SELECT id FROM users UNION SELECT user_id FROM bot_started ORDER BY 1")]
+    bid = run("INSERT INTO broadcasts(html,photo,buttons,total,created) VALUES(?,?,?,?,?)", html, photo, json.dumps(rows, ensure_ascii=False), len(ids), int(time.time()))
+    BC["stop"] = False; BC["task"] = asyncio.create_task(bc_worker(bid, ids, html, photo, kb))
+    return {"ok": True, "id": bid, "total": len(ids)}
+
+
+@app.post("/api/admin/broadcast/stop", dependencies=[Depends(admin)])
+def a_bc_stop():
+    BC["stop"] = True; return {"ok": True}
+
+
+async def bc_worker(bid, ids, html, photo, kb):
+    sent = failed = 0; err = ""; status = "done"
+    try:
+        for i, uid in enumerate(ids):
+            if BC["stop"]: status = "stopped"; break
+            for _ in range(3):
+                try:
+                    m = await bc_send(uid, html, photo, kb); sent += 1
+                    if photo and not photo.startswith("tg:") and m.photo: photo = "tg:" + m.photo[-1].file_id  # дальше шлём уже загруженную
+                    break
+                except TelegramRetryAfter as e: await asyncio.sleep(e.retry_after + 1)
+                except TelegramForbiddenError: failed += 1; break
+                except TelegramBadRequest as e:
+                    failed += 1; t = str(e)
+                    if sent == 0 and ("parse" in t or "BUTTON" in t.upper() or "caption" in t or "URL" in t): err = tg_error(e); status = "error"
+                    break
+                except Exception as e: failed += 1; print("bc", uid, e); break
+            if status == "error": break
+            if i % 20 == 0: run("UPDATE broadcasts SET sent=?, failed=? WHERE id=?", sent, failed, bid)
+            await asyncio.sleep(0.05)  # ~20 сообщений в секунду: ниже лимита Telegram
+    except asyncio.CancelledError: status = "stopped"
+    finally:
+        run("UPDATE broadcasts SET sent=?, failed=?, status=?, error=?, finished=? WHERE id=?", sent, failed, status, err, int(time.time()), bid)
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
