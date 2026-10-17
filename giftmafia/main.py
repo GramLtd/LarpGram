@@ -266,6 +266,8 @@ CREATE TABLE IF NOT EXISTS cm_files(uid TEXT PRIMARY KEY, created INT);
 CREATE TABLE IF NOT EXISTS rk_rounds(id INTEGER PRIMARY KEY AUTOINCREMENT, crash REAL, seed TEXT, bet_start REAL, fly_start REAL, end_at REAL);
 CREATE TABLE IF NOT EXISTS crash(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, gift TEXT DEFAULT '', crash REAL, auto REAL DEFAULT 0,
   seed TEXT, started REAL, status TEXT DEFAULT 'live', mult REAL DEFAULT 0, payout INT DEFAULT 0, created INT);
+CREATE TABLE IF NOT EXISTS withdrawals(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, win_id INT, prize TEXT, gift TEXT, model TEXT, value INT,
+  status TEXT DEFAULT 'requested', reason TEXT DEFAULT '', created INT, decided INT DEFAULT 0);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
 """)
@@ -484,6 +486,10 @@ def build_cases(force=False):
 
 
 build_cases()
+if not q1("SELECT 1 FROM meta WHERE k='wd_backfill'"):
+    db.execute("INSERT INTO withdrawals(user_id,win_id,prize,gift,model,value,status,created,decided) SELECT user_id,id,prize,gift,model,value,status,created,0 FROM wins WHERE status IN('requested','sent','rejected')")
+    db.execute("UPDATE wins SET status='ready' WHERE status='rejected'")
+    run("INSERT OR REPLACE INTO meta(k,v) VALUES('wd_backfill','1')")
 if not q1("SELECT 1 FROM meta WHERE k='bets_backfill'"):  # статистика игр из старых таблиц
     db.execute("INSERT INTO bets(user_id,game,ref,amount,payout,created) SELECT user_id,'mines',id,bet,payout,created FROM mines WHERE status!='live'")
     db.execute("INSERT INTO bets(user_id,game,ref,amount,payout,created) SELECT user_id,'plinko',id,bet,payout,created FROM plinko")
@@ -762,7 +768,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 def inventory(uid):
-    ws = q("SELECT * FROM wins WHERE user_id=? AND kind='nft' AND status IN('locked','ready','requested','sent') ORDER BY id DESC LIMIT 200", uid)
+    ws = q("SELECT * FROM wins WHERE user_id=? AND kind='nft' AND status IN('locked','ready','requested') ORDER BY id DESC LIMIT 200", uid)  # отправленные - в истории
     for w in ws: w["story_url"] = story_url(w["id"])
     return ws
 
@@ -920,6 +926,7 @@ async def withdraw(wid: int, uid: int = Depends(auth)):
             raise HTTPException(400, "Сначала выполните все задания")
         run("UPDATE wins SET status='ready' WHERE id=?", wid); w["status"] = "ready"
     if changed("UPDATE wins SET status='requested' WHERE id=? AND status='ready'", wid) == 0: raise HTTPException(400, "Уже подана заявка")
+    run("INSERT INTO withdrawals(user_id,win_id,prize,gift,model,value,created) VALUES(?,?,?,?,?,?,?)", uid, wid, w["prize"], w["gift"], w["model"], w["value"], int(time.time()))
     if ADMIN_CHAT_ID:
         u = q1("SELECT * FROM users WHERE id=?", uid)
         await bot.send_message(ADMIN_CHAT_ID, f"📦 <b>Заявка на вывод #{wid}</b>\n\n<blockquote>🎁 {E(w['prize'])}\n⭐ ≈ {N(w['value'])}\n"
@@ -1194,6 +1201,13 @@ def player(pid: int, uid: int = Depends(auth)):
     if not u: raise HTTPException(404, "Игрок не найден")
     st = user_stats(pid); st.pop("deposits", None)
     return {"id": u["id"], "name": (u["name"] or "Игрок")[:24], "photo": u["photo"] or "", "me": pid == uid, **st}
+
+
+@app.get("/api/me/history")
+def me_history(uid: int = Depends(auth)):
+    pays = q("SELECT method,stars,bonus,amount,currency,status,created,paid_at FROM payments WHERE user_id=? AND status IN('paid','pending') ORDER BY id DESC LIMIT 50", uid)
+    outs = q("SELECT win_id,prize,gift,model,value,status,reason,created,decided FROM withdrawals WHERE user_id=? ORDER BY id DESC LIMIT 50", uid)
+    return {"payments": [p for p in pays if p["status"] == "paid" or time.time() - p["created"] < 3600], "withdrawals": outs}
 
 
 @app.get("/api/me/stats")
@@ -1780,14 +1794,28 @@ def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
 # ---------- admin ----------
 @app.get("/api/admin/requests", dependencies=[Depends(admin)])
 def a_req():
-    return q("SELECT w.*,u.username,u.name FROM wins w JOIN users u ON u.id=w.user_id WHERE status IN('requested','sent','rejected') ORDER BY (status='requested') DESC, w.id DESC LIMIT 100")
+    rows = q("SELECT d.id AS wd, d.win_id AS id, d.user_id, d.prize, d.gift, d.model, d.value, d.status, d.reason, d.created, u.username, u.name "
+             "FROM withdrawals d JOIN users u ON u.id=d.user_id ORDER BY (d.status='requested') DESC, d.id DESC LIMIT 150")
+    for r in rows: r["img"] = model_img(r["gift"], r["model"], 128) if r["gift"] else ""
+    return rows
+
+
+REJECT_REASON = "Не смогли найти подарок на маркете по флору — попробуйте вывести позже."
 
 
 @app.post("/api/admin/win/{wid}/{act}", dependencies=[Depends(admin)])
-async def a_win(wid: int, act: str):
+async def a_win(wid: int, act: str, b: dict = Body(default={})):
     if act not in ("sent", "rejected"): raise HTTPException(400)
     w = q1("SELECT * FROM wins WHERE id=?", wid)
-    run("UPDATE wins SET status=? WHERE id=?", act, wid)
+    if not w: raise HTTPException(404)
+    # отклонение - подарок возвращается в инвентарь (доступен к продаже и выводу)
+    if not changed("UPDATE wins SET status=? WHERE id=? AND status='requested'", "sent" if act == "sent" else "ready", wid): raise HTTPException(400, "Заявка уже обработана")
+    reason = (b or {}).get("reason") or REJECT_REASON
+    run("UPDATE withdrawals SET status=?, reason=?, decided=? WHERE id=(SELECT max(id) FROM withdrawals WHERE win_id=? AND status='requested')",
+        act, reason if act == "rejected" else "", int(time.time()), wid)
+    if act == "rejected":
+        try: await bot.send_message(w["user_id"], f"↩️ <b>Вывод не выполнен</b>\n\n<blockquote>🎁 {E(w['prize'])}\n⚠️ {E(reason)}</blockquote>\n\n✅ Подарок вернулся в инвентарь — его можно вывести снова или продать", parse_mode="HTML")
+        except Exception: pass
     if act == "sent":
         try: await bot.send_message(w["user_id"], f"✅ <b>Подарок отправлен!</b>\n\n<blockquote>🎁 {E(w['prize'])}</blockquote>\n\n🎉 Он уже в вашем профиле Telegram", parse_mode="HTML")
         except Exception: pass

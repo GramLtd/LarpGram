@@ -447,6 +447,11 @@ body.maint>header,body.maint>main,body.maint>nav{display:none!important}
 .crgc.swap{animation:crswap .55s cubic-bezier(.2,1.4,.4,1)}.crgc.swap img{animation:popin .6s cubic-bezier(.2,1.5,.4,1)}@keyframes crswap{0%{transform:scale(.85);box-shadow:0 0 0 0 #3ee08f}40%{box-shadow:0 0 0 6px #3ee08f55}100%{transform:none;box-shadow:0 0 0 0 #3ee08f00}}
 .crgc.gone{opacity:.45;filter:grayscale(.8)}.crnx{margin:2px 6px 4px;font-size:12px;font-weight:700;color:var(--mut)}
 #g-crash button:disabled:not(.btn){opacity:.45}#g-crash input:disabled{opacity:.6}
+.ptabs button{font-size:13px}
+.hl{display:grid;gap:8px;margin-top:12px}.hr{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:linear-gradient(180deg,#24264d,#1b1c3a);border:1px solid var(--line)}
+.hr>div{flex:1;min-width:0}.hr b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hr small{display:block;color:var(--mut);font-size:12px;margin-top:2px}.hr small.neg{color:#ffb0ba}
+.hr em{font-style:normal;font-weight:800;font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:3px;color:var(--mut)}.hr em.pos{color:var(--ok)}.hr em.st-sent{color:var(--ok)}.hr em.st-rejected{color:var(--gold)}
+.hi{width:42px;height:42px;border-radius:14px;flex:none;display:grid;place-items:center;background:#ffffff0d}.hi.in{background:#3ee08f1a}.hi .st{width:24px;height:24px}.hi img{width:36px;height:36px;object-fit:contain}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.ov.on,.sheet>div,body.ready main:not([hidden]),#winfx *{animation:none!important}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -849,7 +854,7 @@ async function loadLive(){try{const l=await api('live');
 const M={mode:'bal',bet:100,bombs:3,auto:false,sel:new Set(),gift:null,g:null,busy:false};
 function mMult(b,k){let m=1;for(let i=0;i<k;i++)m*=(25-i)/(25-b-i);return k?Math.round(m*(S?.mines_edge||.96)*100)/100:1}
 const fmtM=m=>'×'+m.toFixed(2).replace('.',',');
-function renderMines(){M.prev=M.shown||new Set();M.shown=new Set();const el=$('g-mines'),g=M.g,live=g&&g.status=='live',k=g?g.opened.length:0,b=g?g.bombs:M.bombs;
+function renderMines(){if(!(M.g&&M.g.status=='live'))M.gift=fresh(M.gift);M.prev=M.shown||new Set();M.shown=new Set();const el=$('g-mines'),g=M.g,live=g&&g.status=='live',k=g?g.opened.length:0,b=g?g.bombs:M.bombs;
   const steps=[...Array(25-b)].map((_,i)=>i+1),cur=live?k:0,bet=g?g.bet:betVal();
   el.innerHTML=`<div class="gbar"><button class="ib ${sound?'':'off'}" id="mSnd" aria-label="Звук">${sound?IC.snd:IC.mute}</button><button class="ib ${fast?'on':''}" id="mFast" aria-label="Быстрый режим">${IC.bolt}</button>
    <div class="mults" id="mults">${steps.map(s=>`<div class="mu ${s==cur+1?'on':''} ${s<=cur?'done':''}">${fmtM(mMult(b,s))}${s==cur+1?`<small>${profit(bet,b,s)}${CI()}</small>`:''}</div>`).join('')}</div>
@@ -915,7 +920,7 @@ const U={src:{kind:'stars',value:100},target:null,busy:false,res:null,rot:0};
 function upChance(){if(!U.target)return 0;const s=U.src.value;return s>=U.target.value?0:Math.min(S?.upgrade_max||.8,s/U.target.value*(S?.upgrade_edge||.9))}
 function slotHtml(p,empty){if(!p||(p.kind=='gift'&&!p.id))return `<div class="slot">${p?'<b style="font-size:28px">+</b><small>Выбрать подарок</small>':empty}</div>`;
   return `<div class="slot full ${p.kind=='stars'?'ts':'t'+(p.pm!=null?tierP(p.pm):tierV(p.value,300))}">${pic(p)}<b>${p.kind=='stars'?'Звёзды':esc(p.gift)}</b>${p.model?`<small>${esc(p.model)}</small>`:''}<em>${p.kind=='stars'?price(p.value):price(p.value)}</em></div>`}
-function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
+function renderUpgrade(){if(U.src.kind=='nft'&&!U.busy&&!fresh(U.src))U.src={kind:'gift',value:0};const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
   el.innerHTML=`  <div class="upw"><button id="uSrc" style="min-width:0">${slotHtml(U.src,'Что улучшаем')}</button>
    <div class="gauge ${U.res||''}" id="gauge"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="none" stroke="#ffffff12" stroke-width="10"/>
     <circle cx="60" cy="60" r="54" fill="none" stroke="url(#ug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*ch} ${C}"/>
@@ -978,7 +983,8 @@ function rkInfo(){const st=K.st;if(!st)return null;const r=st.round,now=rkNow(),
   let m=ph=='crash'?r.crash:ph=='fly'?Math.min(S?.crash?.max||1000,Math.exp(SPD()*(now-r.fly_start))):1;
   if(ph=='fly'){if(K.mr==r.id&&m<K.mm)m=K.mm;K.mr=r.id;K.mm=m}/* в полёте множитель только растёт */
   const cur=st.mine.find(b=>b.round==r.id),next=st.mine.find(b=>b.round>r.id);return {r,ph,m,cur,next,now}}
-function renderCrash(){const el=$('g-crash');if(!el||!S)return;
+const fresh=g=>g&&(S?.inventory||[]).some(w=>w.id==g.id&&w.status=='ready')?g:null; // подарок ещё в инвентаре
+function renderCrash(){const el=$('g-crash');if(!el||!S)return;K.gift=fresh(K.gift);
   el.innerHTML=`<div class="crb"><canvas id="crc" aria-label="Полёт ракеты"></canvas><div class="crk" id="crk">${rocketSvg('game')}</div>
     <div class="crm"><b id="crx">x1,00</b><small id="crs">Подключаемся к раунду…</small><div class="crp" id="crp"><i></i></div></div><span class="crid" id="crid"></span></div>
   <div class="plh" id="crh"></div>
@@ -1168,6 +1174,15 @@ function statsHtml(){if(!ST)return '<p class="empty">Загрузка…</p>';co
   <div class="stt"><small>Пополнено</small><b>${price(ST.deposits)}</b><em>за всё время</em></div>
   <div class="stt"><small>Любимая игра</small>${ST.fav_game?`<b><span class="gi">${GICO[ST.fav_game]||''}</span>${GNAME[ST.fav_game]||ST.fav_game}</b>`:'<b>—</b>'}</div>
   <div class="stt"><small>Любимый кейс</small>${ST.fav_case?`<b>${fimg?`<img class="cimg" src="${esc(imgOf(fimg,128))}" alt="">`:''}${esc(ST.fav_case.title)}</b><em>открыт ${num(ST.fav_case.n)} ${plural(ST.fav_case.n,'раз','раза','раз')}</em>`:'<b>—</b>'}</div></div>`}
+let HI=null,HF='all';
+async function loadHist(){try{HI=await api('me/history');renderProfile()}catch(e){}}
+const METHN={stars:'Звёзды',ton:'GRAM',xrocket:'xRocket',gift:'Подарок'};
+function histHtml(){if(!HI)return '<p class="empty">Загрузка…</p>';
+  const d=t=>new Date(t*1000).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const items=[...HI.payments.map(p=>({t:p.paid_at||p.created,k:'in',p})),...HI.withdrawals.map(w=>({t:w.decided||w.created,k:'out',w}))].sort((a,b)=>b.t-a.t).filter(x=>HF=='all'||x.k==HF);
+  return `<div class="box seg" style="margin-top:14px">${[['all','Всё'],['in','Пополнения'],['out','Выводы']].map(([k,t])=>`<button data-hf="${k}" class="${HF==k?'on':''}">${t}</button>`).join('')}</div>
+   <div class="hl">${items.map(x=>x.k=='in'?`<div class="hr"><span class="hi in">${STAR}</span><div><b>Пополнение · ${METHN[x.p.method]||x.p.method}</b><small>${d(x.t)}${x.p.amount&&x.p.method!='stars'?' · '+(+x.p.amount).toLocaleString('ru-RU')+' '+esc(x.p.currency||''):''}</small></div><em class="${x.p.status=='paid'?'pos':''}">${x.p.status=='paid'?'+'+price(x.p.stars+x.p.bonus):'ожидает'}</em></div>`
+     :`<div class="hr"><span class="hi"><img src="${esc(th(x.w.gift,x.w.model,128))}" alt=""></span><div><b>Вывод · ${esc(x.w.gift)}</b><small>${d(x.t)} · ${esc(x.w.model)}</small>${x.w.status=='rejected'&&x.w.reason?`<small class="neg">${esc(x.w.reason)}</small>`:''}</div><em class="st-${x.w.status}">${{requested:'⏳ В обработке',sent:'✅ Отправлен',rejected:'↩️ Возвращён'}[x.w.status]||x.w.status}</em></div>`).join('')||'<p class="empty">Пока ничего нет.</p>'}</div>`}
 function promoHtml(){const p=S?.promo;
   return `<div class="card"><h3>Промокод</h3><p class="mut" style="margin-top:0">Промокод даёт бонус к следующему пополнению баланса любым способом.</p>
    <div class="promo"><input class="inp" id="prIn" placeholder="Промокод" autocomplete="off" autocapitalize="characters" enterkeyhint="done"><button class="btn" id="prGo">Активировать</button></div>
@@ -1177,18 +1192,19 @@ function renderProfile(){if(!$('ovProf').classList.contains('on'))return;const u
   <div class="prof"><div class="ava" style="${u.photo_url?`background-image:url('${esc(u.photo_url)}')`:''}">${u.photo_url?'':esc((u.first_name||'?')[0])}</div><div style="flex:1;min-width:0"><b>${esc(u.first_name||'Игрок')}</b><div class="big" style="font-size:22px;margin-top:4px">${price(S.balance)}</div></div>
    <div class="cursw" role="group" aria-label="Валюта цен"><button data-cur="stars" class="${CUR=='stars'?'on':''}" aria-label="Цены в звёздах">${STAR}</button><button data-cur="gram" class="${CUR=='gram'?'on':''}" aria-label="Цены в GRAM">${GRAM}</button></div></div>
   <div class="row2" style="margin-top:14px"><button class="btn" id="pTop">Пополнить</button><button class="btn ghost" id="pCat">Все NFT</button></div>
-  <div class="gsw glass ptabs" id="ptabs"><i class="lens" aria-hidden="true"></i><button data-pt="inv" class="${PT=='inv'?'on':''}">Инвентарь</button><button data-pt="stats" class="${PT=='stats'?'on':''}">Статистика</button><button data-pt="promo" class="${PT=='promo'?'on':''}">Промокод</button></div>
+  <div class="gsw glass ptabs" id="ptabs"><i class="lens" aria-hidden="true"></i><button data-pt="inv" class="${PT=='inv'?'on':''}">Инвентарь</button><button data-pt="stats" class="${PT=='stats'?'on':''}">Статистика</button><button data-pt="promo" class="${PT=='promo'?'on':''}">Промокод</button><button data-pt="hist" class="${PT=='hist'?'on':''}">История</button></div>
   ${PT=='inv'?`<h2>Инвентарь<small>${act.length} ${plural(act.length,'подарок','подарка','подарков')} · ${price(act.reduce((a,w)=>a+w.value,0))}</small></h2>
-  <div class="inv">${inv.map(invCard).join('')||'<p class="empty">Пока пусто — откройте кейс или сыграйте.</p>'}</div>`:PT=='stats'?statsHtml():promoHtml()}
+  <div class="inv">${inv.map(invCard).join('')||'<p class="empty">Пока пусто — откройте кейс или сыграйте.</p>'}</div>`:PT=='stats'?statsHtml():PT=='hist'?histHtml():promoHtml()}
   <p class="credit">Данные NFT: thanks to <a href="https://t.me/GiftChanges" target="_blank" rel="noopener">GiftChanges</a></p>`))return;
   $('pX').onclick=closeProf;$('pTop').onclick=()=>openTop();$('pCat').onclick=()=>openCatalog();
   requestAnimationFrame(()=>moveLens($('ptabs')));setTimeout(()=>moveLens($('ptabs')),480);
-  $$('#profIn [data-pt]').forEach(b=>b.onclick=()=>{PT=b.dataset.pt;renderProfile();if(PT=='stats')loadStats()});
+  $$('#profIn [data-pt]').forEach(b=>b.onclick=()=>{PT=b.dataset.pt;renderProfile();if(PT=='stats')loadStats();if(PT=='hist')loadHist()});
   $$('#profIn [data-cur]').forEach(b=>b.onclick=()=>setCur(b.dataset.cur));
   const pg=$('prGo');if(pg){const pi=$('prIn');pi.onkeydown=e=>{if(e.key=='Enter'){pi.blur();pg.click()}};
     pg.onclick=async()=>{const code=pi.value.trim();if(!code)return toast('Введите промокод');pg.disabled=true;
       try{const r=await api('promo','POST',{code});toast(`Промокод ${r.code} активирован: +${r.percent}% к пополнению`);sfx.win();hap('ok');await load()}catch(e){toast(e.message);hap('err')}pg.disabled=false}}
   if($('prTop'))$('prTop').onclick=()=>openTop();
+  $$('#profIn [data-hf]').forEach(b=>b.onclick=()=>{HF=b.dataset.hf;renderProfile()});
   $$('#profIn [data-a]').forEach(b=>b.onclick=()=>act_(b.dataset.a,+b.dataset.w,b))}
 function closeProf(){$('ovProf').classList.remove('on');afterClose()}
 function invCard(w){const st={sent:'Отправлен',requested:'⏳ Вывод до 24 ч'}[w.status];let body='';
@@ -1205,7 +1221,7 @@ async function act_(a,id,b){try{b.disabled=true;
     tg.shareToStory(w.story_url,{text:`Я выиграл ${w.gift} в GiftMafia`,widget_link:{url:`https://t.me/${S.bot}`,name:'GiftMafia'}});await api(`win/${id}/story`,'POST')}
   if(a=='friend'){if(!tg.isVersionAtLeast('8.0')){b.disabled=false;return toast('Обновите Telegram')}
     const {id:mid}=await api(`win/${id}/prepare`,'POST');tg.shareMessage(mid,async ok=>{if(ok){await api(`win/${id}/shared`,'POST');await load()}})}
-  if(a=='withdraw'){await api(`win/${id}/withdraw`,'POST');toast('Заявка принята. Вывод подарка в течение 24 ч.');hap('ok')}
+  if(a=='withdraw'){await api(`win/${id}/withdraw`,'POST');HI=null;toast('Заявка принята. Вывод подарка в течение 24 ч.');hap('ok')}
   if(a=='sell'){const r=await api(`win/${id}/sell`,'POST');toast(`+${price(r.amount)} на баланс`);hap('ok')}
   await load()}catch(e){toast(e.message);b.disabled=false}}
 function pickInv(cb,max){const all=(S?.inventory||[]).filter(w=>w.status=='ready'),inv=max?all.filter(w=>w.value<=max):all;

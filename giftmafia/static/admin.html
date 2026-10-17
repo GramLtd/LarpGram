@@ -139,10 +139,10 @@ function render(){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset
       <div class="chips">${[['requested','Ждут'],['sent','Отправлены'],['rejected','Отклонены'],['all','Все']].map(([k,t])=>`<button class="chip ${reqF==k?'on':''}" data-f="${k}">${t}</button>`).join('')}</div>
       <div class="list">${list.map(w=>`<div class="card req">${w.img?`<img src="${esc(w.img)}" alt="">`:''}
         <div class="who"><b>${esc(w.prize)}</b><small>#${w.id} · ≈ ${num(w.value)} ⭐ · ${w.username?`<a href="https://t.me/${esc(w.username)}" target="_blank" rel="noopener">@${esc(w.username)}</a>`:`<a href="tg://user?id=${w.user_id}">${esc(w.name||w.user_id)}</a>`}</small></div>
-        <span class="st ${w.status}">${{requested:'Ждёт',sent:'Отправлен',rejected:'Отклонён'}[w.status]||w.status}</span>
+        ${w.reason?`<small style="color:var(--mut);width:100%">${esc(w.reason)}</small>`:''}<span class="st ${w.status}">${{requested:'Ждёт',sent:'Отправлен',rejected:'Отклонён'}[w.status]||w.status}</span>
         ${w.status=='requested'?`<div class="acts"><button class="btn ok sm" data-w="${w.id}" data-a="sent">Отправлен</button><button class="btn bad sm" data-w="${w.id}" data-a="rejected">Отклонить</button></div>`:''}</div>`).join('')||'<p class="empty">Заявок нет.</p>'}</div>`;
     $$('[data-f]',M).forEach(b=>b.onclick=()=>{reqF=b.dataset.f;render()});
-    $$('[data-a]',M).forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api(`win/${b.dataset.w}/${b.dataset.a}`,'POST');toast(b.dataset.a=='sent'?'Отмечено как отправленное':'Заявка отклонена');await load()}catch(e){toast(e.message);b.disabled=false}})}
+    $$('[data-a]',M).forEach(b=>b.onclick=async()=>{let body={};if(b.dataset.a=='rejected'){const r=prompt('Причина (увидит пользователь):','Не смогли найти подарок на маркете по флору — попробуйте вывести позже.');if(r===null)return;body={reason:r}}b.disabled=true;try{await api(`win/${b.dataset.w}/${b.dataset.a}`,'POST',body);toast(b.dataset.a=='sent'?'Отмечено как отправленное':'Отклонено, подарок вернулся пользователю');await load()}catch(e){toast(e.message);b.disabled=false}})}
   if(view=='tasks'){M.innerHTML='<p class="empty">Загрузка…</p>';renderTasksAdmin()}
   if(view=='prices'){M.innerHTML=`<h2>Цены моделей<small id="pinfo"></small></h2>
       <p style="color:var(--mut);margin-bottom:10px">Цена модели: своя цена → флор модели на Portals (обновляется раз в сутки, шансы кейсов подгоняются автоматически) → формула, если модели нет в продаже. После своих правок нажмите «Подогнать шансы» у нужных кейсов.</p>
