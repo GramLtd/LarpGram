@@ -655,7 +655,7 @@ CaseView.prototype.q=function(s){return this.root.querySelector(s)};
 const preload=urls=>Promise.all([...new Set(urls)].filter(Boolean).map(u=>new Promise(r=>{const i=new Image();i.onload=i.onerror=r;i.src=u})));
 CaseView.prototype.render=function(){const c=this.c,me=this;
   this.root.innerHTML=`${inline_bar(this.inline,c)}
-  ${isFree(c)&&S.free_channel&&S.free_channel[0]?`<div class="card cond" style="margin-top:4px"><span class="tgi" style="width:42px;height:42px">${TGI}</span><div class="tt"><b>Условие: подписка на ${esc(S.free_channel[0])}</b><small>Без подписки подарок дня не откроется</small></div><button class="btn ghost" data-sub>Подписаться</button></div>`:''}
+  ${isFree(c)&&!this.inline&&S.free_channel&&S.free_channel[0]?`<div class="card cond" style="margin-top:4px"><span class="tgi" style="width:42px;height:42px">${TGI}</span><div class="tt"><b>Условие: подписка на ${esc(S.free_channel[0])}</b><small>Без подписки подарок дня не откроется</small></div><button class="btn ghost" data-sub>Подписаться</button></div>`:''}
   <div class="panel"><div class="ph">${cover(c)}<h1>${esc(c.title)}</h1></div>
   <div class="reels" data-r></div>
   <button class="btn cta" data-go></button>
