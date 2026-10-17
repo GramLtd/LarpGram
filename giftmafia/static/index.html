@@ -157,6 +157,7 @@ body.kb .tabs{transform:translateY(140%);opacity:0;pointer-events:none}
 .slot.full{border-style:solid;background:linear-gradient(180deg,var(--c1),var(--c2));border-color:#ffffff1a;border-bottom:3px solid var(--c3)}
 .slot img,.slot .coin{width:78%;aspect-ratio:1;object-fit:contain;filter:drop-shadow(0 6px 8px #0008)}.slot b{font-size:13px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.slot small{color:var(--mut);font-size:12px}
 .slot em{font-style:normal;font-weight:800;display:flex;align-items:center;gap:3px}
+.slot .uadd{color:#3ee08f;font-weight:800;display:flex;align-items:center;gap:3px}.uab{flex-wrap:wrap}.uab .ual{width:100%;padding:4px 8px 0;color:var(--mut);font-size:13px;font-weight:700}.uab .bet{font-size:20px;min-width:96px}.uab .sb{min-width:0;padding:0 10px}@media(max-width:374px){.uab [data-ua="100"]{display:none}}
 .gauge{position:relative;width:130px;height:130px}.gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
 .gauge .pt{position:absolute;inset:0;transition:transform 0s}.gauge .pt:before{content:"";position:absolute;left:50%;top:-4px;margin-left:-7px;border:7px solid transparent;border-top:14px solid #fff;filter:drop-shadow(0 2px 4px #000)}
 .gauge .pc2{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font:800 24px "Unbounded",system-ui}.gauge .pc2 small{font:700 12px "Manrope";color:var(--mut)}
@@ -916,10 +917,14 @@ async function cashout(){if(!M.g)return;M.busy=true;try{M.g=await api(`mines/${M
   M.busy=false;renderMines();load()}
 
 /* ---------- апгрейд ---------- */
-const U={src:{kind:'stars',value:100},target:null,busy:false,res:null,rot:0};
-function upChance(){if(!U.target)return 0;const s=U.src.value;return s>=U.target.value?0:Math.min(S?.upgrade_max||.8,s/U.target.value*(S?.upgrade_edge||.9))}
+const U={src:{kind:'gift',value:0},add:0,target:null,busy:false,res:null,rot:0};
+/* сумма ставки: подарок + звёзды, добавленные с баланса */
+const upSV=()=>U.src.value+(U.src.kind=='nft'?U.add:0);
+/* сколько звёзд имеет смысл добавить: до максимального шанса, но не больше баланса и лимита */
+function upAddMax(){const b=Math.min(S?.balance||0,S?.game_max_bet||50000);if(!U.target||U.src.kind!='nft')return b;return Math.max(0,Math.min(b,Math.ceil(U.target.value*(S?.upgrade_max||.8)/(S?.upgrade_edge||.9))-U.src.value))}
+function upChance(){if(!U.target)return 0;const s=upSV();return s>=U.target.value?0:Math.min(S?.upgrade_max||.8,s/U.target.value*(S?.upgrade_edge||.9))}
 function slotHtml(p,empty){if(!p||(p.kind=='gift'&&!p.id))return `<div class="slot">${p?'<b style="font-size:28px">+</b><small>Выбрать подарок</small>':empty}</div>`;
-  return `<div class="slot full ${p.kind=='stars'?'ts':'t'+(p.pm!=null?tierP(p.pm):tierV(p.value,300))}">${pic(p)}<b>${p.kind=='stars'?'Звёзды':esc(p.gift)}</b>${p.model?`<small>${esc(p.model)}</small>`:''}<em>${p.kind=='stars'?price(p.value):price(p.value)}</em></div>`}
+  return `<div class="slot full ${p.kind=='stars'?'ts':'t'+(p.pm!=null?tierP(p.pm):tierV(p.value,300))}">${pic(p)}<b>${p.kind=='stars'?'Звёзды':esc(p.gift)}</b>${p.model?`<small>${esc(p.model)}</small>`:''}<em>${price(p.value)}</em>${p===U.src&&p.kind=='nft'&&U.add?`<small class="uadd">+ ${price(U.add)}</small>`:''}</div>`}
 function renderUpgrade(){if(U.src.kind=='nft'&&!U.busy&&!fresh(U.src))U.src={kind:'gift',value:0};const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
   el.innerHTML=`  <div class="upw"><button id="uSrc" style="min-width:0">${slotHtml(U.src,'Что улучшаем')}</button>
    <div class="gauge ${U.res||''}" id="gauge"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="none" stroke="#ffffff12" stroke-width="10"/>
@@ -928,30 +933,37 @@ function renderUpgrade(){if(U.src.kind=='nft'&&!U.busy&&!fresh(U.src))U.src={kin
     <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2">${U.target?(ch*100).toFixed(ch<.1?2:1).replace('.',',')+'%':'—'}<small>шанс</small></div></div>
    <button id="uTgt" style="min-width:0">${slotHtml(U.target,'<b style="font-size:28px">+</b><small>Выбрать NFT</small>')}</button></div>
   <div class="box seg" style="margin-top:14px"><button data-us="gift" class="${U.src.kind!='stars'?'on':''}">Подарком</button><button data-us="stars" class="${U.src.kind=='stars'?'on':''}">Звёздами</button></div>
+  ${U.src.kind!='stars'?`<div class="box uab"><span class="ual">Добавить с баланса</span><div class="bet">${CI()}<input id="uAdd" inputmode="decimal" value="${U.add?inCur(U.add):''}" placeholder="0" aria-label="Добавить с баланса"></div><button class="sb" data-ua="100">+100</button><button class="sb" data-ua="500">+500</button><button class="sb" data-ua="max" style="color:#fff">МАКС</button>${U.add?'<button class="sb" data-ua="0" aria-label="Сбросить">✕</button>':''}</div>`:''}
   ${U.src.kind=='stars'?`<div class="box"><div class="bet">${CI()}<input id="uBet" inputmode="decimal" value="${inCur(U.src.value)}" aria-label="Сумма"></div><button class="sb" data-ub="h">½</button><button class="sb" data-ub="d">2×</button><button class="sb" data-ub="max" style="color:#fff">МАКС</button></div>`:''}
   <div class="ks">${[1.5,2,3,5,10].map(k=>`<button data-k="${k}">x${k}</button>`).join('')}</div>
   <button class="btn" id="uGo" style="margin-top:12px" ${!U.target||!ch||U.busy?'disabled':''}>${U.src.kind=='gift'&&!U.src.id?'Выберите подарок':U.target?(ch?'Улучшить':'Цель дешевле ставки'):'Выберите цель'}</button>
   <p class="maxw" style="justify-content:center;text-align:center">Чем ближе ставка к цене цели, тем выше шанс</p>`;
   $('uSrc').onclick=()=>{if(U.busy)return;if(U.src.kind=='stars')return;pickInv(w=>{U.src={...w,kind:'nft'};U.res=null;renderUpgrade()})};
   $('uTgt').onclick=()=>{if(!U.busy)openCatalog(p=>{U.target=p;U.res=null;renderUpgrade()})};
-  $$('[data-us]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;U.res=null;if(b.dataset.us=='stars')U.src={kind:'stars',value:Math.max(1,Math.min(100,S.balance||100))};else{U.src={kind:'gift',value:0};pickInv(w=>{U.src={...w,kind:'nft'};renderUpgrade()})}renderUpgrade()});
+  $$('[data-us]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;U.res=null;U.add=0;if(b.dataset.us=='stars')U.src={kind:'stars',value:Math.max(1,Math.min(100,S.balance||100))};else{U.src={kind:'gift',value:0};pickInv(w=>{U.src={...w,kind:'nft'};renderUpgrade()})}renderUpgrade()});
   $$('[data-ub]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;const v=U.src.value;U.src.value=Math.max(MINB(),Math.min(Math.max(MINB(),S.balance),b.dataset.ub=='h'?v/2|0:b.dataset.ub=='d'?v*2:S.balance));U.res=null;renderUpgrade()});
+  $$('[data-ua]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;const k=b.dataset.ua,mx=upAddMax();
+    if(k!='0'&&U.src.kind!='nft')return toast('Сначала выберите подарок');
+    if(k!='0'&&!(S.balance>0))return openTop(100);
+    U.add=k=='0'?0:k=='max'?mx:Math.min(mx,U.add+ +k);if(k!='0'&&k!='max'&&U.add>=mx)toast(U.target&&mx<S.balance?'Это уже максимальный шанс':'Больше нет звёзд на балансе');U.res=null;renderUpgrade()});
+  const ai=$('uAdd');if(ai){ai.disabled=U.busy;ai.onchange=()=>{if(U.busy)return;U.add=Math.max(0,Math.min(upAddMax(),Math.round(fromCur(ai.value)||0)));U.res=null;renderUpgrade()}};
   const bi=$('uBet');if(bi){bi.disabled=U.busy;bi.onchange=()=>{if(U.busy)return;U.src.value=Math.max(1,fromCur(bi.value));U.res=null;renderUpgrade()}};
-  $$('[data-k]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;if(!U.src.value)return toast('Сначала выберите, что улучшаем');U.target=nearest(U.src.value*+b.dataset.k);U.res=null;renderUpgrade()});
-  $('uGo').onclick=doUpgrade;$$('#g-upgrade .sb,#g-upgrade [data-k],#g-upgrade [data-us]').forEach(b=>b.disabled=U.busy)}
+  $$('[data-k]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;if(!U.src.value)return toast('Сначала выберите, что улучшаем');U.target=nearest(upSV()*+b.dataset.k);U.res=null;renderUpgrade()});
+  $('uGo').onclick=doUpgrade;$$('#g-upgrade .sb,#g-upgrade [data-k],#g-upgrade [data-us],#g-upgrade [data-ua]').forEach(b=>b.disabled=U.busy)}
 function allModels(){if(allModels.c)return allModels.c;return allModels.c=CAT.flatMap(g=>g.models.map(([m,pm])=>({kind:'nft',gift:g.name,model:m,pm,img:mimg(g.name,m),value:nftVal(g.name,m)})))}
-function nearest(v){const a=allModels().filter(p=>p.value>U.src.value&&PRC[p.gift]?.[p.model]!==0);if(!a.length)return null;
+function nearest(v){const a=allModels().filter(p=>p.value>upSV()&&PRC[p.gift]?.[p.model]!==0);if(!a.length)return null;
   const best=a.reduce((b,p)=>Math.abs(Math.log(p.value/v))<Math.abs(Math.log(b.value/v))?p:b);const close=a.filter(p=>p.value>=best.value*.97&&p.value<=best.value*1.03);return close[Math.random()*close.length|0]}
 async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
   if(U.src.kind=='stars'&&U.src.value<MINB())return toast('Минимальная ставка '+price(MINB()));
   if(U.src.kind=='stars'&&S.balance<U.src.value)return openTop(U.src.value-S.balance);
+  if(U.src.kind=='nft'&&U.add>S.balance)return openTop(U.add-S.balance);
   U.busy=true;U.res=null;renderUpgrade();
-  try{const r=await api('upgrade','POST',U.src.kind=='stars'?{stars:U.src.value,gift:U.target.gift,model:U.target.model}:{win_id:U.src.id,gift:U.target.gift,model:U.target.model});
+  try{const r=await api('upgrade','POST',U.src.kind=='stars'?{stars:U.src.value,gift:U.target.gift,model:U.target.model}:{win_id:U.src.id,add:U.add,gift:U.target.gift,model:U.target.model});
     const end=U.rot-U.rot%360+360*(fast?2:5)+r.roll*360,p=$('ptr');
     p.style.transition=`transform ${fast?1.2:3.6}s cubic-bezier(.12,.7,.1,1)`;requestAnimationFrame(()=>p.style.transform=`rotate(${end}deg)`);
     await new Promise(z=>setTimeout(z,fast?1300:3700));U.rot=end;
     U.res=r.ok?'win':'lose';if(r.ok){sfx.win();hap('ok')}else{sfx.lose();hap('err')}
-    if(U.src.kind!='stars')U.src={kind:'gift',value:0};
+    if(U.src.kind!='stars'){U.src={kind:'gift',value:0};U.add=0}
     U.busy=false;renderUpgrade();await load();
     if(r.ok)showWins([r.win]);else toast('Не повезло — попробуйте ещё')}
   catch(e){U.busy=false;toast(e.message);renderUpgrade()}}
@@ -1146,7 +1158,7 @@ function renderCat(){const total=CAT.reduce((a,g)=>a+g.models.length,0);
   function list(){const L=$('catList');
     if(catQ||catColl){let ms=catColl?catColl.models.map(([m,pm])=>({kind:'nft',gift:catColl.name,model:m,pm,img:mimg(catColl.name,m),value:nftVal(catColl.name,m)})):allModels();
       if(catQ)ms=ms.filter(p=>(p.gift+' '+p.model).toLowerCase().includes(catQ));
-      if(catPick&&U.src.value)ms=ms.filter(p=>p.value>U.src.value&&PRC[p.gift]?.[p.model]!==0);
+      if(catPick&&U.src.value)ms=ms.filter(p=>p.value>upSV()&&PRC[p.gift]?.[p.model]!==0);
       const shown=ms.slice(0,180);
       L.innerHTML=(ms.length?`<p class="maxw" style="margin:0 0 10px">${num(ms.length)} ${plural(ms.length,'модель','модели','моделей')}${ms.length>shown.length?' — показаны первые '+shown.length:''}</p>`:'')+
         `<div class="grid3">${shown.map((p,i)=>`<button class="pc t${tierP(p.pm)}" data-i="${i}"><div class="pi"><img src="${esc(imgOf(p))}" alt="" loading="lazy" decoding="async"></div><b>${catColl?esc(p.model):esc(p.gift)+' · '+esc(p.model)}</b><em>${price(p.value)}</em></button>`).join('')}</div>`+(ms.length?'':'<p class="empty">Ничего не нашлось.</p>');

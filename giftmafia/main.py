@@ -792,7 +792,7 @@ def state(uid: int = Depends(auth)):
             "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "min_bet": MIN_BET, "game_max_bet": GAME_MAX_BET, "gift_bet_max": GIFT_BET_MAX,
             "crash": {"speed": CRASH_SPEED, "max": CRASH_MAX, "max_win": CRASH_MAX_WIN},
             "free_channel": chat_ref(setting("free_channel")), "ton_stars": TON_STARS,
-            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
+            "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE, "upgrade_edge": UPGRADE_EDGE}
 
 
 CATALOG_CACHE = {}
@@ -1778,12 +1778,20 @@ def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
     if gift not in CATALOG: raise HTTPException(404, "Нет такой коллекции")
     target = nft_value(gift, model)
     if not priced(gift, model): raise HTTPException(400, "У этой модели нет рыночной цены — выберите другую")
-    src = int(b["stars"]) if not b.get("win_id") else own_win(int(b["win_id"]), uid)["value"]
+    wid = int(b.get("win_id") or 0)
+    add = int(b.get("add") or 0) if wid else 0  # «добавить с баланса» к подарку: звёзды повышают шанс
+    if add < 0 or add > GAME_MAX_BET: raise HTTPException(400, f"Добавить можно до {GAME_MAX_BET:,} ⭐".replace(",", " "))
+    src = int(b["stars"]) if not wid else own_win(wid, uid)["value"] + add
     if src < 1: raise HTTPException(400, "Выберите, что улучшать")
-    if not b.get("win_id") and src < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")
+    if not wid and src < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")
     if src >= target: raise HTTPException(400, "Цель должна быть дороже ставки")
     chance = min(UPGRADE_MAX_CHANCE, src / target * UPGRADE_EDGE)
-    if b.get("win_id"): take_item(uid, int(b["win_id"]))
+    if wid:
+        if add: charge(uid, add)
+        try: take_item(uid, wid)
+        except HTTPException:
+            if add: credit(uid, add)
+            raise
     else: charge(uid, src)
     r = secrets.SystemRandom().random()
     win = add_win(uid, nft_item(gift, model), "ready", "upgrade") if r < chance else None
