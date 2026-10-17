@@ -887,13 +887,13 @@ function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
    <div class="gauge ${U.res||''}" id="gauge"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" fill="none" stroke="#ffffff12" stroke-width="10"/>
     <circle cx="60" cy="60" r="54" fill="none" stroke="url(#ug)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*ch} ${C}"/>
     <defs><linearGradient id="ug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg>
-    <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg><small>${U.res=='win'?'Успех':U.res=='lose'?'Мимо':'шкала шанса'}</small></div></div>
+    <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2">${(ch*100).toFixed(ch<.1?2:1).replace('.',',')}%<small>шанс</small></div></div>
    <button id="uTgt" style="min-width:0">${slotHtml(U.target,'<b style="font-size:28px">+</b><small>Выбрать NFT</small>')}</button></div>
   <div class="box seg" style="margin-top:14px"><button data-us="stars" class="${U.src.kind=='stars'?'on':''}">Звёздами</button><button data-us="gift" class="${U.src.kind!='stars'?'on':''}">Подарком</button></div>
   ${U.src.kind=='stars'?`<div class="box"><div class="bet">${CI()}<input id="uBet" inputmode="decimal" value="${inCur(U.src.value)}" aria-label="Сумма"></div><button class="sb" data-ub="h">½</button><button class="sb" data-ub="d">2×</button><button class="sb" data-ub="max" style="color:#fff">МАКС</button></div>`:''}
   <div class="ks">${[1.5,2,3,5,10].map(k=>`<button data-k="${k}">x${k}</button>`).join('')}</div>
   <button class="btn" id="uGo" style="margin-top:12px" ${!U.target||!ch||U.busy?'disabled':''}>${U.src.kind=='gift'&&!U.src.id?'Выберите подарок':U.target?(ch?'Улучшить':'Цель дешевле ставки'):'Выберите цель'}</button>
-  <p class="maxw" style="justify-content:center;text-align:center">Чем ближе ставка к цене цели, тем полнее шкала и выше шанс</p>`;
+  <p class="maxw" style="justify-content:center;text-align:center">Чем ближе ставка к цене цели, тем выше шанс</p>`;
   $('uSrc').onclick=()=>{if(U.busy)return;if(U.src.kind=='stars')return;pickInv(w=>{U.src={...w,kind:'nft'};U.res=null;renderUpgrade()})};
   $('uTgt').onclick=()=>{if(!U.busy)openCatalog(p=>{U.target=p;U.res=null;renderUpgrade()})};
   $$('[data-us]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;U.res=null;if(b.dataset.us=='stars')U.src={kind:'stars',value:Math.max(1,Math.min(100,S.balance||100))};else{U.src={kind:'gift',value:0};pickInv(w=>{U.src={...w,kind:'nft'};renderUpgrade()})}renderUpgrade()});
