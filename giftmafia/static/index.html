@@ -927,7 +927,7 @@ function renderUpgrade(){if(U.src.kind=='nft'&&!U.busy&&!fresh(U.src))U.src={kin
     <defs><linearGradient id="ug"><stop offset="0" stop-color="#5a6cff"/><stop offset="1" stop-color="#3ee08f"/></linearGradient></defs></svg>
     <div class="pt" id="ptr" style="transform:rotate(${U.rot}deg)"></div><div class="pc2">${U.target?(ch*100).toFixed(ch<.1?2:1).replace('.',',')+'%':'—'}<small>шанс</small></div></div>
    <button id="uTgt" style="min-width:0">${slotHtml(U.target,'<b style="font-size:28px">+</b><small>Выбрать NFT</small>')}</button></div>
-  <div class="box seg" style="margin-top:14px"><button data-us="stars" class="${U.src.kind=='stars'?'on':''}">Звёздами</button><button data-us="gift" class="${U.src.kind!='stars'?'on':''}">Подарком</button></div>
+  <div class="box seg" style="margin-top:14px"><button data-us="gift" class="${U.src.kind!='stars'?'on':''}">Подарком</button><button data-us="stars" class="${U.src.kind=='stars'?'on':''}">Звёздами</button></div>
   ${U.src.kind=='stars'?`<div class="box"><div class="bet">${CI()}<input id="uBet" inputmode="decimal" value="${inCur(U.src.value)}" aria-label="Сумма"></div><button class="sb" data-ub="h">½</button><button class="sb" data-ub="d">2×</button><button class="sb" data-ub="max" style="color:#fff">МАКС</button></div>`:''}
   <div class="ks">${[1.5,2,3,5,10].map(k=>`<button data-k="${k}">x${k}</button>`).join('')}</div>
   <button class="btn" id="uGo" style="margin-top:12px" ${!U.target||!ch||U.busy?'disabled':''}>${U.src.kind=='gift'&&!U.src.id?'Выберите подарок':U.target?(ch?'Улучшить':'Цель дешевле ставки'):'Выберите цель'}</button>
