@@ -271,6 +271,7 @@ CREATE TABLE IF NOT EXISTS withdrawals(id INTEGER PRIMARY KEY AUTOINCREMENT, use
   status TEXT DEFAULT 'requested', reason TEXT DEFAULT '', created INT, decided INT DEFAULT 0);
 CREATE TABLE IF NOT EXISTS mines(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, bet INT, bombs INT, field TEXT, seed TEXT, opened TEXT DEFAULT '[]',
   status TEXT DEFAULT 'live', payout INT DEFAULT 0, created INT);
+CREATE TABLE IF NOT EXISTS balance_log(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, amount INT, balance INT, note TEXT DEFAULT '', created INT);
 CREATE TABLE IF NOT EXISTS wd_msgs(win_id INT, chat_id INT, msg_id INT, html TEXT DEFAULT '', PRIMARY KEY(win_id, chat_id));
 CREATE TABLE IF NOT EXISTS broadcasts(id INTEGER PRIMARY KEY AUTOINCREMENT, html TEXT, photo TEXT DEFAULT '', buttons TEXT DEFAULT '[]', status TEXT DEFAULT 'running',
   total INT DEFAULT 0, sent INT DEFAULT 0, failed INT DEFAULT 0, error TEXT DEFAULT '', created INT, finished INT DEFAULT 0);
@@ -2279,7 +2280,42 @@ def a_user(uid: int):
     if not u: raise HTTPException(404, "Нет пользователя")
     return {"user": u, "stats": user_stats(uid), "refs": q1("SELECT COUNT(*) n FROM users WHERE ref_by=?", uid)["n"],
             "payments": q("SELECT method,stars,bonus,amount,currency,status,created FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 20", uid),
-            "bets": q("SELECT game,ref,amount,payout,created FROM bets WHERE user_id=? ORDER BY id DESC LIMIT 30", uid)}
+            "bets": q("SELECT game,ref,amount,payout,created FROM bets WHERE user_id=? ORDER BY id DESC LIMIT 30", uid),
+            "grants": q("SELECT amount,balance,note,created FROM balance_log WHERE user_id=? ORDER BY id DESC LIMIT 20", uid)}
+
+
+def find_user(ref):
+    """@username, username или числовой id -> строка users."""
+    t = str(ref or "").strip().lstrip("@")
+    if not t: return None
+    return q1("SELECT * FROM users WHERE id=?", int(t)) if t.isdigit() else q1("SELECT * FROM users WHERE lower(username)=?", t.lower())
+
+
+@app.get("/api/admin/find_user", dependencies=[Depends(admin)])
+def a_find_user(u: str = ""):
+    r = find_user(u)
+    return {"user": {k: r[k] for k in ("id", "username", "name", "balance")} if r else None}
+
+
+@app.post("/api/admin/balance", dependencies=[Depends(admin)])
+async def a_balance(b: dict):
+    """Выдать (+) или списать (-) звёзды игроку вручную. Не считается пополнением в статистике, пишется в журнал."""
+    u = find_user(b.get("user"))
+    if not u: raise HTTPException(404, "Игрок не найден: укажите @username или id (игрок должен хотя бы раз открыть мини-апп)")
+    try: amount = int(str(b.get("amount", "")).replace(" ", ""))
+    except ValueError: raise HTTPException(400, "Сумма: целое число, например 500 или -200")
+    if not amount or abs(amount) > 10_000_000: raise HTTPException(400, "Сумма: от 1 до 10 000 000 ⭐ (минус — списать)")
+    note = str(b.get("note") or "").strip()[:200]
+    if amount > 0: credit(u["id"], amount)
+    elif not changed("UPDATE users SET balance=balance+? WHERE id=? AND balance>=?", amount, u["id"], -amount):
+        raise HTTPException(400, f"У игрока только {N(u['balance'])} ⭐ — столько списать нельзя")
+    bal = q1("SELECT balance FROM users WHERE id=?", u["id"])["balance"]
+    run("INSERT INTO balance_log(user_id,amount,balance,note,created) VALUES(?,?,?,?,?)", u["id"], amount, bal, note, int(time.time()))
+    if b.get("notify") and amount > 0:
+        try: await bot.send_message(u["id"], f"🎁 <b>Вам начислено {N(amount)} ⭐</b>\n\n<blockquote>" + (f"💬 {E(note)}\n" if note else "") + f"⭐ Баланс: <b>{N(bal)}</b></blockquote>",
+                                    parse_mode="HTML", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🎁 Открыть GiftMafia", web_app=WebAppInfo(url=WEBAPP_URL), style="primary")]]))
+        except Exception as e: print("grant notify:", e)
+    return {"ok": True, "user": {"id": u["id"], "username": u["username"], "name": u["name"]}, "amount": amount, "balance": bal}
 
 
 @app.get("/api/admin/utm", dependencies=[Depends(admin)])

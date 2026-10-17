@@ -81,7 +81,7 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .tip small{display:block;color:var(--mut);font-size:11px}.tip b{font-size:14px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:640px){.two{grid-template-columns:1fr}}
 .tbl{padding:4px 16px}.tr{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}.tr:last-child{border:0}
-.tr>span:first-child{flex:1;min-width:0;font-weight:800}.tr>span{color:var(--mut);white-space:nowrap}.tr b{white-space:nowrap}
+.tr>span:first-child{flex:1;min-width:0;font-weight:800;overflow:hidden;text-overflow:ellipsis}.tr>span{color:var(--mut);white-space:nowrap}.tr b{white-space:nowrap}
 .pos{color:var(--ok)}.neg{color:var(--bad)}
 .urow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;text-align:left;width:100%}.uav{width:42px;height:42px;border-radius:50%;background:var(--card2);display:grid;place-items:center;font-weight:800;flex:none}
 .urow .who{flex:1;min-width:160px}.urow .who b{display:block}.urow .who b small,.urow .who>small{color:var(--mut);font-weight:600}
@@ -101,6 +101,7 @@ h2 small{font:700 14px "Manrope";color:var(--mut)}
 .eu img+small,.eu img+button{margin-left:auto}.eu small{color:var(--gold);font-size:12px}.eu .btn{margin-left:auto}.eu small+.btn{margin-left:8px}.eu.no{background:#ffc83d12}
 .epick{position:fixed;inset:0;z-index:50;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}.epick .card{max-width:520px;width:100%;max-height:80vh;overflow:auto}
 .eadd{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:8px;margin-top:8px;max-width:100%}.eadd .btn{padding:0 12px}.eadd .inp{min-width:0}#eaE{text-align:center;font-size:20px}
+.grr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}@media(max-width:560px){.grr{grid-template-columns:1fr}}
 .mtc.on{border-color:#ff5a6e66;box-shadow:0 0 0 1px #ff5a6e33}
 .bcbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.bcbar button{height:36px;min-width:40px;padding:0 10px;border-radius:10px;background:#ffffff0d;font-weight:800}
 .bcbar button:hover{background:#ffffff1f}.bcta{width:100%;min-height:170px;height:auto;padding:12px;resize:vertical;font:600 14px/1.5 ui-monospace,Menlo,monospace;color:#fff}
@@ -243,10 +244,32 @@ addEventListener('resize',()=>{if(view=='stats'&&DD)drawChart()});
 /* ---------- пользователи ---------- */
 let US='recent',UQ='',UU=null;
 async function renderUsers(){const M=$('main');
-  M.innerHTML=`<h2>Пользователи<small id="ucnt"></small></h2><div class="price"><input class="inp" id="uq" style="flex:1;min-width:180px" placeholder="Поиск: id, @username или имя" value="${esc(UQ)}"></div>
+  M.innerHTML=`<h2>Выдать баланс</h2>${grantHtml()}<h2>Пользователи<small id="ucnt"></small></h2><div class="price"><input class="inp" id="uq" style="flex:1;min-width:180px" placeholder="Поиск: id, @username или имя" value="${esc(UQ)}"></div>
    <div class="chips">${[['recent','Недавние'],['deposits','Пополнения'],['turnover','Оборот'],['ggr','Доход'],['balance','Баланс']].map(([k,t])=>`<button class="chip ${US==k?'on':''}" data-s="${k}">${t}</button>`).join('')}</div><div class="list" id="ulist"><p class="empty">Загрузка…</p></div>`;
   let tm;$('uq').oninput=e=>{clearTimeout(tm);tm=setTimeout(()=>{UQ=e.target.value;loadUsers()},300)};
-  $$('[data-s]',M).forEach(b=>b.onclick=()=>{US=b.dataset.s;$$('[data-s]',M).forEach(x=>x.classList.toggle('on',x==b));loadUsers()});loadUsers()}
+  $$('[data-s]',M).forEach(b=>b.onclick=()=>{US=b.dataset.s;$$('[data-s]',M).forEach(x=>x.classList.toggle('on',x==b));loadUsers()});grantBind(null,loadUsers);loadUsers()}
+/* ---------- выдача баланса ---------- */
+function grantHtml(u){return `<div class="card set" id="gr">
+  ${u?'':`<label>Игрок<input class="inp" id="grU" placeholder="@username или id" autocomplete="off"></label><small id="grF" style="color:var(--mut);font-size:13px;min-height:18px"></small>`}
+  <div class="grr"><label>Сумма ⭐ (минус — списать)<input class="inp" id="grA" inputmode="numeric" placeholder="500"></label>
+   <div class="chips" style="margin:0;align-self:end">${[100,500,1000,5000].map(v=>`<button class="chip" data-ga="${v}" type="button">+${num(v)}</button>`).join('')}</div></div>
+  <label>Комментарий (увидит игрок в уведомлении)<input class="inp" id="grN" maxlength="200" placeholder="Компенсация за техработы"></label>
+  <label style="display:flex;align-items:center;gap:10px;color:#fff"><button class="sw on" id="grS" type="button" aria-label="Уведомить"></button>Уведомить игрока в боте</label>
+  <button class="btn" id="grGo">Начислить</button></div>`}
+function grantBind(u,after){let found=u||null;const A=$('grA'),go=$('grGo');
+  const lbl=()=>{const v=parseInt((A.value||'').replace(/[^\d-]/g,''))||0;go.textContent=v<0?`Списать ${num(-v)} ⭐`:v>0?`Начислить ${num(v)} ⭐`:'Начислить';go.classList.toggle('bad',v<0)};
+  A.oninput=lbl;$$('[data-ga]').forEach(b=>b.onclick=()=>{A.value=(parseInt(A.value)||0)+ +b.dataset.ga;lbl()});
+  $('grS').onclick=()=>$('grS').classList.toggle('on');
+  const U=$('grU');if(U){let t;U.oninput=()=>{found=null;clearTimeout(t);const v=U.value.trim();if(!v){$('grF').textContent='';return}
+    t=setTimeout(async()=>{try{const r=await api('find_user?u='+encodeURIComponent(v));if(U.value.trim()!=v)return;found=r.user;
+      $('grF').innerHTML=found?`<span style="color:var(--ok)">✓ ${esc(found.name||'')}${found.username?' @'+esc(found.username):''} · id ${found.id} · баланс ${num(found.balance)} ⭐</span>`:'<span style="color:var(--bad)">Игрок не найден — он должен хотя бы раз открыть мини-апп</span>'}catch(e){}},350)}}
+  go.onclick=async()=>{const who=u?String(u.id):(U.value.trim()),a=parseInt((A.value||'').replace(/[^\d-]/g,''))||0;
+    if(!who)return toast('Укажите игрока');if(!a)return toast('Укажите сумму');
+    const name=found?(found.username?'@'+found.username:found.name||found.id):who;
+    if(!confirm(a>0?`Начислить ${num(a)} ⭐ игроку ${name}?`:`Списать ${num(-a)} ⭐ у игрока ${name}?`))return;
+    go.disabled=true;try{const r=await api('balance','POST',{user:who,amount:a,note:$('grN').value,notify:$('grS').classList.contains('on')});
+      toast(`${a>0?'Начислено':'Списано'} ${num(Math.abs(a))} ⭐ · баланс ${r.user.username?'@'+r.user.username:r.user.id}: ${num(r.balance)} ⭐`);
+      A.value='';$('grN').value='';lbl();if(found)found.balance=r.balance;if(U)U.oninput();after&&after()}catch(e){toast(e.message)}go.disabled=false}}
 const ago=t=>{if(!t)return 'никогда';const s=Date.now()/1000-t;return s<120?'сейчас':s<3600?Math.round(s/60)+' мин назад':s<86400?Math.round(s/3600)+' ч назад':Math.round(s/86400)+' дн назад'};
 async function loadUsers(){try{UU=(await api(`users?search=${encodeURIComponent(UQ)}&sort=${US}`)).users}catch(e){return toast(e.message)}
   const L=$('ulist');if(!L)return;$('ucnt').textContent=UU.length+(UU.length>=50?'+':'');
@@ -261,9 +284,11 @@ async function userCard(id){let d;try{d=await api('user/'+id)}catch(e){return to
     <div class="card stat"><small>Игр / выигрышей</small><b>${num(s.games)} / ${num(s.wins)}</b></div><div class="card stat"><small>Любимая игра</small><b>${GAME[s.fav_game]||'—'}</b></div>
     <div class="card stat"><small>Любимый кейс</small><b style="font-size:18px">${esc(s.fav_case?.title||'—')}</b></div><div class="card stat"><small>Лучший выигрыш</small><b style="font-size:18px">${s.best?num(s.best.value)+' ⭐':'—'}</b><em>${esc(s.best?.prize||'')}</em></div>
     <div class="card stat"><small>Друзей</small><b>${num(d.refs)}</b></div><div class="card stat"><small>Регистрация</small><b style="font-size:16px">${new Date(u.created*1000).toLocaleDateString('ru-RU')}</b><em>${u.utm?'UTM '+esc(u.utm):'без метки'}</em></div></div>
+   <h2>Изменить баланс</h2>${grantHtml(u)}
+   ${d.grants.length?`<h2>Ручные начисления</h2><div class="card tbl">${d.grants.map(g=>`<div class="tr"><span>${esc(g.note||'без комментария')}</span><span>${new Date(g.created*1000).toLocaleString('ru-RU')}</span><b class="${g.amount>0?'pos':'neg'}">${g.amount>0?'+':''}${num(g.amount)} ⭐</b></div>`).join('')}</div>`:''}
    <h2>Пополнения</h2><div class="card tbl">${d.payments.map(p=>`<div class="tr"><span>${METH[p.method]||p.method}</span><span>${p.amount?(+p.amount).toLocaleString('ru-RU')+' '+esc(p.currency):''}</span><span>${new Date(p.created*1000).toLocaleString('ru-RU')}</span><b class="${p.status=='paid'?'pos':''}">${num(p.stars)} ⭐${p.bonus?' +'+num(p.bonus):''}${p.status!='paid'?' · '+p.status:''}</b></div>`).join('')||'<p class="empty">Нет</p>'}</div>
    <h2>Последние ставки</h2><div class="card tbl">${d.bets.map(b=>`<div class="tr"><span>${GAME[b.game]||b.game}</span><span>${new Date(b.created*1000).toLocaleString('ru-RU')}</span><span>${num(b.amount)} ⭐</span><b class="${b.payout>b.amount?'pos':'neg'}">${num(b.payout)} ⭐</b></div>`).join('')||'<p class="empty">Нет</p>'}</div>`;
-  $('ub').onclick=renderUsers;scrollTo(0,0)}
+  $('ub').onclick=renderUsers;grantBind(u,()=>userCard(id));scrollTo(0,0)}
 /* ---------- UTM ---------- */
 async function renderUtm(){const M=$('main');let d;try{d=await api('utm')}catch(e){return toast(e.message)}
   M.innerHTML=`<h2>UTM-ссылки<small>${d.links.length}</small></h2>
