@@ -29,7 +29,7 @@ MAX_MULTI = 5      # сколько платных кейсов можно от�
 STORY_MIN_DELAY = 20  # сек между нажатием "в сторис" и выводом
 CASE_RTP = 0.85    # средний возврат платного кейса (доля цены)
 FREE_NFT_CHANCE = 3  # % шанс NFT в бесплатном «Подарке дня»
-ECONOMY_VERSION = "6"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
+ECONOMY_VERSION = "7"  # поменяйте, чтобы при старте пересобрать кейсы и призы (правки в админке сбросятся)
 SELL_RATE = 0.9    # продажа подарка из инвентаря: доля оценки на баланс
 MINES_EDGE = 0.96  # множитель мин = EDGE * честный коэффициент
 MINES_MAX_WIN = 181818  # максимум выплаты за раунд мин, ⭐
@@ -41,6 +41,7 @@ PLINKO_RTP = 0.95  # средний возврат плинко
 PLINKO_MAX_BET = 10000
 GIFT_BET_MAX = 150000  # подарок дороже нельзя поставить в мины и ракетку, ⭐
 RK_STEPS = [1.5, 2, 3, 5, 10, 20, 50, 100, 200, 500]  # ракетка подарком: на этих множителях подарок меняется на дороже
+GAME_MAX_BET = 50000  # максимальная ставка звёздами в минах и ракетке (чтобы выплату не срезал лимит выигрыша)
 MIN_BET = 50       # минимальная ставка звёздами в играх (мины, плинко, апгрейд, ракетка)
 CRASH_EDGE = 0.96  # ракетка: множитель краша = EDGE / (1 - U) - средний возврат 96%
 CRASH_SPEED = 0.09  # рост множителя: m(t) = e^(SPEED * t), t в секундах (x2 за ~7.7 с, x10 за ~25 с)
@@ -223,6 +224,11 @@ def nft_value(gift, model):
     ton = MARKET.get((gift, model))
     return round(ton * TON_STARS) if ton else formula_value(gift, model)
 
+def priced(gift, model):
+    """Есть ли у модели реальная цена (своя из админки или с Portals). Без рынка (MARKET пуст) считаем все модели с ценой."""
+    return not MARKET or (gift, model) in OVR or (gift, model) in MARKET
+
+
 def floor_stars(gift): return round((CFLOOR.get(gift) or FLOORS.get(gift, DEFAULT_FLOOR)) * TON_STARS)
 
 # ---------- база ----------
@@ -270,6 +276,8 @@ for t, c, d in [("crash", "ladder", "TEXT DEFAULT ''"), ("crash", "src_win", "IN
     try: db.execute(f"ALTER TABLE {t} ADD COLUMN {c} {d}")
     except sqlite3.OperationalError: pass
 db.execute("CREATE INDEX IF NOT EXISTS crash_round ON crash(round_id, user_id)")
+try: db.execute("CREATE UNIQUE INDEX IF NOT EXISTS crash_one ON crash(round_id, user_id) WHERE round_id>0")
+except sqlite3.Error as e: print("crash index:", e)
 
 
 def q(sql, *a): return [dict(r) for r in db.execute(sql, a).fetchall()]
@@ -387,6 +395,7 @@ def nice(x): return min(NICE, key=lambda n: abs(n - x))
 def near(value, rng, pool=None, spread=0.15):
     """Случайная модель NFT стоимостью около value (из всего каталога или из коллекций pool)."""
     cands = [(g, m) for g in (pool or CATALOG) for m in MODELS[g]]
+    cands = [k for k in cands if priced(*k)] or cands  # только модели с рыночной ценой
     vals = {(g, m): nft_value(g, m) for g, m in cands}
     best = min(cands, key=lambda k: abs(vals[k] - value))
     close = [k for k in cands if abs(vals[k] - vals[best]) <= vals[best] * spread]
@@ -453,7 +462,7 @@ def build_cases(force=False):
                            "Kissed Frog", "Vintage Cigar", "Loot Bag", "Nail Bracelet"]):
         if g not in CATALOG: continue
         f = floor_stars(g); p = nice(f * 0.45)
-        ms = sorted(CATALOG[g]["models"], key=lambda x: x[1])  # от редких к частым
+        ms = sorted([x for x in CATALOG[g]["models"] if priced(g, x[0])] or CATALOG[g]["models"], key=lambda x: x[1])  # только модели с рыночной ценой  # от редких к частым
         items = low_items(p, (0.3, 0.5, 0.7) if p >= 1000 else (0.4,), rng)
         cheap = sorted(ms[4:], key=lambda x: nft_value(g, x[0]))  # самые дешёвые модели коллекции
         items += [nft_item(g, m) for m, _ in ms[:4]] + [nft_item(g, m) for m, _ in cheap[:8]] + [nft_item(g, m) for m, _ in rng.sample(cheap[8:], min(3, len(cheap) - 8))]
@@ -774,7 +783,7 @@ def state(uid: int = Depends(auth)):
             "refs": q1("SELECT COUNT(*) n FROM users WHERE ref_by=?", uid)["n"], "ref_earned": u["ref_earned"],
             "ref_bonus": REF_BONUS, "ref_percent": REF_PERCENT, "uid": uid, "need": FRIENDS_REQUIRED, "bot": BOT_USERNAME,
             "sell_rate": SELL_RATE, "mines_edge": MINES_EDGE, "mines_max": MINES_MAX_WIN, "upgrade_edge": UPGRADE_EDGE, "topup_min": TOPUP_MIN, "topup_max": TOPUP_MAX,
-            "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "min_bet": MIN_BET, "gift_bet_max": GIFT_BET_MAX,
+            "plinko": PLINKO, "plinko_max": PLINKO_MAX_BET, "min_bet": MIN_BET, "game_max_bet": GAME_MAX_BET, "gift_bet_max": GIFT_BET_MAX,
             "crash": {"speed": CRASH_SPEED, "max": CRASH_MAX, "max_win": CRASH_MAX_WIN},
             "free_channel": chat_ref(setting("free_channel")), "ton_stars": TON_STARS,
             "promo": q1("SELECT u.code, p.percent FROM promo_use u JOIN promos p ON p.code=u.code WHERE u.user_id=? AND u.used_at=0 LIMIT 1", uid), "tasks": user_tasks(uid), "nick": nick_state(uid), "cm": cm_state(uid), "upgrade_max": UPGRADE_MAX_CHANCE}
@@ -788,7 +797,8 @@ def catalog():
     """Все коллекции с флором; модели и редкость — в /static/gifts.json."""
     if not CATALOG_CACHE:
         CATALOG_CACHE.update(ton_stars=TON_STARS, floors_ton={g: FLOORS.get(g, DEFAULT_FLOOR) for g in CATALOG},
-                             prices={g: [nft_value(g, m) for m, _ in c["models"]] for g, c in CATALOG.items()})
+                             prices={g: [nft_value(g, m) for m, _ in c["models"]] for g, c in CATALOG.items()},
+                             priced={g: [int(priced(g, m)) for m, _ in c["models"]] for g, c in CATALOG.items()})
     return CATALOG_CACHE
 
 
@@ -1118,7 +1128,7 @@ async def biz_gift(m):
     rate = int(setting("gift_rate") or 90)
     if m.unique_gift:
         g = m.unique_gift.gift; base, model = g.base_name, g.model.name
-        try: value = nft_value(base, model)
+        try: value = nft_value(base, model) if priced(base, model) else floor_stars(base)  # без рыночной цены - только флор
         except HTTPException: value = floor_stars(base) if base in CATALOG else 0
         name = f"{base} · {model}"
     else:
@@ -1445,7 +1455,7 @@ def mines_start(b: dict = Body(...), uid: int = Depends(auth)):
     if b.get("win_id"): bet = take_item(uid, int(b["win_id"]), GIFT_BET_MAX)["value"]
     else:
         bet = int(b.get("bet", 0))
-        if bet < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")
+        if not MIN_BET <= bet <= GAME_MAX_BET: raise HTTPException(400, f"Ставка от {MIN_BET} до {GAME_MAX_BET:,} ⭐".replace(",", " "))
         charge(uid, bet)
     field = sorted(secrets.SystemRandom().sample(range(CELLS), bombs))
     gid = run("INSERT INTO mines(user_id,bet,bombs,field,seed,created) VALUES(?,?,?,?,?,?)", uid, bet, bombs, json.dumps(field), secrets.token_hex(16), int(time.time()))
@@ -1644,7 +1654,7 @@ _NFT_SORTED = []
 
 def nft_below(v, rng, exclude=()):
     """Случайная из 4 самых дорогих моделей не дороже v (не из exclude)."""
-    if not _NFT_SORTED: _NFT_SORTED.extend(sorted((nft_value(g, m), g, m) for g in CATALOG for m in MODELS[g]))
+    if not _NFT_SORTED: _NFT_SORTED.extend(sorted((nft_value(g, m), g, m) for g in CATALOG for m in MODELS[g] if priced(g, m)))
     import bisect
     i = bisect.bisect_right(_NFT_SORTED, (v, "\uffff", "\uffff"))
     cands = [x for x in _NFT_SORTED[max(0, i - 40):i] if (x[1], x[2]) not in exclude][-4:]
@@ -1726,9 +1736,13 @@ def rk_bet(b: dict = Body(...), uid: int = Depends(auth)):
         ladder = json.dumps(rk_ladder(w))
     else:
         bet = int(b.get("bet", 0))
-        if bet < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")
+        if not MIN_BET <= bet <= GAME_MAX_BET: raise HTTPException(400, f"Ставка от {MIN_BET} до {GAME_MAX_BET:,} ⭐".replace(",", " "))
         charge(uid, bet)
-    run("INSERT INTO crash(user_id,round_id,bet,gift,auto,status,created,ladder,src_win) VALUES(?,?,?,?,?,'live',?,?,?)", uid, target["id"], bet, gift, auto, int(time.time()), ladder, src)
+    try: run("INSERT INTO crash(user_id,round_id,bet,gift,auto,status,created,ladder,src_win) VALUES(?,?,?,?,?,'live',?,?,?)", uid, target["id"], bet, gift, auto, int(time.time()), ladder, src)
+    except sqlite3.IntegrityError:  # две ставки одновременно - вторую возвращаем
+        if src: run("UPDATE wins SET status='ready' WHERE id=?", src)
+        else: credit(uid, bet)
+        raise HTTPException(400, "Ставка на этот раунд уже сделана")
     return {"round": target["id"], "next": target["id"] != r["id"], "balance": q1("SELECT balance FROM users WHERE id=?", uid)["balance"]}
 
 
@@ -1749,6 +1763,7 @@ def upgrade(b: dict = Body(...), uid: int = Depends(auth)):
     gift, model = b.get("gift", ""), b.get("model", "")
     if gift not in CATALOG: raise HTTPException(404, "Нет такой коллекции")
     target = nft_value(gift, model)
+    if not priced(gift, model): raise HTTPException(400, "У этой модели нет рыночной цены — выберите другую")
     src = int(b["stars"]) if not b.get("win_id") else own_win(int(b["win_id"]), uid)["value"]
     if src < 1: raise HTTPException(400, "Выберите, что улучшать")
     if not b.get("win_id") and src < MIN_BET: raise HTTPException(400, f"Ставка от {MIN_BET} ⭐")

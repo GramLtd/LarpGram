@@ -424,7 +424,7 @@ body.maint>header,body.maint>main,body.maint>nav{display:none!important}
 @keyframes gupt{0%{transform:rotate(150deg)}58%,100%{transform:rotate(870deg)}}
 .ga-up img{animation:float 3.2s ease-in-out infinite}
 .gu-up{position:absolute;left:2px;bottom:8px;width:34px!important;height:34px!important;padding:0;line-height:0;font-style:normal;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg,#8affc1,#2fcf80);color:#0b3a22;border:3px solid #1c2350;box-shadow:0 6px 14px -4px #3ee08f;animation:guup 3.6s ease-in-out infinite}
-.gu-up svg{display:block;width:18px;height:18px;margin:0}@keyframes guup{0%,56%{opacity:0;transform:scale(.3)}63%{opacity:1;transform:scale(1.18)}68%,90%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.8)}}
+.ga-up .gu-up svg{position:static;inset:auto;display:block;width:18px;height:18px;margin:0}@keyframes guup{0%,56%{opacity:0;transform:scale(.3)}63%{opacity:1;transform:scale(1.18)}68%,90%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.8)}}
 .ga-up .gu-glow{animation:guglow 3.6s ease-in-out infinite}@keyframes guglow{0%,55%{opacity:.45;transform:scale(.9)}64%,88%{opacity:1;transform:scale(1.12);background:radial-gradient(circle,#3ee08f99,transparent 65%)}100%{opacity:.45;transform:scale(.9)}}
 .gauge .pc2 small{font-size:11px}.gauge .pc2 svg{width:30px;height:30px;transform:none;margin-bottom:2px}
 /* ракетка: лайв */
@@ -440,12 +440,13 @@ body.maint>header,body.maint>main,body.maint>nav{display:none!important}
 .rkr .avi{width:30px;height:30px;font-size:13px}.lc{cursor:pointer}.rkr{cursor:pointer}
 .avi img,.ava.big img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:1}.ava.big{position:relative;overflow:hidden}
 .plh2{display:flex;align-items:center;gap:14px;margin-bottom:6px}.ava.big{width:64px;height:64px;font-size:26px;background-size:cover;background-position:center}
-.crg{position:absolute;left:12px;right:12px;bottom:12px;z-index:3;pointer-events:none}
-.crgc{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:18px;background:#0b0c1fb8;border:1px solid #ffffff26;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.crgw{flex:1;min-width:0;padding:2px}.crst{margin-left:auto;align-self:flex-start;font-size:11px;font-weight:800;padding:3px 8px;border-radius:8px;background:#ffffff14;color:#d9daf0;white-space:nowrap}
+.crgc{display:flex;align-items:center;gap:10px;padding:6px 6px 6px 4px;border-radius:16px}
 .crgc img{width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 4px 8px #000a)}.crgc div{min-width:0}.crgc b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crgc small{display:block;color:var(--mut);font-size:12px}.crgc em{font-style:normal;font-weight:800;font-size:14px;display:flex;align-items:center;gap:3px;color:var(--gold)}
 .crgc.swap{animation:crswap .55s cubic-bezier(.2,1.4,.4,1)}.crgc.swap img{animation:popin .6s cubic-bezier(.2,1.5,.4,1)}@keyframes crswap{0%{transform:scale(.85);box-shadow:0 0 0 0 #3ee08f}40%{box-shadow:0 0 0 6px #3ee08f55}100%{transform:none;box-shadow:0 0 0 0 #3ee08f00}}
-.crgc.gone{opacity:.45;filter:grayscale(.8)}.crnx{margin:6px 4px 0;font-size:12px;font-weight:700;color:#d9daf0;text-shadow:0 1px 4px #000}
+.crgc.gone{opacity:.45;filter:grayscale(.8)}.crnx{margin:2px 6px 4px;font-size:12px;font-weight:700;color:var(--mut)}
+#g-crash button:disabled:not(.btn){opacity:.45}#g-crash input:disabled{opacity:.6}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.ov.on,.sheet>div,body.ready main:not([hidden]),#winfx *{animation:none!important}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -538,7 +539,7 @@ const IC={x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
  help:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.8"/><circle cx="12" cy="17.3" r=".6" fill="currentColor"/></svg>'};
 $('bal').querySelector('.ic').innerHTML=STAR;$$('.sti').forEach(e=>e.outerHTML=STAR);
 
-let S=null,CAT=[],FL={},VAL={},TS=69,left=0,filt='all',asc=true,query='',tab='cases';
+let PRC={},S=null,CAT=[],FL={},VAL={},TS=69,left=0,filt='all',asc=true,query='',tab='cases';
 let fast=false,sound=true;try{fast=localStorage.gmFast=='1';sound=localStorage.gmSnd!='0'}catch(e){}
 const save=()=>{try{localStorage.gmFast=fast?'1':'0';localStorage.gmSnd=sound?'1':'0'}catch(e){}};
 const toast=t=>{const e=$('toast');t=String(t);e.innerHTML=t.includes('<svg')?t:esc(t).replace(/\u2B50/g,STAR);e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',2800)};
@@ -929,12 +930,12 @@ function renderUpgrade(){const el=$('g-upgrade'),ch=upChance(),C=2*Math.PI*54;
   $('uSrc').onclick=()=>{if(U.busy)return;if(U.src.kind=='stars')return;pickInv(w=>{U.src={...w,kind:'nft'};U.res=null;renderUpgrade()})};
   $('uTgt').onclick=()=>{if(!U.busy)openCatalog(p=>{U.target=p;U.res=null;renderUpgrade()})};
   $$('[data-us]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;U.res=null;if(b.dataset.us=='stars')U.src={kind:'stars',value:Math.max(1,Math.min(100,S.balance||100))};else{U.src={kind:'gift',value:0};pickInv(w=>{U.src={...w,kind:'nft'};renderUpgrade()})}renderUpgrade()});
-  $$('[data-ub]',el).forEach(b=>b.onclick=()=>{const v=U.src.value;U.src.value=Math.max(MINB(),b.dataset.ub=='h'?v/2|0:b.dataset.ub=='d'?v*2:S.balance);U.res=null;renderUpgrade()});
-  const bi=$('uBet');if(bi)bi.onchange=()=>{U.src.value=Math.max(1,fromCur(bi.value));U.res=null;renderUpgrade()};
-  $$('[data-k]',el).forEach(b=>b.onclick=()=>{if(!U.src.value)return toast('Сначала выберите, что улучшаем');U.target=nearest(U.src.value*+b.dataset.k);U.res=null;renderUpgrade()});
-  $('uGo').onclick=doUpgrade}
+  $$('[data-ub]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;const v=U.src.value;U.src.value=Math.max(MINB(),Math.min(Math.max(MINB(),S.balance),b.dataset.ub=='h'?v/2|0:b.dataset.ub=='d'?v*2:S.balance));U.res=null;renderUpgrade()});
+  const bi=$('uBet');if(bi){bi.disabled=U.busy;bi.onchange=()=>{if(U.busy)return;U.src.value=Math.max(1,fromCur(bi.value));U.res=null;renderUpgrade()}};
+  $$('[data-k]',el).forEach(b=>b.onclick=()=>{if(U.busy)return;if(!U.src.value)return toast('Сначала выберите, что улучшаем');U.target=nearest(U.src.value*+b.dataset.k);U.res=null;renderUpgrade()});
+  $('uGo').onclick=doUpgrade;$$('#g-upgrade .sb,#g-upgrade [data-k],#g-upgrade [data-us]').forEach(b=>b.disabled=U.busy)}
 function allModels(){if(allModels.c)return allModels.c;return allModels.c=CAT.flatMap(g=>g.models.map(([m,pm])=>({kind:'nft',gift:g.name,model:m,pm,img:mimg(g.name,m),value:nftVal(g.name,m)})))}
-function nearest(v){const a=allModels().filter(p=>p.value>U.src.value);if(!a.length)return null;
+function nearest(v){const a=allModels().filter(p=>p.value>U.src.value&&PRC[p.gift]?.[p.model]!==0);if(!a.length)return null;
   const best=a.reduce((b,p)=>Math.abs(Math.log(p.value/v))<Math.abs(Math.log(b.value/v))?p:b);const close=a.filter(p=>p.value>=best.value*.97&&p.value<=best.value*1.03);return close[Math.random()*close.length|0]}
 async function doUpgrade(){if(U.busy||!U.target)return;const ch=upChance();
   if(U.src.kind=='stars'&&U.src.value<MINB())return toast('Минимальная ставка '+price(MINB()));
@@ -979,22 +980,22 @@ function rkInfo(){const st=K.st;if(!st)return null;const r=st.round,now=rkNow(),
   const cur=st.mine.find(b=>b.round==r.id),next=st.mine.find(b=>b.round>r.id);return {r,ph,m,cur,next,now}}
 function renderCrash(){const el=$('g-crash');if(!el||!S)return;
   el.innerHTML=`<div class="crb"><canvas id="crc" aria-label="Полёт ракеты"></canvas><div class="crk" id="crk">${rocketSvg('game')}</div>
-    <div class="crm"><b id="crx">x1,00</b><small id="crs">Подключаемся к раунду…</small><div class="crp" id="crp"><i></i></div></div><span class="crid" id="crid"></span><div class="crg" id="crg" hidden></div></div>
+    <div class="crm"><b id="crx">x1,00</b><small id="crs">Подключаемся к раунду…</small><div class="crp" id="crp"><i></i></div></div><span class="crid" id="crid"></span></div>
   <div class="plh" id="crh"></div>
   <div class="box seg"><button data-km="bal" class="${K.mode=='bal'?'on':''}">Балансом</button><button data-km="gift" class="${K.mode=='gift'?'on':''}">Подарком</button></div>
   ${K.mode=='bal'?`<div class="box"><div class="bet">${CI()}<input id="kBet" inputmode="decimal" value="${inCur(K.bet)}" aria-label="Ставка"></div><button class="sb" data-kb="h">½</button><button class="sb" data-kb="d">2×</button><button class="sb" data-kb="max" style="color:#fff">МАКС</button></div>`
-   :`<div class="box"><button class="gsel" id="kGift">${K.gift?`<img src="${esc(imgOf(K.gift,128))}" alt=""><span style="min-width:0"><b>${title(K.gift)}</b><small>${price(K.gift.value)}</small></span>`:'<span style="color:var(--mut);padding:12px 6px">Выберите подарок из инвентаря</span>'}</button></div>`}
+   :`<div class="box" id="kGiftBox"><button class="gsel" id="kGift">${K.gift?`<img src="${esc(imgOf(K.gift,128))}" alt=""><span style="min-width:0"><b>${title(K.gift)}</b><small>${price(K.gift.value)}</small></span>`:'<span style="color:var(--mut);padding:12px 6px">Выберите подарок из инвентаря</span>'}</button></div>`}
   <div class="box"><div class="bet" style="font-size:18px"><span style="color:var(--mut);font:700 14px Manrope;white-space:nowrap">Автовывод x</span><input id="kAuto" inputmode="decimal" placeholder="нет" value="${esc(K.auto)}" aria-label="Автовывод"></div>${[1.5,2,5].map(a=>`<button class="sb" data-ka="${a}">${String(a).replace('.',',')}</button>`).join('')}</div>
   <button class="btn" id="kGo" style="margin-top:12px"></button>
   <p class="maxw" style="justify-content:center;text-align:center">Мин. ставка ${price(MINB())} · выигрыш = ставка × множитель</p>
   <h2 style="margin-top:20px">Игроки раунда<small id="crc2"></small></h2><div class="rkp" id="rkp"></div>`;
   const bi=$('kBet');if(bi)bi.oninput=()=>{K.bet=Math.max(0,fromCur(bi.value))};
-  $$('[data-kb]',el).forEach(b=>b.onclick=()=>{const v=Math.max(MINB(),K.bet);K.bet=b.dataset.kb=='h'?Math.max(MINB(),v/2|0):b.dataset.kb=='d'?v*2:Math.max(MINB(),S.balance);$('kBet').value=inCur(K.bet)});
-  $$('[data-km]',el).forEach(b=>b.onclick=()=>{K.mode=b.dataset.km;renderCrash()});
-  $$('[data-ka]',el).forEach(b=>b.onclick=()=>{K.auto=b.dataset.ka;$('kAuto').value=K.auto});
+  $$('[data-kb]',el).forEach(b=>b.onclick=()=>{if(K.lock)return;const v=Math.max(MINB(),K.bet);K.bet=Math.min(Math.max(MINB(),S.balance),b.dataset.kb=='h'?Math.max(MINB(),v/2|0):b.dataset.kb=='d'?v*2:Math.max(MINB(),S.balance));$('kBet').value=inCur(K.bet)});
+  $$('[data-km]',el).forEach(b=>b.onclick=()=>{if(K.lock)return;K.mode=b.dataset.km;renderCrash()});
+  $$('[data-ka]',el).forEach(b=>b.onclick=()=>{if(K.lock)return;K.auto=b.dataset.ka;$('kAuto').value=K.auto});
   const ai=$('kAuto');ai.oninput=()=>{K.auto=ai.value.replace(',','.').replace(/[^\d.]/g,'')};
-  const gs=$('kGift');if(gs)gs.onclick=()=>pickInv(w=>{K.gift=w;renderCrash()},S.gift_bet_max);
-  crLayout();crPaint();if(!K.raf)K.raf=requestAnimationFrame(crLoop)}
+  const gs=$('kGift');if(gs)gs.onclick=()=>!K.lock&&pickInv(w=>{K.gift=w;renderCrash()},S.gift_bet_max);
+  K.lock=null;crLayout();crPaint();if(!K.raf)K.raf=requestAnimationFrame(crLoop)}
 function crLayout(){const cv=$('crc');if(!cv)return;const W=cv.clientWidth,H=cv.clientHeight,d=Math.min(2,devicePixelRatio||1);cv.width=W*d;cv.height=H*d;cv.getContext('2d').setTransform(d,0,0,d,0,0);
   if(!K.stars)K.stars=[...Array(40)].map(()=>[Math.random(),Math.random(),Math.random()*1.4+.3])}
 function crDraw(m,live,show){const cv=$('crc');if(!cv)return;const x=cv.getContext('2d'),W=cv.clientWidth,H=cv.clientHeight,t=performance.now()/1000;x.clearRect(0,0,W,H);
@@ -1023,6 +1024,7 @@ function crPaint(){const I=rkInfo(),xel=$('crx'),s=$('crs'),pb=$('crp'),b=$('kGo
   pb.style.display=ph=='bet'?'':'none';pb.firstChild.style.width=(100-left/bs*100)+'%';
   s.innerHTML=ph=='bet'?'Приём ставок — взлёт через '+Math.ceil(left)+' с':ph=='fly'?(cur&&cur.status=='won'?`Вы забрали ${fx2(cur.mult)} · +${price(cur.payout)}`:cur?'Летим! Забирайте вовремя':'Ракета в полёте'):`Ракета взорвалась на ${fx2(r.crash)}`;
   const gs=cur&&cur.src?crStep(cur,ph=='crash'?(cur.status=='won'?cur.mult:1):cur.status=='won'?cur.mult:m):null;crGift(gs,cur,ph);
+  const lock=!!(cur&&cur.status=='live')||!!next||K.busy;if(K.lock!==lock){K.lock=lock;$$('#g-crash [data-kb],#g-crash [data-km],#g-crash [data-ka],#kBet,#kAuto,#kGift').forEach(x=>x.disabled=lock)}
   if(!b)return;
   if(cur&&cur.status=='live'&&ph=='fly'){b.className='btn green';b.disabled=K.busy;b.innerHTML=gs?`Забрать ${esc(gs.gift)} · ${price(gs.value)}`:`Забрать ${price(Math.floor(cur.bet*m))}`;b.onclick=crCash}
   else if(cur&&ph=='bet'){b.className='btn';b.disabled=true;b.innerHTML='Ставка принята — ждём взлёт'}
@@ -1030,13 +1032,13 @@ function crPaint(){const I=rkInfo(),xel=$('crx'),s=$('crs'),pb=$('crp'),b=$('kGo
   else{b.className='btn';b.disabled=K.busy||(K.mode=='gift'&&!K.gift);b.onclick=crBet;
     b.innerHTML=K.mode=='gift'&&!K.gift?'Выберите подарок':ph=='bet'?'Поставить'+(K.mode=='bal'?' '+price(K.bet):''):'Поставить на следующий раунд'}}
 function crStep(b,m){const st=(b.ladder||[]).filter(x=>x.s<=m);return st.length?{...st.at(-1),i:st.length}:b.src_item?{...b.src_item,i:0}:null}
-function crGift(gs,cur,ph){const el=$('crg');if(!el)return;if(!gs){el.hidden=true;el._k='';return}el.hidden=false;
+function crGift(gs,cur,ph){const el=$('kGiftBox');if(!el)return;if(!gs){if(el._k){el._k='';renderCrash()}return}
   const nx=(cur.ladder||[])[gs.i],k=gs.gift+gs.model+(cur.status||'');
   if(el._k!==k){const up=el._k&&gs.i>0;el._k=k;
-    el.innerHTML=`<div class="crgc ${up?'swap':''} ${cur.status=='lost'?'gone':''}"><img src="${th(gs.gift,gs.model,256)}" alt=""><div><b>${esc(gs.gift)}</b><small>${esc(gs.model)}</small><em>${price(gs.value)}</em></div></div>`;
+    el.innerHTML=`<div class="crgw"><div class="crgc ${up?'swap':''} ${cur.status=='lost'?'gone':''}"><img src="${th(gs.gift,gs.model,256)}" alt=""><div><b>${esc(gs.gift)}</b><small>${esc(gs.model)}</small><em>${price(gs.value)}</em></div><span class="crst">${cur.status=='lost'?'Сгорел':cur.status=='won'?'Ваш':gs.i?'Ступень '+gs.i:'Ставка'}</span></div></div>`;
     if(up){hap('medium');sfx.pop(Math.min(9,gs.i+2))}}
   const n=el.querySelector('.crnx');const t=nx&&cur.status=='live'&&ph!='crash'?`Следующий на ${fx2(nx.s)}: ${esc(nx.gift)}`:'';
-  if(n){if(n._t!==t){n._t=t;n.textContent=t}}else if(t){const d=document.createElement('p');d.className='crnx';d._t=t;d.textContent=t;el.appendChild(d)}}
+  const w=el.querySelector('.crgw');if(n){if(n._t!==t){n._t=t;n.textContent=t}}else if(t&&w){const d=document.createElement('p');d.className='crnx';d._t=t;d.textContent=t;w.appendChild(d)}}
 function crList(){const st=K.st;if(!st||!$('rkp'))return;
   setHTML($('crh'),st.history.map(h=>`<span style="--sc:${h<2?'#3d45a6':h<10?'#8b5cff':'#ffc83d'};color:${h>=10?'#3a2600':'#fff'}">${fx2(h)}</span>`).join(''));
   $('crc2').innerHTML=`${st.count} · ${price(st.sum)}`;
@@ -1080,7 +1082,7 @@ function renderPlinko(){const el=$('g-plinko');if(!el||!S||plBusy())return;const
   <button class="btn" id="pGo" style="margin-top:12px">Бросить шар</button>
   <p class="maxw" style="justify-content:center">Шар падает случайно, выигрыш = ставка × множитель ячейки</p>`;
   const bi=$('pBet');bi.oninput=()=>{P.bet=Math.max(0,fromCur(bi.value))};
-  $$('[data-pb]',el).forEach(b=>b.onclick=()=>{const v=Math.max(1,P.bet);P.bet=b.dataset.pb=='h'?Math.max(MINB(),v/2|0):b.dataset.pb=='d'?v*2:Math.max(MINB(),S.balance);
+  $$('[data-pb]',el).forEach(b=>b.onclick=()=>{const v=Math.max(1,P.bet);P.bet=Math.min(Math.max(MINB(),S.balance),b.dataset.pb=='h'?Math.max(MINB(),v/2|0):b.dataset.pb=='d'?v*2:Math.max(MINB(),S.balance));
     P.bet=Math.min(P.bet,S.plinko_max||10000);bi.value=inCur(P.bet)});
   $$('[data-pr]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.risk=b.dataset.pr;renderPlinko()});
   $$('[data-pn]',el).forEach(b=>b.onclick=()=>{if(plBusy())return toast('Дождитесь, пока упадут шары');P.rows=+b.dataset.pn;renderPlinko()});
@@ -1138,7 +1140,7 @@ function renderCat(){const total=CAT.reduce((a,g)=>a+g.models.length,0);
   function list(){const L=$('catList');
     if(catQ||catColl){let ms=catColl?catColl.models.map(([m,pm])=>({kind:'nft',gift:catColl.name,model:m,pm,img:mimg(catColl.name,m),value:nftVal(catColl.name,m)})):allModels();
       if(catQ)ms=ms.filter(p=>(p.gift+' '+p.model).toLowerCase().includes(catQ));
-      if(catPick&&U.src.value)ms=ms.filter(p=>p.value>U.src.value);
+      if(catPick&&U.src.value)ms=ms.filter(p=>p.value>U.src.value&&PRC[p.gift]?.[p.model]!==0);
       const shown=ms.slice(0,180);
       L.innerHTML=(ms.length?`<p class="maxw" style="margin:0 0 10px">${num(ms.length)} ${plural(ms.length,'модель','модели','моделей')}${ms.length>shown.length?' — показаны первые '+shown.length:''}</p>`:'')+
         `<div class="grid3">${shown.map((p,i)=>`<button class="pc t${tierP(p.pm)}" data-i="${i}"><div class="pi"><img src="${esc(imgOf(p))}" alt="" loading="lazy" decoding="async"></div><b>${catColl?esc(p.model):esc(p.gift)+' · '+esc(p.model)}</b><em>${price(p.value)}</em></button>`).join('')}</div>`+(ms.length?'':'<p class="empty">Ничего не нашлось.</p>');
@@ -1301,7 +1303,7 @@ setInterval(()=>{if(left>0){left--;if(left==0){freeBadge();renderCases();renderB
 const bootP=v=>{const b=$('bootp');if(b)b.style.width=v+'%'};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{const t0=Date.now();bootP(15);
-  try{const [g,c]=await Promise.all([fetch('/static/gifts.json').then(r=>r.json()),fetch('/api/catalog').then(r=>r.json())]);CAT=g;TS=c.ton_stars;FL=c.floors_ton;for(const x of g)VAL[x.name]=Object.fromEntries(x.models.map(([m],i)=>[m,c.prices?.[x.name]?.[i]??0]))}catch(e){}
+  try{const [g,c]=await Promise.all([fetch('/static/gifts.json').then(r=>r.json()),fetch('/api/catalog').then(r=>r.json())]);CAT=g;TS=c.ton_stars;FL=c.floors_ton;for(const x of g){VAL[x.name]=Object.fromEntries(x.models.map(([m],i)=>[m,c.prices?.[x.name]?.[i]??0]));PRC[x.name]=Object.fromEntries(x.models.map(([m],i)=>[m,c.priced?c.priced[x.name]?.[i]:1]))}}catch(e){}
   bootP(40);
   try{await load()}catch(e){if(!document.body.classList.contains('maint'))toast(e.message)}
   bootP(65);
